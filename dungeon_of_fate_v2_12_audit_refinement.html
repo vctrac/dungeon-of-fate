@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#100f0e">
+<title>Dungeon of Fate v2.12 — Audit &amp; Refinement</title>
+<style>
+*{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
+body{display:flex;justify-content:center;overscroll-behavior:none}
+#game{width:min(720px,100vw);height:100dvh;padding:7px 8px calc(7px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px}
+#hud{display:grid;grid-template-columns:1fr 1.25fr .8fr 1fr;gap:4px}.stat{background:#24211e;border:1px solid #514940;border-radius:8px;padding:2px;text-align:center}.label{font-size:7px;color:#9e9588;letter-spacing:1px;text-transform:uppercase}.value{font-size:14px;font-weight:900;line-height:18px}
+#message{height:29px;display:flex;align-items:center;justify-content:center;text-align:center;color:#d8bf86;font-size:12px;padding:0 8px}
+#board{position:relative;flex:1;min-height:0;border:2px solid #4d463e;border-radius:14px;background:#181614;overflow:hidden;touch-action:manipulation}
+.cell{position:absolute;width:7.2%;height:7.2%;display:flex;align-items:center;justify-content:center;z-index:3;cursor:pointer;touch-action:manipulation;transition:opacity .18s,filter .18s,transform .12s}.cell:active{transform:scale(.94)}
+.floor{position:absolute;inset:1px;background:#413b35;border:2px solid #655b51;border-radius:6px;box-shadow:inset 0 2px #ffffff0a,inset 0 -3px #0006,0 2px 3px #0008}
+.cell.available .floor{border-color:#c19a58;box-shadow:0 0 14px #b8945844}.cell.current .floor{border-color:#e0bb69;box-shadow:0 0 20px #d2a65377}.cell.searched .floor{background:#35302b;border-color:#575049}
+.cell.treasure .floor{background:linear-gradient(#55472f,#3c3328);border-color:#b99752}.cell.rich .floor{background:linear-gradient(#4c3d51,#352e38);border-color:#a88cc3}.cell.monster .floor{background:linear-gradient(#4d302e,#382726);border-color:#a86158}.cell.trap .floor{background:linear-gradient(#4e392a,#382c24);border-color:#b77b4b}.cell.heal .floor{background:linear-gradient(#34483a,#29372e);border-color:#72a67c}.cell.key .floor{background:linear-gradient(#30404b,#29343a);border-color:#709ab0}
+.icon{position:relative;z-index:5;font-size:16px;font-weight:900;text-shadow:0 2px 3px #000;pointer-events:none}.unknown .icon{font-size:14px;color:#b7ad9f}.event{position:absolute;right:1px;bottom:0;z-index:6;font-size:12px;pointer-events:none}.startMark,.exitMark{position:absolute;left:2px;z-index:6;font-size:6px;pointer-events:none}.startMark{top:0;color:#aaa093}.exitMark{bottom:0;color:#cdb36f}
+.link{position:absolute;background:#70655a;z-index:1;border-radius:4px;box-shadow:0 1px 3px #000;pointer-events:none}.link.recent{background:#aa8d5c}.link.old{opacity:.46}.link.veryold{opacity:.24}
+#hint{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);color:#70675d;font-size:9px;pointer-events:none;white-space:nowrap}
+#overlay{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;padding:16px;z-index:20}.panel{width:min(450px,100%);background:#29241f;border:2px solid #6c5940;border-radius:17px;padding:18px;text-align:center}.panel h1{margin:0 0 5px;font-size:24px}.panel p{color:#c0b5a6;font-size:12px;margin:6px 0}.big{font-size:36px;font-weight:950;margin:7px}.summary{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:12px 0;text-align:left}.summary div{background:#211e1b;border:1px solid #494039;border-radius:8px;padding:7px;font-size:10px;color:#a99f91}.summary b{display:block;color:#eee;font-size:14px;margin-top:2px}.actions{display:flex;gap:7px;justify-content:center}.panel button{min-height:44px;border:1px solid #6d5a3f;background:#76572c;color:#fff;border-radius:10px;font-size:11px;font-weight:900;padding:0 18px}.panel button.secondary{background:#3b3631;border-color:#5b5147}
+#diceOverlay{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:30}.dicePanel{width:min(350px,90vw);background:#29241f;border:2px solid #6c5940;border-radius:18px;padding:22px;text-align:center}.diceTitle{font-size:13px;color:#d8bf86;font-weight:900;letter-spacing:1px;text-transform:uppercase}.die{width:76px;height:76px;margin:18px auto 10px;background:#e7dfd2;color:#27221d;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:950;box-shadow:0 5px 15px #0008}.diceResult{font-size:22px;font-weight:950;min-height:28px}.diceDetail{font-size:12px;color:#b8ad9f;min-height:20px}
+@keyframes shake{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(-9deg) scale(1.08)}75%{transform:rotate(9deg) scale(1.08)}}.rolling{animation:shake .12s infinite}
+
+/* V2.7 local torch-lighting */
+.cell.current .floor{box-shadow:0 0 24px #d2a65399,0 0 46px #d2a65333,inset 0 2px #ffffff12,inset 0 -3px #0006}
+.cell.available .floor{box-shadow:0 0 16px #b8945866,inset 0 2px #ffffff0b,inset 0 -3px #0006}
+
+
+/* V2.8 fixed fast travel */
+.cell.fast-target .floor{
+  border-color:#e0bb69;
+  box-shadow:0 0 18px #d2a65377,inset 0 2px #ffffff12,inset 0 -3px #0006;
+}
+.cell.fast-charge::after{
+  content:"";
+  position:absolute;
+  inset:-3px;
+  border-radius:9px;
+  z-index:8;
+  pointer-events:none;
+  padding:3px;
+  background:conic-gradient(#f0ca78 var(--charge,0deg),transparent 0);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+}
+.cell.travel-step .floor{
+  border-color:#f1cf82!important;
+  box-shadow:0 0 28px #e0b65cbb,0 0 48px #d2a65355!important;
+  filter:brightness(1.28) saturate(1.08);
+}
+
+#message{height:54px!important;min-height:54px;border-top:1px solid #403a34;background:#12100f;border-radius:10px;padding:7px 12px!important;justify-content:flex-start!important;text-align:left!important;font-size:12px!important;line-height:16px}
+#diceOverlay{background:rgba(7,6,5,.55)!important;backdrop-filter:blur(2px)}
+.encounterPanel{width:min(88%,360px);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.eventCard{width:148px;height:174px;border:2px solid #8d5149;border-radius:13px;background:radial-gradient(circle,#542f2b,#181312 70%);box-shadow:0 0 26px #8e433b44;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:eventIn .18s ease-out}
+.eventCard.trap{border-color:#a87345;background:radial-gradient(circle,#55402b,#181411 70%)}.eventCard.heal{border-color:#65916f;background:radial-gradient(circle,#304c37,#111512 70%)}
+#eventArt{font-size:58px;line-height:1}.eventCard .diceTitle{font-size:10px;letter-spacing:1.5px;font-weight:900;color:#e1c99b}
+#tapContinue{opacity:0;font-size:10px;letter-spacing:2px;color:#92887b;transition:opacity .15s}.resolved #tapContinue{opacity:1}
+.cell.entry-pulse .floor{animation:roomEntry .2s ease-out}@keyframes roomEntry{0%{transform:scale(.82);filter:brightness(1.8)}100%{transform:scale(1);filter:brightness(1)}}@keyframes eventIn{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+/* Landmarks stay readable while their room surfaces retain distance lighting. */
+.cell.landmark .floor,.cell.landmark .icon,.cell.landmark .event{opacity:var(--room-opacity);filter:saturate(var(--room-saturation))}
+.cell.landmark .startMark,.cell.landmark .exitMark{left:50%;transform:translateX(-50%);z-index:9;white-space:nowrap;font-size:9px;font-weight:900;letter-spacing:.5px;line-height:15px;padding:0 4px;border-radius:4px;background:#151310e6;text-shadow:0 1px 3px #000;opacity:1}
+.cell.landmark .startMark{top:-8px;color:#e1e8f0;border:1px solid #aeb9cd88;box-shadow:0 0 7px #cedaf333}
+.cell.landmark .exitMark{bottom:-8px;color:#ffe0a0;border:1px solid #d4b47399;box-shadow:0 0 8px #eac47944}
+.cell.exit-landmark::before{content:"";position:absolute;inset:-2px;z-index:7;border:1px solid #edca83;border-radius:8px;pointer-events:none;animation:exitBeacon 2.4s ease-in-out infinite}
+.cell.scavenged .floor::after{content:"✓";position:absolute;right:2px;top:0;color:#8c8275;font-size:8px;font-weight:900;text-shadow:0 1px 2px #000}
+.cell.clued:not(.searched) .floor{border-color:#79a5b5;box-shadow:0 0 12px #69a4bd55,inset 0 2px #ffffff0b}
+.cell.clued:not(.searched)::before{content:"⌁";position:absolute;left:50%;top:-8px;transform:translateX(-50%);z-index:9;color:#a8d6e7;font-size:11px;text-shadow:0 0 6px #72bad5}
+@keyframes exitBeacon{0%,100%{opacity:.5;box-shadow:0 0 4px #ebc47a22}50%{opacity:.95;box-shadow:0 0 10px #ebc47a66}}
+@media(prefers-reduced-motion:reduce){.cell.exit-landmark::before{animation:none;opacity:.75}}
+
+/* V2.9 readability hierarchy */
+.cell .floor{transition:background .2s ease,border-color .2s ease,box-shadow .25s ease,filter .2s ease}
+.cell.current{opacity:1!important;filter:none!important;z-index:12}
+.cell.current .floor{background:radial-gradient(circle at 50% 38%,#8a754f 0,#62543e 45%,#423a31 100%)!important;border-color:#ffe09a!important;box-shadow:0 0 18px #ffd579dd,0 0 42px #d9a94f88,0 0 72px #c58a3044,inset 0 2px #fff5c955,inset 0 -4px #21170d88!important;filter:brightness(1.25) saturate(1.08)}
+.cell.current .currentGlyph{font-size:22px;color:#fff0bd;text-shadow:0 0 5px #fff3c7,0 0 13px #efbc58,0 2px 3px #000;animation:currentBreath 1.8s ease-in-out infinite;transform-origin:center}
+.cell.light-near:not(.current) .floor{filter:brightness(1.13);box-shadow:0 0 15px #c8a45d55,inset 0 2px #ffffff14,inset 0 -3px #0006}
+.cell.light-mid:not(.current) .floor{filter:brightness(.92);box-shadow:0 0 8px #b8945828,inset 0 2px #ffffff0b,inset 0 -3px #0006}
+.cell.light-far:not(.current) .floor{filter:brightness(.66)}
+.cell.current-arrival .floor{animation:currentArrival .28s ease-out}
+.cell.travel-step.current .floor{animation:travelArrival .18s ease-out}
+.cell.entry-pulse.current .floor{animation:roomEntry .2s ease-out}
+@keyframes currentBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes currentArrival{0%{transform:scale(.86);filter:brightness(2)}55%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes travelArrival{0%{transform:scale(.82);filter:brightness(2.2)}100%{transform:scale(1);filter:brightness(1.25)}}
+
+/* Ambiguous tendency hints: never event names or event icons. */
+.cell.unknown.hint-danger .floor{background:radial-gradient(circle at 50% 65%,rgba(164,69,42,var(--hint-alpha)),#40362f 70%);border-color:rgba(184,91,58,.72)}
+.cell.unknown.hint-fortune .floor{background:radial-gradient(circle at 68% 30%,rgba(202,163,67,var(--hint-alpha)),#413a2f 68%);border-color:rgba(190,154,67,.78)}
+.cell.unknown.hint-safe .floor{background:radial-gradient(circle at 45% 45%,rgba(70,145,101,var(--hint-alpha)),#333d35 72%);border-color:rgba(87,157,112,.72)}
+.cell.unknown.hint-fortune::after{content:"";position:absolute;right:5px;top:5px;width:2px;height:2px;border-radius:50%;z-index:7;background:#f5d47e;box-shadow:-5px 7px #c8a856,3px 10px #8f783e;opacity:calc(.35 + var(--hint-alpha));pointer-events:none}
+.cell.frontier{opacity:var(--frontier-room-opacity)!important}.cell.frontier .icon{opacity:1!important;color:#e1d8c9;font-size:15px;text-shadow:0 1px 3px #000,0 0 7px #d6c49a88;animation:frontierBreath 2.8s ease-in-out infinite}.cell.frontier .floor{opacity:var(--frontier-floor-opacity);filter:brightness(var(--frontier-brightness))}.cell.frontier.hint-danger .floor,.cell.frontier.hint-fortune .floor,.cell.frontier.hint-safe .floor{box-shadow:0 0 9px rgba(190,145,75,var(--frontier-hint-alpha)),inset 0 2px #ffffff09}
+@keyframes frontierBreath{0%,100%{opacity:.72;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+@media(prefers-reduced-motion:reduce){.cell.current .currentGlyph{animation:none}.cell.current-arrival .floor,.cell.travel-step.current .floor{animation:none}}
+
+/* Room-local feedback and quick reward celebration */
+#feedbackLayer{position:absolute;inset:0;z-index:30;overflow:hidden;pointer-events:none}
+.roomFeedback{position:absolute;z-index:1;min-width:100px;text-align:center;font-weight:950;line-height:1.12;color:#fff4cf;text-shadow:0 2px 3px #000,0 0 7px #000;pointer-events:none;animation:feedbackFloat 1s ease-out forwards;white-space:nowrap}
+.roomFeedback .calc{font-size:9px;color:#f4d58a;letter-spacing:.4px}.roomFeedback .reward{font-size:19px}.roomFeedback.bad .reward{color:#ff9b85}.roomFeedback.clue .reward{color:#a9ddeb}.roomFeedback.fate .reward{color:#ffd575}
+@keyframes feedbackFloat{0%{opacity:0;transform:translateY(5px) scale(.88)}15%{opacity:1;transform:translateY(0) scale(1.06)}72%{opacity:1}100%{opacity:0;transform:translateY(-20px) scale(1)}}
+.cell.treasure-celebrate .floor{animation:treasureFlash .9s ease-out!important}.cell.rich-celebrate .floor{animation:richFlash 1.05s ease-out!important}
+.cell.treasure-celebrate .event{animation:treasurePop .75s cubic-bezier(.2,.9,.25,1.35)}
+.coinParticle{position:absolute;left:50%;top:48%;z-index:25;width:4px;height:4px;border-radius:50%;background:#ffd66d;box-shadow:0 0 5px #ffc13b;pointer-events:none;animation:coinBurst var(--dur) ease-out forwards}
+@keyframes treasureFlash{0%{filter:brightness(2.5);box-shadow:0 0 16px #ffd66d,0 0 44px #d99b28}100%{filter:brightness(1.25)}}
+@keyframes richFlash{0%{filter:brightness(3);box-shadow:0 0 22px #fff0a0,0 0 58px #e0a438,0 0 82px #ad6bd655}100%{filter:brightness(1.25)}}
+@keyframes treasurePop{0%{transform:scale(.4) rotate(-12deg)}42%{transform:scale(1.75) rotate(8deg)}72%{transform:scale(.9)}100%{transform:scale(1)}}
+@keyframes coinBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.4)}}
+.tutorialGesture{position:absolute;left:50%;bottom:78%;transform:translateX(-50%);z-index:22;color:#fff0bd;text-align:center;font-size:9px;font-weight:950;line-height:10px;letter-spacing:1px;text-shadow:0 1px 4px #000;pointer-events:none;animation:tutorialBob 1.8s ease-in-out infinite}
+.tutorialGesture b{display:block;font-size:15px;line-height:15px}.tutorialGesture::after{content:"";position:absolute;left:50%;top:27px;width:30px;height:30px;transform:translateX(-50%);border-radius:8px;padding:2px;background:conic-gradient(#f0ca78 0 135deg,transparent 135deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.72;animation:tutorialRing 1.8s ease-in-out infinite}
+.cell.exit-landmark.floor-complete::before{border-color:#f6dc8c;box-shadow:0 0 12px #f5d77a99,0 0 25px #d8a84244;opacity:1}
+@keyframes tutorialBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-4px)}}
+@keyframes tutorialRing{0%,100%{opacity:.3}50%{opacity:.9}}
+#message{color:#d9cba9;font-weight:750;letter-spacing:.2px}
+.scoreCounting{color:#ffe08a;text-shadow:0 0 8px #e9b94f}
+@media(prefers-reduced-motion:reduce){.roomFeedback,.cell.treasure-celebrate .floor,.cell.rich-celebrate .floor,.cell.treasure-celebrate .event,.coinParticle,.tutorialGesture,.tutorialGesture::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+/* Stronger encounter die: dark relic, energetic tumble, decisive landing. */
+.die{position:relative;width:104px;height:104px;margin:14px auto 8px;background:radial-gradient(circle at 38% 30%,#493f33 0,#211d19 48%,#0e0c0b 100%);color:#ffe5a2;border:2px solid #8f7447;border-radius:20px;font-size:74px;text-shadow:0 0 10px #ffd36dbb,0 3px 4px #000;box-shadow:0 8px 22px #000b,inset 0 2px #ffffff16,inset 0 -5px #0008;transform-style:preserve-3d}
+.die::before{content:"";position:absolute;inset:-8px;border:1px solid #c99d5244;border-radius:22px;opacity:.55;box-shadow:0 0 18px #d29d4144;pointer-events:none}
+.die.rolling{width:132px;height:132px;font-size:92px;margin:0 auto 2px;border-radius:24px;animation:diceTumble .34s cubic-bezier(.4,0,.6,1) infinite;box-shadow:0 0 32px #e2ad52cc,0 13px 30px #000d,inset 0 2px #fff4c444}
+.die.rolling::before{opacity:1;box-shadow:0 0 28px #e2aa4c88;animation:dieAura .34s ease-in-out infinite alternate}
+.die.landed{animation:dieLand .42s cubic-bezier(.2,.8,.25,1.2)}
+@keyframes diceTumble{0%{transform:translateY(5px) rotate(-14deg) rotateY(0) scale(.82);filter:brightness(.8)}25%{transform:translateY(-9px) rotate(11deg) rotateY(90deg) scale(1.1);filter:brightness(1.45)}50%{transform:translateY(2px) rotate(-8deg) rotateY(180deg) scale(.94)}75%{transform:translateY(-7px) rotate(14deg) rotateY(270deg) scale(1.08);filter:brightness(1.35)}100%{transform:translateY(5px) rotate(-14deg) rotateY(360deg) scale(.82);filter:brightness(.8)}}
+@keyframes dieLand{0%{transform:translateY(-12px) rotate(8deg) scale(1.22);filter:brightness(1.8)}45%{transform:translateY(3px) rotate(-3deg) scale(.92)}72%{transform:translateY(-2px) rotate(1deg) scale(1.06)}100%{transform:none;filter:none}}
+@keyframes dieAura{from{transform:scale(.9);opacity:.35}to{transform:scale(1.12);opacity:1}}
+.diceResult.rollCall{font-size:25px;letter-spacing:1.5px;color:#ffe09a;text-shadow:0 0 12px #e5ae50aa}
+.diceDetail .outcome{display:block;margin-bottom:4px;font-size:22px;line-height:24px;color:#fff0c5;letter-spacing:1px;text-shadow:0 0 10px #d9a84f77}.diceDetail .consequence{display:block;font-size:12px;color:#c8bcad}
+@media(prefers-reduced-motion:reduce){.die.rolling,.die.rolling::before,.die.landed{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<div id="game">
+<div id="hud"><div class="stat"><div class="label">Health</div><div class="value" id="hp"></div></div><div class="stat"><div class="label">Gold</div><div class="value" id="gold">0</div></div><div class="stat"><div class="label">Floor</div><div class="value" id="floorNo">1</div></div><div class="stat"><div class="label">Fate</div><div class="value" id="combo">x1.0</div></div></div>
+<div id="board"><div id="feedbackLayer"></div></div><div id="message"></div></div>
+<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard"><div id="eventArt">👹</div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
+
+<script>
+(function(){
+"use strict";
+var W=9,H=9,N=W*H,rooms=[],startId=0,exitId=0,currentId=0,history=[],searched={},hp=3,shield=false,gold=0,score=0,combo=1,floorNo=1,gameOver=false,totalMoves=0,floorDamage=0,perfectFloors=0,pendingAction=null,fastTravelTimer=null,fastTravelTarget=null,fastTraveling=false,encounterResolved=false,encounterCloseAction=null,holdAction=null,arrivalId=null,arrivalTimer=null,floorPerfectAwarded=false,scoreAnimation=null;
+var hintProfile={range:1,strength:.32,accuracy:.68,exactRevealChance:0,frontierMinStrength:.13};
+function $(id){return document.getElementById(id)} function room(id){return rooms[id]}
+var runtimeLearned={};
+function learned(name){try{return localStorage.getItem("dof."+name)==="1"}catch(e){return!!runtimeLearned[name]}}
+function learn(name){runtimeLearned[name]=true;try{localStorage.setItem("dof."+name,"1")}catch(e){}}
+function resetLearning(){runtimeLearned={};try{["learnedScavenge","learnedDescend","learnedFastTravel"].forEach(function(k){localStorage.removeItem("dof."+k)})}catch(e){}update()}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function adjacent(r){var a=[];if(r.x>0)a.push(rooms[r.id-1]);if(r.x<W-1)a.push(rooms[r.id+1]);if(r.y>0)a.push(rooms[r.id-W]);if(r.y<H-1)a.push(rooms[r.id+W]);return a}
+function generateDungeon(){
+ rooms=[];for(var i=0;i<N;i++)rooms.push({id:i,x:i%W,y:Math.floor(i/W),active:false,links:[],known:false,visited:false,searched:false,scavenged:false,clued:false,event:"empty",hint:"neutral",exactHint:null});
+ var target=(floorNo===1?20+Math.floor(Math.random()*5):27+Math.floor(Math.random()*9)),root=Math.floor(Math.random()*N),active=[root];room(root).active=true;
+ while(active.length<target){var candidates=[];for(i=0;i<active.length;i++)adjacent(room(active[i])).forEach(function(n){if(!n.active&&candidates.indexOf(n.id)<0)candidates.push(n.id)});if(!candidates.length)break;var pick=candidates[Math.floor(Math.random()*candidates.length)];room(pick).active=true;active.push(pick)}
+ var connected={},frontier=[root];connected[root]=true;
+ while(frontier.length){var fi=Math.floor(Math.random()*frontier.length),from=room(frontier[fi]),opts=adjacent(from).filter(function(n){return n.active&&!connected[n.id]});if(!opts.length){frontier.splice(fi,1);continue}var to=opts[Math.floor(Math.random()*opts.length)];from.links.push(to.id);to.links.push(from.id);connected[to.id]=true;frontier.push(to.id)}
+ var possible=[];for(i=0;i<N;i++){var rr=room(i);if(!rr.active)continue;adjacent(rr).forEach(function(n){if(n.active&&n.id>rr.id&&rr.links.indexOf(n.id)<0)possible.push([rr,n])})}shuffle(possible);for(i=0;i<Math.floor(target*.14)&&i<possible.length;i++){possible[i][0].links.push(possible[i][1].id);possible[i][1].links.push(possible[i][0].id)}
+ chooseEndpoints();placeEvents();assignRoomHints();
+}
+function chooseEndpoints(){var d=[],q=[],i;do{startId=Math.floor(Math.random()*N)}while(!room(startId).active);for(i=0;i<N;i++)d[i]=-1;d[startId]=0;q.push(startId);for(i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(d[id]<0){d[id]=d[q[i]]+1;q.push(id)}});var far=[];for(i=0;i<N;i++)if(room(i).active&&i!==startId)far.push(i);far.sort(function(a,b){return d[b]-d[a]});exitId=far[Math.floor(Math.random()*Math.min(5,far.length))]}
+function distancesFrom(id){var d={},q=[id];d[id]=0;for(var i=0;i<q.length;i++)room(q[i]).links.forEach(function(n){if(d[n]===undefined){d[n]=d[q[i]]+1;q.push(n)}});return d}
+function placeEvents(){
+ var ids=[],events=["treasure","treasure","treasure","treasure","rich","monster","monster","trap","trap","heal","key"],used={};
+ for(var i=0;i<N;i++)if(room(i).active&&i!==startId&&i!==exitId)ids.push(i);
+ if(floorNo===1){
+  var d=distancesFrom(startId),near=ids.filter(function(id){return d[id]===1}),early=ids.filter(function(id){return d[id]>=1&&d[id]<=2});shuffle(near);shuffle(early);
+  if(near[0]!==undefined){room(near[0]).event="empty";used[near[0]]=true}
+  var treasure=near.filter(function(id){return!used[id]})[0];if(treasure===undefined)treasure=early.filter(function(id){return!used[id]})[0];if(treasure!==undefined){room(treasure).event="treasure";used[treasure]=true}
+  var danger=early.filter(function(id){return!used[id]})[0];if(danger!==undefined){room(danger).event=Math.random()<.55?"monster":"trap";used[danger]=true}
+ }
+ ids=shuffle(ids.filter(function(id){return!used[id]}));
+ for(i=0;i<events.length&&i<ids.length;i++)room(ids[i]).event=events[i]
+}
+function eventTendency(event){if(event==="monster"||event==="trap")return"danger";if(event==="treasure"||event==="rich"||event==="key")return"fortune";if(event==="heal")return"safe";return"neutral"}
+function assignRoomHints(){
+ var kinds=["danger","fortune","safe","neutral"];
+ rooms.forEach(function(r){
+  if(!r.active||r.id===startId){r.hint="neutral";return}
+  var trueHint=r.id===exitId?"neutral":eventTendency(r.event);
+  r.hint=Math.random()<hintProfile.accuracy?trueHint:kinds[Math.floor(Math.random()*kinds.length)];
+  r.exactHint=hintProfile.exactRevealChance>0&&Math.random()<hintProfile.exactRevealChance?r.event:null
+ })
+}
+function hintForRoom(r,distance){
+ if(r.searched)return null;
+ var nearby=distance<=hintProfile.range,strength=nearby?hintProfile.strength*(1-(distance-1)*.35):hintProfile.frontierMinStrength;
+ return{tendency:r.hint,strength:Math.max(0,Math.min(1,strength)),exactEvent:nearby?r.exactHint:null}
+}
+function revealNeighbors(id){room(id).links.forEach(function(n){room(n).known=true})}
+function knownDistance(id){if(id===currentId)return 0;var dist={},q=[currentId];dist[currentId]=0;for(var k=0;k<q.length;k++)room(q[k]).links.forEach(function(n){if(!room(n).known||dist[n]!==undefined)return;dist[n]=dist[room(q[k]).id]+1;q.push(n)});return dist[id]===undefined?6:dist[id]}
+function routeDistance(id){var best=999;for(var i=0;i<history.length;i++)if(history[i]===id)best=Math.min(best,history.length-1-i);return best<999?best:knownDistance(id)}
+$("diceOverlay").addEventListener("pointerup",function(e){if(encounterResolved&&encounterCloseAction){e.preventDefault();var fn=encounterCloseAction;fn();setTimeout(function(){if(!pendingAction&&!gameOver){if(!awardPerfectFloor())updateContext()}},0)}},{passive:false});
+function beginRun(){hp=3;shield=false;gold=0;score=0;combo=1;floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
+function newFloor(first,announcement){document.querySelectorAll(".roomFeedback").forEach(function(el){el.remove()});generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;updateContext(announcement||"");update();markArrival(startId)}
+function markArrival(id){arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340)}
+
+function usefulFastTravelExists(){return rooms.some(function(r){return r.visited&&r.id!==currentId&&room(currentId).links.indexOf(r.id)<0&&shortestVisitedPath(currentId,r.id)})}
+function updateContext(temporary){
+ if(temporary){$("message").textContent=temporary;return}
+ if(gameOver)return;
+ var r=room(currentId);
+ if(currentId===exitId&&r.searched){$("message").textContent="▼ EXIT — Hold ◆ to descend"+(unexploredCount()?" • "+unexploredCount()+" unexplored":" • Floor complete");return}
+ if(pendingAction){$("message").textContent="";return}
+ if(!learned("learnedFastTravel")&&usefulFastTravelExists()){$("message").textContent="⚡ Hold a distant visited room to Fast Travel • FATE will reset";return}
+ if(r.scavenged){$("message").textContent="✓ Nothing more to search here";return}
+ if(r.searched){$("message").textContent="✦ Hold ◆ to Scavenge";return}
+ $("message").textContent=""
+}
+function showLocalFeedback(id,reward,kind,calc,duration){
+ var board=$("board"),layer=$("feedbackLayer"),r=room(id),cell=document.querySelector('.cell[data-id="'+id+'"]');if(!board||!layer||!r||!r.active)return null;
+ var el=document.createElement("div");el.className="roomFeedback "+(kind||"");el.style.animationDuration=(duration||1000)+"ms";
+ el.dataset.roomId=id;el.style.visibility="hidden";el.style.maxWidth=Math.max(100,board.clientWidth-20)+"px";
+ if(calc){var c=document.createElement("div");c.className="calc";c.textContent=calc;el.appendChild(c)}
+ var v=document.createElement("div");v.className="reward";v.textContent=reward;el.appendChild(v);layer.appendChild(el);
+ var boardRect=board.getBoundingClientRect(),cellRect=cell?cell.getBoundingClientRect():null,pad=12,w=el.offsetWidth,h=el.offsetHeight;
+ var centerX=cellRect?cellRect.left-boardRect.left+cellRect.width/2:(r.x/W*board.clientWidth+board.clientWidth/W/2);
+ var roomTop=cellRect?cellRect.top-boardRect.top:(r.y/H*board.clientHeight),roomBottom=cellRect?cellRect.bottom-boardRect.top:roomTop+board.clientHeight/H;
+ var x=Math.max(pad,Math.min(board.clientWidth-w-pad,centerX-w/2)),y=roomTop-h-8;if(y<pad+22)y=roomBottom+8;y=Math.max(pad+22,Math.min(board.clientHeight-h-pad,y));
+ el.style.left=x+"px";el.style.top=y+"px";el.style.visibility="visible";
+ setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el)},(duration||1000)+80);return el
+}
+function animateGold(from,to,duration){
+ if(scoreAnimation)cancelAnimationFrame(scoreAnimation);var start=performance.now();$("gold").classList.add("scoreCounting");
+ function tick(now){var t=Math.min(1,(now-start)/(duration||850)),ease=1-Math.pow(1-t,3);$("gold").textContent=Math.floor(from+(to-from)*ease).toLocaleString();if(t<1)scoreAnimation=requestAnimationFrame(tick);else{$("gold").classList.remove("scoreCounting");scoreAnimation=null}}
+ scoreAnimation=requestAnimationFrame(tick)
+}
+function celebrateTreasure(id,base,gain,fate,rich,goldBefore){
+ var cell=document.querySelector('.cell[data-id="'+id+'"]');if(!cell)return;
+ cell.classList.add("treasure-celebrate");if(rich)cell.classList.add("rich-celebrate");
+ var source=room(id),count=rich?16:9;for(var i=0;i<count;i++){var p=document.createElement("i"),a=(Math.PI*2*i/count)+(Math.random()*.35),distance=(rich?30:22)+Math.random()*(rich?24:16),dx=Math.cos(a)*distance,dy=Math.sin(a)*distance-12;if(source.x<=1&&dx<0)dx=Math.abs(dx)*.65;if(source.x>=W-2&&dx>0)dx=-Math.abs(dx)*.65;if(source.y<=1&&dy<0)dy=Math.abs(dy)*.55;if(source.y>=H-2&&dy>0)dy=-Math.abs(dy)*.65;p.className="coinParticle";p.style.setProperty("--dx",dx+"px");p.style.setProperty("--dy",dy+"px");p.style.setProperty("--dur",(650+Math.random()*350)+"ms");cell.appendChild(p)}
+ var calc=fate>1.04?base+" × FATE "+fate.toFixed(1):rich?"✦ RICH TREASURE! ✦":"TREASURE!";
+ showLocalFeedback(id,"+"+gain+" GOLD",rich?"fate":"",calc,rich?1150:980);animateGold(goldBefore,gold,rich?1050:850);
+ setTimeout(function(){if(cell){cell.classList.remove("treasure-celebrate","rich-celebrate")}},1200)
+}
+function awardPerfectFloor(){
+ if(floorPerfectAwarded||unexploredCount()!==0)return false;
+ floorPerfectAwarded=true;perfectFloors++;var bonus=Math.floor((250+floorNo*100)*combo);score+=bonus;update();showLocalFeedback(currentId,"Every room explored","fate","✦ PERFECT FLOOR! ✦",1200);updateContext("✦ PERFECT FLOOR! ✦  Every room explored");return true
+}
+
+function activeRoomCount(){return rooms.filter(function(r){return r.active}).length}
+function searchedRoomCount(){return rooms.filter(function(r){return r.active&&r.searched}).length}
+function unexploredCount(){return activeRoomCount()-searchedRoomCount()}
+function exitMessage(){var left=unexploredCount();return "EXIT REACHED — Hold to descend"+(left?" • "+left+" room"+(left===1?"":"s")+" unexplored":" • PERFECT FLOOR")}
+
+function shortestVisitedPath(from,to){
+ var prev={},q=[from],seen={};seen[from]=true;
+ for(var k=0;k<q.length;k++){
+  var at=q[k];if(at===to)break;
+  room(at).links.forEach(function(n){
+   if(seen[n]||!room(n).visited)return;
+   seen[n]=true;prev[n]=at;q.push(n)
+  })
+ }
+ if(!seen[to])return null;
+ var path=[to],p=to;
+ while(p!==from){p=prev[p];if(p===undefined)return null;path.push(p)}
+ path.reverse();return path
+}
+function clearFastPreview(){
+ if(fastTravelTimer){clearTimeout(fastTravelTimer);fastTravelTimer=null}
+ fastTravelTarget=null;
+ holdAction=null;
+ document.querySelectorAll(".fast-target,.fast-charge").forEach(function(el){
+  el.classList.remove("fast-target","fast-charge");
+  el.style.removeProperty("--charge")
+ })
+ if(!fastTraveling&&!pendingAction)updateContext()
+}
+function previewFastTravel(id){
+ if(fastTraveling||pendingAction||gameOver||id===currentId||!room(id).visited)return false;
+ var path=shortestVisitedPath(currentId,id);
+ if(!path||path.length<3)return false;
+
+ clearFastPreview();
+ fastTravelTarget=id;
+ holdAction="fast";
+
+ var target=document.querySelector('.cell[data-id="'+id+'"]');
+ if(target){
+  target.classList.add("fast-target","fast-charge");
+  target.style.setProperty("--charge","0deg")
+ }
+
+ var started=performance.now(),hold=320;
+ function charge(now){
+  if(fastTravelTarget!==id)return;
+  var t=Math.min(1,(now-started)/hold);
+  if(target)target.style.setProperty("--charge",(t*360)+"deg");
+  if(t<1)requestAnimationFrame(charge)
+ }
+ requestAnimationFrame(charge);
+
+ $("message").textContent="⚡ FAST TRAVEL — FATE ×"+combo.toFixed(1)+" → ×1";
+ fastTravelTimer=setTimeout(function(){
+  fastTravelTimer=null;
+  if(fastTravelTarget===id)startFastTravel(id)
+ },hold);
+ return true
+}
+function previewCurrentAction(id){
+ if(fastTraveling||pendingAction||gameOver||id!==currentId||!room(id).searched)return false;
+ var action=id===exitId?"descend":"scavenge";
+ if(action==="scavenge"&&room(id).scavenged){$("message").textContent="This room has already been scavenged.";return false}
+ clearFastPreview();fastTravelTarget=id;holdAction=action;
+ var target=document.querySelector('.cell[data-id="'+id+'"]');
+ if(target){target.classList.add("fast-target","fast-charge");target.style.setProperty("--charge","0deg")}
+ var started=performance.now(),hold=320;
+ function charge(now){if(fastTravelTarget!==id||holdAction!==action)return;var t=Math.min(1,(now-started)/hold);if(target)target.style.setProperty("--charge",(t*360)+"deg");if(t<1)requestAnimationFrame(charge)}
+ requestAnimationFrame(charge);
+ $("message").textContent=action==="descend"?"▼ EXIT — Hold this room to descend":"✦ Hold ◆ to Scavenge";
+ fastTravelTimer=setTimeout(function(){fastTravelTimer=null;if(fastTravelTarget!==id||holdAction!==action)return;fastTravelTarget=null;holdAction=null;if(target){target.classList.remove("fast-target","fast-charge");target.style.removeProperty("--charge")}if(action==="descend")descend();else scavenge(id)},hold);
+ return true
+}
+function startFastTravel(id){
+ var path=shortestVisitedPath(currentId,id);
+ if(!path||path.length<3){clearFastPreview();return}
+ var fateBefore=combo;
+
+ fastTravelTarget=null;
+ fastTraveling=true;
+ document.querySelectorAll(".fast-target,.fast-charge").forEach(function(el){
+  el.classList.remove("fast-target","fast-charge");
+  el.style.removeProperty("--charge")
+ });
+
+ var step=1;
+ function hop(){
+  if(step>=path.length){
+   combo=1;
+   fastTraveling=false;
+   update();
+   showLocalFeedback(currentId,"×"+fateBefore.toFixed(1)+" → ×1","bad","FATE BROKEN",1100);learn("learnedFastTravel");updateContext();
+   return
+  }
+
+  currentId=path[step];markArrival(currentId);
+  history.push(currentId);
+  totalMoves++;
+  update();
+
+  var el=document.querySelector('.cell[data-id="'+currentId+'"]');
+  if(el){
+   el.classList.add("travel-step");
+   setTimeout(function(){el.classList.remove("travel-step")},110)
+  }
+
+  step++;
+  setTimeout(hop,Math.max(55,95-step*6))
+ }
+ hop()
+}
+
+function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;currentId=id;markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){update();updateContext();return}pendingAction="room-entry";update();var rid=id;setTimeout(function(){var el=document.querySelector('.cell[data-id="'+rid+'"]');if(el)el.classList.add("entry-pulse");setTimeout(function(){searchCurrentRoom(rid)},170)},20)}
+function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
+function resolveSimpleEvent(event){
+ var gain,base,goldBefore=gold,fateBefore=combo;
+ switch(event){
+  case"treasure":base=Math.floor(180*(1+Math.floor((floorNo-1)/5)*.1));gain=Math.floor(base*combo);gold+=gain;score+=gain;combo=Math.min(5,combo+.35);update();(function(roomId,b,g,f,s){setTimeout(function(){celebrateTreasure(roomId,b,g,f,false,s)},210)})(currentId,base,gain,fateBefore,goldBefore);break;
+  case"rich":base=Math.floor(600*(1+Math.floor((floorNo-1)/5)*.15));gain=Math.floor(base*combo);gold+=gain;score+=gain;combo=Math.min(6,combo+.6);update();(function(roomId,b,g,f,s){setTimeout(function(){celebrateTreasure(roomId,b,g,f,true,s)},210)})(currentId,base,gain,fateBefore,goldBefore);break;
+  case"key":gain=Math.floor((125+floorNo*10)*combo);gold+=gain;score+=gain+125;combo=Math.min(5,combo+.5);update();showLocalFeedback(currentId,"+"+gain+" GOLD","","ANCIENT KEY",1000);animateGold(goldBefore,gold,850);break;
+  default:gain=Math.floor(35*combo*(1+floorNo*.04));score+=gain;update();(function(roomId){setTimeout(function(){if(currentId===roomId)showLocalFeedback(roomId,"ROOM SEARCHED","","",1150)},210)})(currentId)
+ }
+ if(combo-fateBefore>=.3)(function(roomId,newFate){setTimeout(function(){showLocalFeedback(roomId,"FATE ↑ ×"+newFate.toFixed(1),"fate","",900)},1450)})(currentId,combo);
+ if(!awardPerfectFloor())updateContext()
+}
+function resolveDice(type,roll){var result="",detail="";if(type==="monster"){if(roll<=2){hp--;combo=1;floorDamage++;result="WOUNDED";detail="The monster hits you. -1 ❤️"}else if(roll<=4){var safe=Math.floor(80*combo);score+=safe;result="ESCAPED";detail="You slip away. +"+safe+" score"}else if(roll===5){var win=Math.floor(220*combo);score+=win;combo=Math.min(6,combo+.5);result="VICTORY";detail="Guardian defeated! +"+win+" score"}else{var crit=Math.floor(450*combo);score+=crit;combo=Math.min(6,combo+1);result="CRITICAL!";detail="Perfect strike! +"+crit+" score"}}else if(type==="trap"){if(roll<=2){hp--;combo=1;floorDamage++;result="TRIGGERED";detail="The trap catches you. -1 ❤️"}else if(roll<=4){combo=1;result="CLOSE CALL";detail="You avoid the worst, but lose your FATE."}else{var tg=Math.floor(90*combo);score+=tg;combo=Math.min(6,combo+.2);result="AVOIDED";detail="You spot the mechanism. +"+tg+" score"}}else{if(roll<=2){result="FADED";detail="The shrine has no power."}else if(roll<=4){hp=Math.min(3,hp+1);result="RESTORED";detail="+1 ❤️"}else if(roll===5){hp=Math.min(3,hp+1);var hg=Math.floor((120+floorNo*10)*combo);score+=hg;result="BLESSED";detail="+1 ❤️ and +"+hg+" score"}else{hp=3;var fg=Math.floor((250+floorNo*20)*combo);score+=fg;combo=Math.min(6,combo+.4);result="MIRACLE";detail="Full heal! +"+fg+" score"}}$("diceResult").textContent=result;$("diceDetail").textContent=detail;$("message").textContent=detail;encounterResolved=true;$("diceOverlay").classList.add("resolved");encounterCloseAction=function(){$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved");encounterResolved=false;encounterCloseAction=null;pendingAction=null;update();if(hp<=0)finish("YOU DIED")}}
+function showDice(type){
+ encounterResolved=false;encounterCloseAction=null;var o=$("diceOverlay"),c=$("eventCard"),die=$("die"),result=$("diceResult"),detail=$("diceDetail");
+ o.classList.remove("resolved");c.className="eventCard "+type;$("eventArt").textContent=type==="monster"?"👹":type==="trap"?"⚠️":"✚";$("diceTitle").textContent=type==="monster"?"MONSTER ENCOUNTER":type==="trap"?"TRAP":"SHRINE";
+ die.className="die";die.textContent="⚄";result.className="diceResult";result.textContent=type==="monster"?"BATTLE ROLL":type==="heal"?"BLESSING ROLL":"FATE ROLL";detail.textContent="GET READY...";o.style.display="flex";
+ setTimeout(function(){
+  if(o.style.display!=="flex")return;die.className="die rolling";detail.textContent="ROLLING...";
+  var faces=["⚀","⚁","⚂","⚃","⚄","⚅"],ticks=0,roller=setInterval(function(){
+   die.textContent=faces[Math.floor(Math.random()*6)];
+   if(++ticks>=9){clearInterval(roller);var rolled=1+Math.floor(Math.random()*6);die.textContent=faces[rolled-1];die.className="die landed";result.textContent="";detail.textContent="";
+    setTimeout(function(){
+     resolveDice(type,rolled);var outcome=result.textContent,consequence=detail.textContent;result.className="diceResult rollCall";result.textContent="ROLLED "+rolled;detail.textContent="";var strong=document.createElement("b");strong.className="outcome";strong.textContent=outcome;var explanation=document.createElement("span");explanation.className="consequence";explanation.textContent=consequence;detail.appendChild(strong);detail.appendChild(explanation)
+    },210)
+   }
+  },90)
+ },250)
+}
+var resolveDiceCore=resolveDice;
+resolveDice=function(type,roll){
+ var fateBefore=combo,hpBefore=hp,shieldBefore=shield,scoreBefore=score,goldBefore=gold,damageBefore=floorDamage;
+ resolveDiceCore(type,roll);
+ var encounterGold=score-scoreBefore;if(encounterGold>0){gold+=encounterGold;$("diceDetail").textContent=$("diceDetail").textContent.replace(/score/gi,"Gold")}
+ if(hp<hpBefore&&shieldBefore){hp=hpBefore;shield=false;floorDamage=damageBefore;$("diceResult").textContent="BLOCKED";$("diceDetail").textContent="Divine Shield absorbs the damage. 🛡"}
+ if(type==="heal"&&roll<=2){$("diceResult").textContent="SILENT";$("diceDetail").textContent="The shrine is silent."}
+ if(type==="heal"&&roll>=3&&hpBefore>=3){
+  hp=3;gold=goldBefore;score=scoreBefore;combo=fateBefore;
+  if(!shieldBefore){shield=true;$("diceResult").textContent="DIVINE SHIELD";$("diceDetail").textContent="The next point of damage will be absorbed. 🛡"}
+  else{var blessing=Math.floor((55+floorNo*5)*combo);shield=true;gold=goldBefore+blessing;score=scoreBefore+blessing;combo=Math.min(6,combo+.15);$("diceResult").textContent="BLESSING";$("diceDetail").textContent="Shield renewed • +"+blessing+" Gold"}
+ }
+ if(fateBefore>1.04&&combo===1)$("diceDetail").textContent+=" • FATE BROKEN ×"+fateBefore.toFixed(1)+" → ×1";update()
+};
+function scavenge(id,forcedRoll){
+ if(id!==currentId||id===exitId||!room(id).searched||room(id).scavenged||pendingAction||fastTraveling)return false;
+ var r=room(id),first=!learned("learnedScavenge"),goldBefore=gold,fateBefore=combo;r.scavenged=true;var roll=first?.55:(forcedRoll===undefined?Math.random():forcedRoll),gain,candidates,clue,omen;
+ if(roll<.45){update();showLocalFeedback(id,"NOTHING FOUND","","SCAVENGED",950)}
+ else if(roll<.75){gain=Math.floor((25+floorNo*4)*combo);gold+=gain;score+=gain;update();showLocalFeedback(id,"+"+gain+" GOLD","",first?"FIRST FIND!":"SCAVENGED",1000);animateGold(goldBefore,gold,700)}
+ else if(roll<.85){gain=Math.floor((80+floorNo*8)*combo);gold+=gain;score+=gain;combo=Math.min(6,combo+.15);update();showLocalFeedback(id,"+"+gain+" GOLD","fate","LUCKY FIND!",1050);animateGold(goldBefore,gold,800)}
+ else if(roll<.95){candidates=rooms.filter(function(x){return x.active&&!x.searched&&x.id!==exitId});if(!candidates.length)candidates=rooms.filter(function(x){return x.active&&!x.searched});if(candidates.length){clue=candidates[Math.floor(Math.random()*candidates.length)];clue.known=true;clue.clued=true;omen=clue.id===exitId?"stairs":(clue.event==="monster"||clue.event==="trap")?"danger":(clue.event==="treasure"||clue.event==="rich"||clue.event==="key")?"fortune":"a quiet presence";update();showLocalFeedback(id,"CLUE!","clue","You sense "+omen,1100)}else{update();showLocalFeedback(id,"NO SECRETS REMAIN","clue","CLUE",1000)}}
+ else{pendingAction="trap";update();showLocalFeedback(id,"TRAP!","bad","SCAVENGE",750);showDice("trap")}
+ if(first)learn("learnedScavenge");if(combo-fateBefore>=.1)setTimeout(function(){showLocalFeedback(id,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},500);updateContext();return true
+}
+function descend(){
+ if(currentId!==exitId||!room(exitId).searched||pendingAction||fastTraveling)return false;
+ var perfect=unexploredCount()===0;if(perfect&&!floorPerfectAwarded)awardPerfectFloor();var exitBonus=Math.floor((300+floorNo*80)*combo),oldFate=combo;
+ score+=exitBonus;learn("learnedDescend");floorNo++;combo=Math.min(6,combo+.25);newFloor(false,"You descend deeper.");
+ showLocalFeedback(currentId,"DEEPER","","DESCENDED",950);if(combo-oldFate>=.2)setTimeout(function(){showLocalFeedback(currentId,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},520);return true
+}
+function finish(title){gameOver=true;$("endTitle").textContent=title;$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";$("overlay").style.display="flex"}
+function addLink(a,b){var e=document.createElement("div");e.className="link";var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}$("board").appendChild(e)}
+function render(){
+ var board=$("board"),feedbackLayer=$("feedbackLayer");Array.prototype.slice.call(board.children).forEach(function(el){if(el!==feedbackLayer)el.remove()});if(!feedbackLayer){feedbackLayer=document.createElement("div");feedbackLayer.id="feedbackLayer";board.appendChild(feedbackLayer)}
+
+ for(var i=0;i<N;i++){
+  var r=room(i);if(!r.active||!r.known)continue;
+  for(var j=0;j<r.links.length;j++){
+   var n=room(r.links[j]);
+   if(n.known&&n.id>r.id)addLink(r,n)
+  }
+ }
+
+ for(i=0;i<N;i++){
+  r=room(i);if(!r.active||!r.known)continue;
+
+  var cell=document.createElement("div"),d=knownDistance(r.id),hintData=hintForRoom(r,d);
+  cell.dataset.id=r.id;
+  cell.className="cell";
+  if(r.id===currentId)cell.className+=" current";
+  if(r.id===arrivalId)cell.className+=" current-arrival";
+  cell.className+=d===0?" light-current":d===1?" light-near":d===2?" light-mid":" light-far";
+  if(!r.searched)cell.className+=" unknown";
+  if(!r.searched)cell.className+=" frontier";
+  if(r.searched)cell.className+=" searched";
+  if(r.scavenged)cell.className+=" scavenged";
+  if(r.clued)cell.className+=" clued";
+  if(r.searched&&r.event!=="empty")cell.className+=" "+r.event;
+  if(r.id!==currentId&&room(currentId).links.indexOf(r.id)>=0)cell.className+=" available";
+  if(hintData&&hintData.tendency!=="neutral"){
+   cell.className+=" hint-"+hintData.tendency;
+   cell.dataset.hint=hintData.tendency;
+   cell.style.setProperty("--hint-alpha",hintData.strength.toFixed(2));
+  }
+  if(hintData&&hintData.exactEvent)cell.dataset.exactHint=hintData.exactEvent;
+
+  cell.style.left=(r.x/W*100+1.7)+"%";
+  cell.style.top=(r.y/H*100+1.7)+"%";
+  var lightOpacity=d===0?1:d===1?.94:d===2?.66:Math.max(.27,.46-(d-3)*.06);
+  var lightSaturation=d===0?1.08:d===1?1:d===2?.72:.48;
+  cell.style.opacity=lightOpacity;
+  cell.style.filter="saturate("+lightSaturation+")";
+  if(!r.searched){cell.style.setProperty("--frontier-room-opacity","1");cell.style.setProperty("--frontier-floor-opacity",lightOpacity);cell.style.setProperty("--frontier-brightness",d<=1?"1.08":d===2?".82":".58");cell.style.setProperty("--frontier-hint-alpha",hintData?Math.max(.12,hintData.strength).toFixed(2):".12");cell.style.filter="none"}
+  if(r.searched&&(r.id===startId||r.id===exitId)){
+   cell.className+=" landmark"+(r.id===exitId?" exit-landmark":"");
+   if(r.id===exitId&&floorPerfectAwarded)cell.className+=" floor-complete";
+   cell.style.setProperty("--room-opacity",lightOpacity);
+   cell.style.setProperty("--room-saturation",lightSaturation);
+   cell.style.opacity=1;cell.style.filter="none";
+  }
+
+  var floor=document.createElement("div");floor.className="floor";cell.appendChild(floor);
+  var icon=document.createElement("div");icon.className="icon"+(r.id===currentId?" currentGlyph":"");icon.textContent=r.id===currentId?"◆":r.searched?"·":"?";cell.appendChild(icon);
+
+  if(r.id===startId&&r.searched){
+   var sm=document.createElement("div");sm.className="startMark";sm.textContent="◇ START";cell.appendChild(sm)
+  }
+  if(r.id===exitId&&r.searched){
+   var xm=document.createElement("div");xm.className="exitMark";xm.textContent="↧ EXIT";cell.appendChild(xm)
+  }
+  if(r.id===currentId&&r.searched&&((r.id===exitId&&!learned("learnedDescend"))||(r.id!==exitId&&!r.scavenged&&!learned("learnedScavenge")))){
+   var tutor=document.createElement("div");tutor.className="tutorialGesture";tutor.innerHTML="HOLD<br>↓<b>"+(r.id===exitId?"▼":"◆")+"</b>";cell.appendChild(tutor)
+  }
+  if(r.searched&&r.event!=="empty"){
+   var ev=document.createElement("div");ev.className="event";
+   ev.textContent={treasure:"🪙",rich:"💎",monster:"👹",trap:"⚠️",heal:"✚",key:"🗝"}[r.event]||"";
+   cell.appendChild(ev)
+  }
+
+  (function(id,node){
+   var down=false,startX=0,startY=0,holdCandidate=false;
+
+   node.addEventListener("pointerdown",function(e){
+    if(e.pointerType==="mouse"&&e.button!==0)return;
+    down=true;startX=e.clientX;startY=e.clientY;
+    holdCandidate=(id===currentId&&room(id).searched)||(room(id).visited&&id!==currentId&&room(currentId).links.indexOf(id)<0);
+    if(id===currentId&&room(id).searched)previewCurrentAction(id);else if(holdCandidate)previewFastTravel(id)
+   },{passive:true});
+
+   node.addEventListener("pointermove",function(e){
+    if(!down)return;
+    if(Math.hypot(e.clientX-startX,e.clientY-startY)>14){
+     down=false;holdCandidate=false;clearFastPreview()
+    }
+   },{passive:true});
+
+   node.addEventListener("pointercancel",function(){
+    down=false;holdCandidate=false;clearFastPreview()
+   },{passive:true});
+
+   node.addEventListener("pointerup",function(e){
+    e.preventDefault();
+    if(e.pointerType==="mouse"&&e.button!==0)return;
+
+    var wasTraveling=fastTraveling;
+    var wasFastTarget=(fastTravelTarget===id);
+    down=false;
+
+    if(wasFastTarget){
+     clearFastPreview();
+     return
+    }
+    if(wasTraveling||holdCandidate)return;
+
+    enterRoom(id)
+   },{passive:false})
+  })(r.id,cell);
+
+  board.appendChild(cell)
+ }
+
+ var hint=document.createElement("div");
+ hint.id="hint";
+ hint.textContent="Tap adjacent • Hold current to Scavenge / Descend • Hold distant to Travel";
+ board.appendChild(hint)
+}
+function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="x"+combo.toFixed(1);render()}
+$("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
+window.__dofTest={
+ state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,event:r.event}}),startId:startId,exitId:exitId,currentId:currentId,floorNo:floorNo,hp:hp,shield:shield,gold:gold,score:score,combo:combo,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
+ enter:enterRoom,search:searchCurrentRoom,scavenge:scavenge,descend:descend,travel:startFastTravel,update:update,awardPerfectFloor:awardPerfectFloor,resolveSimple:resolveSimpleEvent,resolveDice:resolveDice,showFeedback:showLocalFeedback,celebrateTreasure:celebrateTreasure,resetLearning:resetLearning,newFloor:function(){newFloor(true,"")},
+ setCurrent:function(id){currentId=id;room(id).known=true;room(id).visited=true;update()},
+ markVisited:function(ids){ids.forEach(function(id){room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id)});update()},
+ setCombo:function(value){combo=value;update()},setVitals:function(health,hasShield){hp=health;shield=hasShield;update()},setRoomEvent:function(id,event){room(id).event=event;room(id).searched=true;room(id).eventResolved=true;searched[id]=true;update()},
+ hintProfile:function(){return{range:hintProfile.range,strength:hintProfile.strength,accuracy:hintProfile.accuracy,exactRevealChance:hintProfile.exactRevealChance,frontierMinStrength:hintProfile.frontierMinStrength}},
+ clearPending:function(){pendingAction=null;$("diceOverlay").style.display="none";encounterResolved=false;encounterCloseAction=null;update()}
+};
+beginRun();
+})();
+</script>
+</body>
+</html>
