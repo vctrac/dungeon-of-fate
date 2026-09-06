@@ -4,12 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#100f0e">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<meta name="application-name" content="Dungeon of Fate">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Dungeon of Fate v2.12 — Audit &amp; Refinement</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
 body{display:flex;justify-content:center;overscroll-behavior:none}
-#game{width:min(720px,100vw);height:100dvh;padding:7px 8px calc(7px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px}
+#game{width:min(720px,100vw);height:100vh;height:100dvh;padding:calc(7px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));display:flex;flex-direction:column;gap:4px}
 #hud{display:grid;grid-template-columns:1fr 1.25fr .8fr 1fr;gap:4px}.stat{background:#24211e;border:1px solid #514940;border-radius:8px;padding:2px;text-align:center}.label{font-size:7px;color:#9e9588;letter-spacing:1px;text-transform:uppercase}.value{font-size:14px;font-weight:900;line-height:18px}
 #message{height:29px;display:flex;align-items:center;justify-content:center;text-align:center;color:#d8bf86;font-size:12px;padding:0 8px}
 #board{position:relative;flex:1;min-height:0;border:2px solid #4d463e;border-radius:14px;background:#181614;overflow:hidden;touch-action:manipulation}
@@ -541,6 +549,15 @@ window.__dofTest={
 };
 beginRun();
 })();
+</script>
+<script>
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function (error) {
+      console.warn('Offline support could not be enabled:', error);
+    });
+  });
+}
 </script>
 </body>
 </html>

@@ -1,0 +1,29 @@
+{
+  "id": "./",
+  "name": "Dungeon of Fate",
+  "short_name": "Dungeon of Fate",
+  "description": "A mobile-friendly procedural dungeon game of risk, reward, FATE, dice encounters, and treasure.",
+  "lang": "en",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#100f0e",
+  "theme_color": "#100f0e",
+  "categories": [
+    "games"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
