@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate v2.12 — Audit &amp; Refinement</title>
+<title>Dungeon of Fate V2.13 — Interaction &amp; Visual Language</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -107,9 +107,10 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 
 /* Room-local feedback and quick reward celebration */
 #feedbackLayer{position:absolute;inset:0;z-index:30;overflow:hidden;pointer-events:none}
-.roomFeedback{position:absolute;z-index:1;min-width:100px;text-align:center;font-weight:950;line-height:1.12;color:#fff4cf;text-shadow:0 2px 3px #000,0 0 7px #000;pointer-events:none;animation:feedbackFloat 1s ease-out forwards;white-space:nowrap}
+.roomFeedback{position:absolute;z-index:1;min-width:100px;text-align:center;font-weight:950;line-height:1.12;color:#fff4cf;text-shadow:0 2px 3px #000,0 0 7px #000;pointer-events:none;transition:top .18s ease-out,left .18s ease-out,opacity .18s ease-out,transform .18s ease-out;transform-origin:top center;white-space:normal;overflow-wrap:anywhere}
 .roomFeedback .calc{font-size:9px;color:#f4d58a;letter-spacing:.4px}.roomFeedback .reward{font-size:19px}.roomFeedback.bad .reward{color:#ff9b85}.roomFeedback.clue .reward{color:#a9ddeb}.roomFeedback.fate .reward{color:#ffd575}
-@keyframes feedbackFloat{0%{opacity:0;transform:translateY(5px) scale(.88)}15%{opacity:1;transform:translateY(0) scale(1.06)}72%{opacity:1}100%{opacity:0;transform:translateY(-20px) scale(1)}}
+.feedbackBody{animation:feedbackFloat var(--life,1000ms) ease-out forwards}
+@keyframes feedbackFloat{0%{opacity:0;transform:translateY(4px)}15%,72%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-6px)}}
 .cell.treasure-celebrate .floor{animation:treasureFlash .9s ease-out!important}.cell.rich-celebrate .floor{animation:richFlash 1.05s ease-out!important}
 .cell.treasure-celebrate .event{animation:treasurePop .75s cubic-bezier(.2,.9,.25,1.35)}
 .coinParticle{position:absolute;left:50%;top:48%;z-index:25;width:4px;height:4px;border-radius:50%;background:#ffd66d;box-shadow:0 0 5px #ffc13b;pointer-events:none;animation:coinBurst var(--dur) ease-out forwards}
@@ -138,13 +139,43 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 .diceResult.rollCall{font-size:25px;letter-spacing:1.5px;color:#ffe09a;text-shadow:0 0 12px #e5ae50aa}
 .diceDetail .outcome{display:block;margin-bottom:4px;font-size:22px;line-height:24px;color:#fff0c5;letter-spacing:1px;text-shadow:0 0 10px #d9a84f77}.diceDetail .consequence{display:block;font-size:12px;color:#c8bcad}
 @media(prefers-reduced-motion:reduce){.die.rolling,.die.rolling::before,.die.landed{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+/* V2.13: clue certainty is distinct from ordinary, ambiguous frontier hints. */
+.cell.clued.unknown{--clue-color:#90c999}
+.cell.clued.hint-danger{--clue-color:#ef8875}
+.cell.clued.hint-fortune{--clue-color:#f3ce77}
+.cell.clued.hint-stairs{--clue-color:#c4c3ff}
+.cell.clued.unknown .floor{opacity:1!important;filter:brightness(1.12)!important;border-color:var(--clue-color)!important;box-shadow:0 0 10px color-mix(in srgb,var(--clue-color) 55%,transparent)!important}
+.cell.clued.unknown .clueMark{position:absolute;left:50%;top:-9px;transform:translateX(-50%);z-index:10;color:#b2edff;font-size:14px;line-height:16px;text-shadow:0 1px 3px #000,0 0 6px #54cfff;pointer-events:none}
+.cell.clued.unknown::before{content:none}
+.cell.clue-reveal .floor{animation:clueTendency .6s ease-in-out 3;animation-delay:var(--clue-delay)}
+.clueRing{position:absolute;inset:-5px;z-index:10;border:2px solid #a2eaff;border-radius:50%;pointer-events:none;animation:cluePulse .6s ease-out 3;animation-delay:var(--clue-delay)}
+.roomFeedback.clue-danger .reward{color:#ff9b85}.roomFeedback.clue-fortune .reward{color:#ffe09a}.roomFeedback.clue-safe .reward{color:#a7e1b0}.roomFeedback.clue-stairs .reward{color:#d3d0ff}
+@keyframes cluePulse{0%{transform:scale(.75);opacity:1}100%{transform:scale(1.8);opacity:0}}
+@keyframes clueTendency{0%,100%{background-color:transparent}50%{background:var(--clue-color)}}
+/* Combat has its own gesture; map holds retain their existing behavior. */
+#diceOverlay{touch-action:none;overscroll-behavior:none;padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+#eventCard{position:relative;touch-action:none;flex-shrink:0}
+.swipeCue{display:none;position:absolute;left:12%;right:12%;bottom:5%;height:28px;color:#fff1cc;pointer-events:none}
+.awaiting-swipe .swipeCue{display:block}
+.swipeCue::before{content:"↔";position:absolute;left:0;right:0;top:0;font-size:32px;opacity:.35}
+.swipeCue::after{content:"";position:absolute;top:8px;left:10%;width:15px;height:15px;border:2px solid #fff1cc;background:#d8bf8640;border-radius:50%;opacity:0;animation:swipeDemo 2.2s ease-in-out .65s infinite}
+.awaiting-swipe #die{opacity:.22;transform:scale(.78)}
+.awaiting-swipe #eventCard{border-color:#d49775;box-shadow:0 0 24px #a94e3544}
+.eventCard.swipe-impact{animation:swipeImpact .24s ease-out}
+.eventCard.swipe-impact::after{content:"";position:absolute;left:5%;top:48%;width:90%;height:4px;background:#fff2c7;box-shadow:0 0 14px 5px #ffc477;transform:rotate(var(--slash-angle,0deg));animation:slashFlash .24s ease-out forwards}
+@keyframes swipeDemo{0%,15%{left:10%;opacity:0}25%{opacity:.8}65%{left:80%;opacity:.8}85%,100%{left:80%;opacity:0}}
+@keyframes swipeImpact{0%{transform:scale(1.04);filter:brightness(1.8)}40%{transform:translateX(-5px) rotate(-3deg)}75%{transform:translateX(3px) rotate(2deg)}100%{transform:none}}
+@keyframes slashFlash{0%{opacity:1}100%{opacity:0}}
+@media(max-height:520px){.encounterPanel{gap:6px}.eventCard{width:104px;height:106px;gap:6px;padding-bottom:24px}.eventCard .diceTitle{font-size:8px;letter-spacing:.25px}#eventArt{font-size:40px}.die{width:72px;height:72px;font-size:52px;margin:4px auto}.die.rolling{width:88px;height:88px;font-size:62px}.diceResult.rollCall{font-size:21px}.diceDetail .outcome{font-size:18px;line-height:20px}}
+@media(prefers-reduced-motion:reduce){.roomFeedback{transition:none}.feedbackBody{animation:none}.clueRing{animation:none;opacity:.8}.cell.clue-reveal .floor{animation:none}.swipeCue::after{animation:none;opacity:.8;left:45%}.eventCard.swipe-impact,.eventCard.swipe-impact::after{animation:none}}
 </style>
 </head>
 <body>
 <div id="game">
 <div id="hud"><div class="stat"><div class="label">Health</div><div class="value" id="hp"></div></div><div class="stat"><div class="label">Gold</div><div class="value" id="gold">0</div></div><div class="stat"><div class="label">Floor</div><div class="value" id="floorNo">1</div></div><div class="stat"><div class="label">Fate</div><div class="value" id="combo">x1.0</div></div></div>
 <div id="board"><div id="feedbackLayer"></div></div><div id="message"></div></div>
-<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard"><div id="eventArt">👹</div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
+<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe across this card, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
 
 <script>
 (function(){
@@ -193,15 +224,65 @@ function assignRoomHints(){
 }
 function hintForRoom(r,distance){
  if(r.searched)return null;
+ if(r.clued)return{tendency:r.clueTendency,strength:.9,exactEvent:null};
  var nearby=distance<=hintProfile.range,strength=nearby?hintProfile.strength*(1-(distance-1)*.35):hintProfile.frontierMinStrength;
  return{tendency:r.hint,strength:Math.max(0,Math.min(1,strength)),exactEvent:nearby?r.exactHint:null}
 }
 function revealNeighbors(id){room(id).links.forEach(function(n){room(n).known=true})}
 function knownDistance(id){if(id===currentId)return 0;var dist={},q=[currentId];dist[currentId]=0;for(var k=0;k<q.length;k++)room(q[k]).links.forEach(function(n){if(!room(n).known||dist[n]!==undefined)return;dist[n]=dist[room(q[k]).id]+1;q.push(n)});return dist[id]===undefined?6:dist[id]}
 function routeDistance(id){var best=999;for(var i=0;i<history.length;i++)if(history[i]===id)best=Math.min(best,history.length-1-i);return best<999?best:knownDistance(id)}
-$("diceOverlay").addEventListener("pointerup",function(e){if(encounterResolved&&encounterCloseAction){e.preventDefault();var fn=encounterCloseAction;fn();setTimeout(function(){if(!pendingAction&&!gameOver){if(!awardPerfectFloor())updateContext()}},0)}},{passive:false});
+
+var combatReady=null,combatPointer=null,continuePointer=null,encounterSerial=0;
+function continueEncounter(){
+ if(!encounterResolved||!encounterCloseAction)return;
+ var fn=encounterCloseAction;continuePointer=null;fn();
+ setTimeout(function(){if(!pendingAction&&!gameOver){if(!awardPerfectFloor())updateContext()}},0)
+}
+$("diceOverlay").addEventListener("pointerdown",function(e){
+ if(e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
+ continuePointer=encounterResolved?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;
+},{passive:true});
+$("diceOverlay").addEventListener("pointerup",function(e){
+ e.preventDefault();
+ var tap=continuePointer;continuePointer=null;
+ if(tap&&tap.id===e.pointerId&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)<18)continueEncounter();
+},{passive:false});
+$("diceOverlay").addEventListener("pointercancel",function(){continuePointer=null});
+$("diceOverlay").addEventListener("contextmenu",function(e){e.preventDefault()});
+function commitCombat(dx,dy){
+ if(!combatReady)return;
+ var start=combatReady;combatReady=null;continuePointer=null;
+ $("diceOverlay").classList.remove("awaiting-swipe");
+ var card=$("eventCard");card.style.setProperty("--slash-angle",Math.atan2(dy,dx)*180/Math.PI+"deg");card.classList.add("swipe-impact");
+ start();
+}
+$("eventCard").addEventListener("pointerdown",function(e){
+ if(!combatReady||combatPointer||e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
+ e.preventDefault();e.stopPropagation();combatPointer={id:e.pointerId,x:e.clientX,y:e.clientY};
+ this.setPointerCapture(e.pointerId);
+},{passive:false});
+function moveCombat(e){
+ if(!combatPointer||combatPointer.id!==e.pointerId)return;
+ e.preventDefault();e.stopPropagation();
+ var dx=e.clientX-combatPointer.x,dy=e.clientY-combatPointer.y;
+ // Distance only validates intent. No gesture characteristic reaches the dice RNG.
+ if(Math.hypot(dx,dy)>=Math.max(24,Math.min(36,$("eventCard").clientWidth*.18)))commitCombat(dx,dy);
+}
+$("eventCard").addEventListener("pointermove",moveCombat,{passive:false});
+$("eventCard").addEventListener("pointerup",function(e){
+ if(!combatPointer||combatPointer.id!==e.pointerId)return;
+ moveCombat(e);combatPointer=null;continuePointer=null;
+ if(this.hasPointerCapture(e.pointerId))this.releasePointerCapture(e.pointerId);
+},{passive:false});
+function cancelCombatPointer(e){if(combatPointer&&combatPointer.id===e.pointerId){combatPointer=null;continuePointer=null}}
+$("eventCard").addEventListener("pointercancel",cancelCombatPointer);
+$("eventCard").addEventListener("lostpointercapture",cancelCombatPointer);
+$("eventCard").addEventListener("keydown",function(e){
+ if((e.key==="Enter"||e.key===" ")&&!e.repeat){e.preventDefault();if(combatReady)commitCombat(1,0);else if(encounterResolved)continueEncounter()}
+});
+
 function beginRun(){hp=3;shield=false;gold=0;score=0;combo=1;floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
-function newFloor(first,announcement){document.querySelectorAll(".roomFeedback").forEach(function(el){el.remove()});generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;updateContext(announcement||"");update();markArrival(startId)}
+function newFloor(first,announcement){clearFeedback();generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;updateContext(announcement||"");update();markArrival(startId)}
 function markArrival(id){arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340)}
 
 function usefulFastTravelExists(){return rooms.some(function(r){return r.visited&&r.id!==currentId&&room(currentId).links.indexOf(r.id)<0&&shortestVisitedPath(currentId,r.id)})}
@@ -216,18 +297,71 @@ function updateContext(temporary){
  if(r.searched){$("message").textContent="✦ Hold ◆ to Scavenge";return}
  $("message").textContent=""
 }
+
+var feedbackEntries=[];
+function removeFeedback(entry){
+ clearTimeout(entry.timer);entry.el.remove();feedbackEntries=feedbackEntries.filter(function(x){return x!==entry})
+}
+function clearFeedback(){feedbackEntries.slice().forEach(removeFeedback)}
+function feedbackAnchor(entry){
+ var board=$("board"),r=room(entry.id),cell=document.querySelector('.cell[data-id="'+entry.id+'"]'),br=board.getBoundingClientRect(),cr=cell?cell.getBoundingClientRect():null;
+ var w=entry.el.offsetWidth,h=entry.el.offsetHeight,pad=14;
+ var cx=cr?cr.left-br.left-board.clientLeft+cr.width/2:(r.x/W+.053)*board.clientWidth;
+ var top=cr?cr.top-br.top-board.clientTop:(r.y/H+.017)*board.clientHeight;
+ var bottom=cr?cr.bottom-br.top-board.clientTop:top+board.clientHeight*.072;
+ var y=top-h-8;if(y<pad+8)y=bottom+8;
+ return{x:Math.max(pad,Math.min(board.clientWidth-w-pad,cx-w/2)),y:Math.max(pad+8,Math.min(board.clientHeight-h-pad-4,y)),w:w,h:h}
+}
+function layoutFeedback(){
+ var board=$("board");if(!board)return;
+ var groups=[];
+ feedbackEntries.forEach(function(entry){
+  entry.el.style.maxWidth=Math.max(1,board.clientWidth-28)+"px";
+  entry.anchor=feedbackAnchor(entry);
+  var matches=groups.filter(function(group){return group.some(function(other){
+   var a=entry.anchor,b=other.anchor;return a.x<b.x+b.w+8&&a.x+a.w+8>b.x&&Math.abs(a.y-b.y)<145
+  })});
+  var group=[entry];matches.forEach(function(match){group=match.concat(group);groups.splice(groups.indexOf(match),1)});
+  groups.push(group.sort(function(a,b){return feedbackEntries.indexOf(a)-feedbackEntries.indexOf(b)}))
+ });
+ groups.forEach(function(group){
+  while(group.length>3)removeFeedback(group.shift());
+  var total=function(){return group.reduce(function(sum,e){return sum+e.anchor.h+12},-12)};
+  while(group.length>1&&total()>board.clientHeight-40)removeFeedback(group.shift());
+  var newest=group[group.length-1],height=total(),olderHeight=height-newest.anchor.h;
+  var y=Math.max(22+olderHeight,Math.min(board.clientHeight-newest.anchor.h-18,newest.anchor.y));
+  for(var i=group.length-1;i>=0;i--){
+   var entry=group[i],age=group.length-1-i;
+   entry.el.style.left=Math.max(14,Math.min(board.clientWidth-entry.anchor.w-14,newest.anchor.x+(newest.anchor.w-entry.anchor.w)/2))+"px";
+   entry.el.style.top=y+"px";entry.el.style.opacity=String(1-age*.17);entry.el.style.transform="scale("+(1-age*.035)+")";entry.el.style.visibility="visible";
+   if(i)y-=group[i-1].anchor.h+12
+  }
+ })
+}
 function showLocalFeedback(id,reward,kind,calc,duration){
- var board=$("board"),layer=$("feedbackLayer"),r=room(id),cell=document.querySelector('.cell[data-id="'+id+'"]');if(!board||!layer||!r||!r.active)return null;
- var el=document.createElement("div");el.className="roomFeedback "+(kind||"");el.style.animationDuration=(duration||1000)+"ms";
- el.dataset.roomId=id;el.style.visibility="hidden";el.style.maxWidth=Math.max(100,board.clientWidth-20)+"px";
- if(calc){var c=document.createElement("div");c.className="calc";c.textContent=calc;el.appendChild(c)}
- var v=document.createElement("div");v.className="reward";v.textContent=reward;el.appendChild(v);layer.appendChild(el);
- var boardRect=board.getBoundingClientRect(),cellRect=cell?cell.getBoundingClientRect():null,pad=12,w=el.offsetWidth,h=el.offsetHeight;
- var centerX=cellRect?cellRect.left-boardRect.left+cellRect.width/2:(r.x/W*board.clientWidth+board.clientWidth/W/2);
- var roomTop=cellRect?cellRect.top-boardRect.top:(r.y/H*board.clientHeight),roomBottom=cellRect?cellRect.bottom-boardRect.top:roomTop+board.clientHeight/H;
- var x=Math.max(pad,Math.min(board.clientWidth-w-pad,centerX-w/2)),y=roomTop-h-8;if(y<pad+22)y=roomBottom+8;y=Math.max(pad+22,Math.min(board.clientHeight-h-pad,y));
- el.style.left=x+"px";el.style.top=y+"px";el.style.visibility="visible";
- setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el)},(duration||1000)+80);return el
+ var board=$("board"),layer=$("feedbackLayer"),r=room(id);if(!board||!layer||!r||!r.active)return null;
+ var el=document.createElement("div");el.className="roomFeedback "+(kind||"");el.dataset.roomId=id;el.style.visibility="hidden";el.style.setProperty("--life",(duration||1000)+"ms");
+ var body=document.createElement("div");body.className="feedbackBody";el.appendChild(body);
+ if(calc){var c=document.createElement("div");c.className="calc";c.textContent=calc;body.appendChild(c)}
+ var v=document.createElement("div");v.className="reward";v.textContent=reward;body.appendChild(v);layer.appendChild(el);
+ var entry={id:id,el:el};feedbackEntries.push(entry);layoutFeedback();
+ entry.timer=setTimeout(function(){removeFeedback(entry);layoutFeedback()},(duration||1000)+80);return el
+}
+if(typeof ResizeObserver!=="undefined")new ResizeObserver(layoutFeedback).observe($("board"));
+function revealClue(sourceId,target){
+ var floorRooms=rooms;
+ showLocalFeedback(sourceId,"⌁","clue","",450);
+ setTimeout(function(){
+  if(rooms!==floorRooms||target.searched)return;
+  target.known=true;target.clued=true;
+  target.clueTendency=target.id===exitId?"stairs":eventTendency(target.event);
+  if(target.clueTendency==="neutral")target.clueTendency="safe";
+  target.clueRevealUntil=performance.now()+1800;
+  update();
+  var symbols={danger:"⚠",fortune:"✦",safe:"✚",stairs:"▼"},labels={danger:"Danger",fortune:"Fortune",safe:"Quiet / blessing",stairs:"Stairs"};
+  showLocalFeedback(target.id,"⌁ "+symbols[target.clueTendency],"clue clue-"+target.clueTendency,labels[target.clueTendency],1500);
+  setTimeout(function(){if(rooms===floorRooms)update()},1850)
+ },180)
 }
 function animateGold(from,to,duration){
  if(scoreAnimation)cancelAnimationFrame(scoreAnimation);var start=performance.now();$("gold").classList.add("scoreCounting");
@@ -238,8 +372,8 @@ function celebrateTreasure(id,base,gain,fate,rich,goldBefore){
  var cell=document.querySelector('.cell[data-id="'+id+'"]');if(!cell)return;
  cell.classList.add("treasure-celebrate");if(rich)cell.classList.add("rich-celebrate");
  var source=room(id),count=rich?16:9;for(var i=0;i<count;i++){var p=document.createElement("i"),a=(Math.PI*2*i/count)+(Math.random()*.35),distance=(rich?30:22)+Math.random()*(rich?24:16),dx=Math.cos(a)*distance,dy=Math.sin(a)*distance-12;if(source.x<=1&&dx<0)dx=Math.abs(dx)*.65;if(source.x>=W-2&&dx>0)dx=-Math.abs(dx)*.65;if(source.y<=1&&dy<0)dy=Math.abs(dy)*.55;if(source.y>=H-2&&dy>0)dy=-Math.abs(dy)*.65;p.className="coinParticle";p.style.setProperty("--dx",dx+"px");p.style.setProperty("--dy",dy+"px");p.style.setProperty("--dur",(650+Math.random()*350)+"ms");cell.appendChild(p)}
- var calc=fate>1.04?base+" × FATE "+fate.toFixed(1):rich?"✦ RICH TREASURE! ✦":"TREASURE!";
- showLocalFeedback(id,"+"+gain+" GOLD",rich?"fate":"",calc,rich?1150:980);animateGold(goldBefore,gold,rich?1050:850);
+ var calc=(rich?"💎 ":"🪙 ")+base+" ×"+fate.toFixed(1)+" ✦";
+ showLocalFeedback(id,"+"+gain+" 🪙",rich?"fate":"",calc,rich?1150:980);animateGold(goldBefore,gold,rich?1050:850);
  setTimeout(function(){if(cell){cell.classList.remove("treasure-celebrate","rich-celebrate")}},1200)
 }
 function awardPerfectFloor(){
@@ -375,20 +509,28 @@ function resolveSimpleEvent(event){
 }
 function resolveDice(type,roll){var result="",detail="";if(type==="monster"){if(roll<=2){hp--;combo=1;floorDamage++;result="WOUNDED";detail="The monster hits you. -1 ❤️"}else if(roll<=4){var safe=Math.floor(80*combo);score+=safe;result="ESCAPED";detail="You slip away. +"+safe+" score"}else if(roll===5){var win=Math.floor(220*combo);score+=win;combo=Math.min(6,combo+.5);result="VICTORY";detail="Guardian defeated! +"+win+" score"}else{var crit=Math.floor(450*combo);score+=crit;combo=Math.min(6,combo+1);result="CRITICAL!";detail="Perfect strike! +"+crit+" score"}}else if(type==="trap"){if(roll<=2){hp--;combo=1;floorDamage++;result="TRIGGERED";detail="The trap catches you. -1 ❤️"}else if(roll<=4){combo=1;result="CLOSE CALL";detail="You avoid the worst, but lose your FATE."}else{var tg=Math.floor(90*combo);score+=tg;combo=Math.min(6,combo+.2);result="AVOIDED";detail="You spot the mechanism. +"+tg+" score"}}else{if(roll<=2){result="FADED";detail="The shrine has no power."}else if(roll<=4){hp=Math.min(3,hp+1);result="RESTORED";detail="+1 ❤️"}else if(roll===5){hp=Math.min(3,hp+1);var hg=Math.floor((120+floorNo*10)*combo);score+=hg;result="BLESSED";detail="+1 ❤️ and +"+hg+" score"}else{hp=3;var fg=Math.floor((250+floorNo*20)*combo);score+=fg;combo=Math.min(6,combo+.4);result="MIRACLE";detail="Full heal! +"+fg+" score"}}$("diceResult").textContent=result;$("diceDetail").textContent=detail;$("message").textContent=detail;encounterResolved=true;$("diceOverlay").classList.add("resolved");encounterCloseAction=function(){$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved");encounterResolved=false;encounterCloseAction=null;pendingAction=null;update();if(hp<=0)finish("YOU DIED")}}
 function showDice(type){
+ var serial=++encounterSerial;combatReady=null;combatPointer=null;continuePointer=null;
  encounterResolved=false;encounterCloseAction=null;var o=$("diceOverlay"),c=$("eventCard"),die=$("die"),result=$("diceResult"),detail=$("diceDetail");
- o.classList.remove("resolved");c.className="eventCard "+type;$("eventArt").textContent=type==="monster"?"👹":type==="trap"?"⚠️":"✚";$("diceTitle").textContent=type==="monster"?"MONSTER ENCOUNTER":type==="trap"?"TRAP":"SHRINE";
+ o.classList.remove("resolved","awaiting-swipe");c.className="eventCard "+type;$("eventArt").textContent=type==="monster"?"👹":type==="trap"?"⚠️":"✚";$("diceTitle").textContent=type==="monster"?"MONSTER ENCOUNTER":type==="trap"?"TRAP":"SHRINE";
  die.className="die";die.textContent="⚄";result.className="diceResult";result.textContent=type==="monster"?"BATTLE ROLL":type==="heal"?"BLESSING ROLL":"FATE ROLL";detail.textContent="GET READY...";o.style.display="flex";
- setTimeout(function(){
-  if(o.style.display!=="flex")return;die.className="die rolling";detail.textContent="ROLLING...";
+ function startRoll(){setTimeout(function(){
+  if(serial!==encounterSerial||o.style.display!=="flex")return;c.classList.remove("swipe-impact");die.className="die rolling";result.textContent=type==="monster"?"BATTLE ROLL":type==="heal"?"BLESSING ROLL":"FATE ROLL";detail.textContent="ROLLING...";
   var faces=["⚀","⚁","⚂","⚃","⚄","⚅"],ticks=0,roller=setInterval(function(){
+   if(serial!==encounterSerial||o.style.display!=="flex"){clearInterval(roller);return}
    die.textContent=faces[Math.floor(Math.random()*6)];
    if(++ticks>=9){clearInterval(roller);var rolled=1+Math.floor(Math.random()*6);die.textContent=faces[rolled-1];die.className="die landed";result.textContent="";detail.textContent="";
     setTimeout(function(){
+     if(serial!==encounterSerial||o.style.display!=="flex")return;
      resolveDice(type,rolled);var outcome=result.textContent,consequence=detail.textContent;result.className="diceResult rollCall";result.textContent="ROLLED "+rolled;detail.textContent="";var strong=document.createElement("b");strong.className="outcome";strong.textContent=outcome;var explanation=document.createElement("span");explanation.className="consequence";explanation.textContent=consequence;detail.appendChild(strong);detail.appendChild(explanation)
     },210)
    }
   },90)
- },250)
+ },250)}
+ c.setAttribute("aria-label",type==="monster"?"Monster: swipe across this card, or press Enter to confront it.":type==="trap"?"Trap encounter":"Shrine encounter");
+ if(type==="monster"){
+  o.classList.add("awaiting-swipe");detail.textContent="Swipe across the monster";result.textContent="↔";combatReady=startRoll;
+ }else startRoll();
+ c.focus({preventScroll:true})
 }
 var resolveDiceCore=resolveDice;
 resolveDice=function(type,roll){
@@ -410,7 +552,7 @@ function scavenge(id,forcedRoll){
  if(roll<.45){update();showLocalFeedback(id,"NOTHING FOUND","","SCAVENGED",950)}
  else if(roll<.75){gain=Math.floor((25+floorNo*4)*combo);gold+=gain;score+=gain;update();showLocalFeedback(id,"+"+gain+" GOLD","",first?"FIRST FIND!":"SCAVENGED",1000);animateGold(goldBefore,gold,700)}
  else if(roll<.85){gain=Math.floor((80+floorNo*8)*combo);gold+=gain;score+=gain;combo=Math.min(6,combo+.15);update();showLocalFeedback(id,"+"+gain+" GOLD","fate","LUCKY FIND!",1050);animateGold(goldBefore,gold,800)}
- else if(roll<.95){candidates=rooms.filter(function(x){return x.active&&!x.searched&&x.id!==exitId});if(!candidates.length)candidates=rooms.filter(function(x){return x.active&&!x.searched});if(candidates.length){clue=candidates[Math.floor(Math.random()*candidates.length)];clue.known=true;clue.clued=true;omen=clue.id===exitId?"stairs":(clue.event==="monster"||clue.event==="trap")?"danger":(clue.event==="treasure"||clue.event==="rich"||clue.event==="key")?"fortune":"a quiet presence";update();showLocalFeedback(id,"CLUE!","clue","You sense "+omen,1100)}else{update();showLocalFeedback(id,"NO SECRETS REMAIN","clue","CLUE",1000)}}
+ else if(roll<.95){candidates=rooms.filter(function(x){return x.active&&!x.searched&&!x.clued&&x.id!==exitId});if(!candidates.length)candidates=rooms.filter(function(x){return x.active&&!x.searched&&!x.clued});if(candidates.length){clue=candidates[Math.floor(Math.random()*candidates.length)];update();revealClue(id,clue)}else{update();showLocalFeedback(id,"⌁ —","clue","No new clues",1000)}}
  else{pendingAction="trap";update();showLocalFeedback(id,"TRAP!","bad","SCAVENGE",750);showDice("trap")}
  if(first)learn("learnedScavenge");if(combo-fateBefore>=.1)setTimeout(function(){showLocalFeedback(id,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},500);updateContext();return true
 }
@@ -447,6 +589,13 @@ function render(){
   if(r.searched)cell.className+=" searched";
   if(r.scavenged)cell.className+=" scavenged";
   if(r.clued)cell.className+=" clued";
+  if(r.clued&&!r.searched){
+   var mark=document.createElement("span");mark.className="clueMark";mark.textContent=r.clueTendency==="stairs"?"⌁ ▼":"⌁";cell.appendChild(mark);
+   if(r.clueRevealUntil>performance.now()){
+    cell.className+=" clue-reveal";cell.style.setProperty("--clue-delay",(r.clueRevealUntil-performance.now()-1800)+"ms");
+    var ring=document.createElement("i");ring.className="clueRing";cell.appendChild(ring)
+   }
+  }
   if(r.searched&&r.event!=="empty")cell.className+=" "+r.event;
   if(r.id!==currentId&&room(currentId).links.indexOf(r.id)>=0)cell.className+=" available";
   if(hintData&&hintData.tendency!=="neutral"){
@@ -454,7 +603,7 @@ function render(){
    cell.dataset.hint=hintData.tendency;
    cell.style.setProperty("--hint-alpha",hintData.strength.toFixed(2));
   }
-  if(hintData&&hintData.exactEvent)cell.dataset.exactHint=hintData.exactEvent;
+  // Exact events stay hidden until a room is searched.
 
   cell.style.left=(r.x/W*100+1.7)+"%";
   cell.style.top=(r.y/H*100+1.7)+"%";
@@ -539,13 +688,13 @@ function render(){
 function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="x"+combo.toFixed(1);render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 window.__dofTest={
- state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,event:r.event}}),startId:startId,exitId:exitId,currentId:currentId,floorNo:floorNo,hp:hp,shield:shield,gold:gold,score:score,combo:combo,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
- enter:enterRoom,search:searchCurrentRoom,scavenge:scavenge,descend:descend,travel:startFastTravel,update:update,awardPerfectFloor:awardPerfectFloor,resolveSimple:resolveSimpleEvent,resolveDice:resolveDice,showFeedback:showLocalFeedback,celebrateTreasure:celebrateTreasure,resetLearning:resetLearning,newFloor:function(){newFloor(true,"")},
+ state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event}}),startId:startId,exitId:exitId,currentId:currentId,floorNo:floorNo,hp:hp,shield:shield,gold:gold,score:score,combo:combo,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
+ revealClue:function(source,id){revealClue(source,room(id))},showDice:function(type){pendingAction=type;showDice(type)},clearFeedback:clearFeedback,enter:enterRoom,search:searchCurrentRoom,scavenge:scavenge,descend:descend,travel:startFastTravel,update:update,awardPerfectFloor:awardPerfectFloor,resolveSimple:resolveSimpleEvent,resolveDice:resolveDice,showFeedback:showLocalFeedback,celebrateTreasure:celebrateTreasure,resetLearning:resetLearning,newFloor:function(){newFloor(true,"")},
  setCurrent:function(id){currentId=id;room(id).known=true;room(id).visited=true;update()},
  markVisited:function(ids){ids.forEach(function(id){room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id)});update()},
  setCombo:function(value){combo=value;update()},setVitals:function(health,hasShield){hp=health;shield=hasShield;update()},setRoomEvent:function(id,event){room(id).event=event;room(id).searched=true;room(id).eventResolved=true;searched[id]=true;update()},
  hintProfile:function(){return{range:hintProfile.range,strength:hintProfile.strength,accuracy:hintProfile.accuracy,exactRevealChance:hintProfile.exactRevealChance,frontierMinStrength:hintProfile.frontierMinStrength}},
- clearPending:function(){pendingAction=null;$("diceOverlay").style.display="none";encounterResolved=false;encounterCloseAction=null;update()}
+ clearPending:function(){encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;$("diceOverlay").classList.remove("resolved","awaiting-swipe");pendingAction=null;$("diceOverlay").style.display="none";encounterResolved=false;encounterCloseAction=null;update()}
 };
 beginRun();
 })();
