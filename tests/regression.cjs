@@ -90,7 +90,7 @@ let browser;
  const directions=[[65,0],[-65,0],[50,-45],[50,45],[-50,-45],[-50,45]];
  await page.evaluate(()=>{window.savedRandom=Math.random;window.rngCalls=0;Math.random=()=>{window.rngCalls++;return .72}});
  for(const [dx,dy] of directions){
-  await clear();await page.evaluate(()=>{__dofTest.setVitals(3,false);__dofTest.setCombo(2);window.rngCalls=0;__dofTest.showDice('monster')});
+  await clear();await page.evaluate(()=>{__dofTest.setVitals(3,false);__dofTest.setCombo(2);window.rngCalls=0;(__dofTest.setVitals(3,false),__dofTest.showDice('monster'))});
   const box=await page.locator('#eventCard').boundingBox(),x=box.x+box.width/2-dx/2,y=box.y+box.height/2-dy/2;
   await page.waitForTimeout(350);assert.equal(await page.locator('#diceOverlay.awaiting-swipe').count(),1);
   await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+4,y+3);await page.mouse.up();
@@ -114,7 +114,7 @@ let browser;
  }
  await page.evaluate(()=>{Math.random=savedRandom});
  // Real touch cancellation and swipe; no scroll or selection.
- await clear();await page.evaluate(()=>__dofTest.showDice('monster'));
+ await clear();await page.evaluate(()=>(__dofTest.setVitals(3,false),__dofTest.showDice('monster')));
  const cdp=await context.newCDPSession(page),box=await page.locator('#eventCard').boundingBox(),x=box.x+35,y=box.y+70;
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+5,y:y+4,id:1}]});
@@ -127,7 +127,7 @@ let browser;
  assert.deepEqual(await page.evaluate(()=>({x:scrollX,y:scrollY,selection:getSelection().toString(),action:getComputedStyle(document.querySelector('#diceOverlay')).touchAction})),{x:0,y:0,selection:'',action:'none'});
  await page.touchscreen.tap(box.x+box.width/2,box.y+box.height/2);
  assert.equal((await state()).diceOverlay,'none');
- await page.evaluate(()=>__dofTest.showDice('monster'));
+ await page.evaluate(()=>(__dofTest.setVitals(3,false),__dofTest.showDice('monster')));
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:3}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:3},{x:x+10,y:y+10,id:4}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y,id:3},{x:x+65,y:y+30,id:4}]});
@@ -135,12 +135,32 @@ let browser;
  await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
  await clear();
  await page.emulateMedia({reducedMotion:'reduce'});
- await page.evaluate(()=>{__dofTest.showDice('monster');__dofTest.showFeedback(__dofTest.state().currentId,'⌁','clue','',1500)});
+ await page.evaluate(()=>{(__dofTest.setVitals(3,false),__dofTest.showDice('monster'));__dofTest.showFeedback(__dofTest.state().currentId,'⌁','clue','',1500)});
  assert.equal(await page.locator('.feedbackBody').evaluate(el=>getComputedStyle(el).animationName),'none');
  assert.equal(await page.locator('.swipeCue').evaluate(el=>getComputedStyle(el,'::after').opacity),'0.8');
  await page.keyboard.press('Enter');await page.waitForSelector('#diceOverlay.resolved');await page.keyboard.press('Enter');
  assert.equal((await state()).diceOverlay,'none');
  await page.emulateMedia({reducedMotion:'no-preference'});
+
+ // Swipes can start and finish outside the card, over any screen region.
+ for(const [x,y,dx,dy] of [[20,25,90,0],[280,750,-80,-45],[20,430,70,45],[280,430,-65,0]]){
+  await clear();await page.evaluate(()=>(__dofTest.setVitals(3,false),__dofTest.showDice('monster')));
+  await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+3,y+2);await page.mouse.up();
+  assert.equal(await page.locator('#diceOverlay.awaiting-swipe').count(),1);
+  await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy,{steps:4});
+  assert.equal(await page.locator('#eventCard.swipe-impact').count(),1);
+  await page.waitForSelector('#diceOverlay.resolved');
+  await page.mouse.up();
+  assert.equal(await page.locator('#diceOverlay.resolved').count(),1,'Swipe release must not continue');
+  await page.mouse.click(20,25);assert.equal((await state()).diceOverlay,'none');
+ }
+ await clear();await page.evaluate(()=>(__dofTest.setVitals(3,false),__dofTest.showDice('monster')));
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:25,y:720,id:9}]});
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:110,y:670,id:9}]});
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await page.waitForSelector('#diceOverlay.resolved');
+ await page.touchscreen.tap(25,720);assert.equal((await state()).diceOverlay,'none');
+ console.log('PASS screen-wide mouse and touch swipes, accidental taps, safe release and continue');
  console.log('PASS six swipe directions, accidental taps, impact, one RNG roll, landing pause, held-pointer safety, touch cancellation and continue');
  for(const type of ['trap','heal']){
   await clear();await page.evaluate(type=>__dofTest.showDice(type),type);
@@ -180,7 +200,7 @@ let browser;
  await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await context.setOffline(true);await page.goto(url+'index.html');assert(await page.locator('.current').count());
- assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.13'))),true);
+ assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.13.1'))),true);
  await page.goto(url);assert(await page.locator('.current').count());
  await context.setOffline(false);
  assert.deepEqual(errors,[]);

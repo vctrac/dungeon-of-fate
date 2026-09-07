@@ -175,7 +175,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 <div id="game">
 <div id="hud"><div class="stat"><div class="label">Health</div><div class="value" id="hp"></div></div><div class="stat"><div class="label">Gold</div><div class="value" id="gold">0</div></div><div class="stat"><div class="label">Floor</div><div class="value" id="floorNo">1</div></div><div class="stat"><div class="label">Fate</div><div class="value" id="combo">x1.0</div></div></div>
 <div id="board"><div id="feedbackLayer"></div></div><div id="message"></div></div>
-<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe across this card, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
+<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
 
 <script>
 (function(){
@@ -256,7 +256,7 @@ function commitCombat(dx,dy){
  var card=$("eventCard");card.style.setProperty("--slash-angle",Math.atan2(dy,dx)*180/Math.PI+"deg");card.classList.add("swipe-impact");
  start();
 }
-$("eventCard").addEventListener("pointerdown",function(e){
+$("diceOverlay").addEventListener("pointerdown",function(e){
  if(!combatReady||combatPointer||e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
  e.preventDefault();e.stopPropagation();combatPointer={id:e.pointerId,x:e.clientX,y:e.clientY};
  this.setPointerCapture(e.pointerId);
@@ -268,15 +268,15 @@ function moveCombat(e){
  // Distance only validates intent. No gesture characteristic reaches the dice RNG.
  if(Math.hypot(dx,dy)>=Math.max(24,Math.min(36,$("eventCard").clientWidth*.18)))commitCombat(dx,dy);
 }
-$("eventCard").addEventListener("pointermove",moveCombat,{passive:false});
-$("eventCard").addEventListener("pointerup",function(e){
+$("diceOverlay").addEventListener("pointermove",moveCombat,{passive:false});
+$("diceOverlay").addEventListener("pointerup",function(e){
  if(!combatPointer||combatPointer.id!==e.pointerId)return;
  moveCombat(e);combatPointer=null;continuePointer=null;
  if(this.hasPointerCapture(e.pointerId))this.releasePointerCapture(e.pointerId);
 },{passive:false});
 function cancelCombatPointer(e){if(combatPointer&&combatPointer.id===e.pointerId){combatPointer=null;continuePointer=null}}
-$("eventCard").addEventListener("pointercancel",cancelCombatPointer);
-$("eventCard").addEventListener("lostpointercapture",cancelCombatPointer);
+$("diceOverlay").addEventListener("pointercancel",cancelCombatPointer);
+$("diceOverlay").addEventListener("lostpointercapture",cancelCombatPointer);
 $("eventCard").addEventListener("keydown",function(e){
  if((e.key==="Enter"||e.key===" ")&&!e.repeat){e.preventDefault();if(combatReady)commitCombat(1,0);else if(encounterResolved)continueEncounter()}
 });
@@ -526,9 +526,9 @@ function showDice(type){
    }
   },90)
  },250)}
- c.setAttribute("aria-label",type==="monster"?"Monster: swipe across this card, or press Enter to confront it.":type==="trap"?"Trap encounter":"Shrine encounter");
+ c.setAttribute("aria-label",type==="monster"?"Monster: swipe anywhere on screen, or press Enter to confront it.":type==="trap"?"Trap encounter":"Shrine encounter");
  if(type==="monster"){
-  o.classList.add("awaiting-swipe");detail.textContent="Swipe across the monster";result.textContent="↔";combatReady=startRoll;
+  o.classList.add("awaiting-swipe");detail.textContent="Swipe anywhere";result.textContent="↔";combatReady=startRoll;
  }else startRoll();
  c.focus({preventScroll:true})
 }
