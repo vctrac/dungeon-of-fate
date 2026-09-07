@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.13 — Interaction &amp; Visual Language</title>
+<title>Dungeon of Fate V2.14 — Monsters &amp; Relics</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -169,20 +169,207 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @keyframes slashFlash{0%{opacity:1}100%{opacity:0}}
 @media(max-height:520px){.encounterPanel{gap:6px}.eventCard{width:104px;height:106px;gap:6px;padding-bottom:24px}.eventCard .diceTitle{font-size:8px;letter-spacing:.25px}#eventArt{font-size:40px}.die{width:72px;height:72px;font-size:52px;margin:4px auto}.die.rolling{width:88px;height:88px;font-size:62px}.diceResult.rollCall{font-size:21px}.diceDetail .outcome{font-size:18px;line-height:20px}}
 @media(prefers-reduced-motion:reduce){.roomFeedback{transition:none}.feedbackBody{animation:none}.clueRing{animation:none;opacity:.8}.cell.clue-reveal .floor{animation:none}.swipeCue::after{animation:none;opacity:.8;left:45%}.eventCard.swipe-impact,.eventCard.swipe-impact::after{animation:none}}
+/* V2.14: resource threats, relics and an unmistakable instructional gesture. */
+#monsterThreat{font-size:18px;line-height:20px;color:#ef9e8b}
+.eventCard{gap:9px}
+.eventCard.thief{border-color:#d0aa60;background:radial-gradient(circle,#59452a,#181312 75%)}
+.eventCard.spirit{border-color:#a9b3ee;background:radial-gradient(circle,#353550,#12121b 75%)}
+.thief #monsterThreat{color:#f4d38d}.spirit #monsterThreat{color:#c7caff}
+.swipeCue{left:-30%;right:-30%;top:46%;bottom:auto;height:44px}
+.swipeCue::before{content:"";top:18px;height:5px;border-radius:10px;background:linear-gradient(90deg,transparent,#fff0c6aa,transparent);opacity:0;animation:swipeTrack 2.8s ease-in-out .5s infinite}
+.swipeCue::after{content:"";left:0;top:2px;width:32px;height:32px;background:#fff0c63b;border:3px solid #fff1d5;box-shadow:0 0 12px #fff0c655;opacity:0;animation:swipeDemo 2.8s ease-in-out .5s infinite}
+@keyframes swipeDemo{0%{left:0;opacity:0}8%{opacity:.65}42%{left:calc(100% - 32px);opacity:.65}50%,100%{left:calc(100% - 32px);opacity:0}}
+@keyframes swipeTrack{0%{opacity:0;transform:scaleX(.1)}12%,36%{opacity:.3;transform:scaleX(1)}50%,100%{opacity:0;transform:scaleX(1)}}
+#footer{display:flex;gap:5px;min-height:54px;height:54px;flex-shrink:0}
+#footer #message{flex:1;min-width:0;font-size:10px!important;line-height:13px;padding:5px 7px!important}
+#relicBar{display:flex;align-items:center;gap:4px;flex-shrink:0}
+#trinkets{display:grid;grid-template-columns:repeat(2,20px);gap:2px}
+#trinkets:empty{display:none}.trinket{font-size:17px;text-align:center;line-height:22px}.trinket.spent{opacity:.38;filter:grayscale(.65)}
+#consumableSlot{position:relative;width:44px;height:44px;border:1px solid #b29465;border-radius:10px;background:#28221a;color:#e9d9b6;font-size:27px;padding:0;touch-action:none}
+#consumableSlot.empty{border-color:#484039;color:#7b7163;font-size:20px}
+#consumableSlot.dangerous{border-color:#bc787c}#consumableSlot:disabled{opacity:.5}
+#consumableSlot.holding::after{content:"";position:absolute;inset:-3px;border-radius:12px;padding:2px;pointer-events:none;background:conic-gradient(#ffd995 var(--charge,0deg),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+#bargainState{font-size:14px;white-space:nowrap;color:#e2bad0}#bargainState:empty{display:none}
+#effectLayer{position:fixed;inset:0;z-index:70;pointer-events:none}
+#effectNotices{position:absolute;top:calc(52px + env(safe-area-inset-top));left:8px;right:8px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.effectNotice{padding:6px 12px;background:#251f19ee;border:1px solid #bba073;border-radius:12px;font-weight:900;font-size:18px;color:#ffe6b1;box-shadow:0 0 18px #e9b56155;animation:relicReveal 1.6s ease-out forwards}
+.resourceFlight{position:fixed;font-size:27px;filter:drop-shadow(0 0 7px #ffdd9a);animation:resourceFlight .85s ease-in-out forwards}
+.effectPulse{animation:resourcePulse .9s ease-out}
+@keyframes relicReveal{0%{opacity:0;transform:scale(.75)}15%,75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-8px)}}
+@keyframes resourceFlight{0%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}100%{opacity:0;transform:translate(calc(-50% + var(--flight-x)),calc(-50% + var(--flight-y))) scale(.7)}}
+@keyframes resourcePulse{30%{color:#fff0bd;text-shadow:0 0 12px #ffe7a8;transform:scale(1.12)}}
+#itemChoice{position:fixed;inset:0;z-index:60;background:#080706d9;display:flex;align-items:center;justify-content:center;touch-action:none;overscroll-behavior:none}
+#itemChoice[hidden]{display:none}.itemChoicePanel{padding:20px;border:1px solid #b9a070;border-radius:18px;background:#29211c;text-align:center;color:#e7d2a7}
+.itemChoicePanel>div{font-size:28px;margin-bottom:10px}.itemChoicePanel button{font-size:32px;min-width:90px;min-height:78px;margin:0 6px;border:1px solid #b9a070;border-radius:12px;background:#191613;color:#fce5b4}
+.cell.loot-omen{--clue-color:#f5d173}
+.cell.loot-omen .floor{border-color:#e8c976!important;box-shadow:0 0 12px #e8c97688!important;filter:brightness(1.1)!important}
+.cell.loot-omen .clueMark{position:absolute;left:50%;top:-12px;transform:translateX(-50%);z-index:11;font-size:12px;line-height:16px;white-space:nowrap;color:#ffe6a4;text-shadow:0 0 8px #edcc73;pointer-events:none;animation:lootShimmer 1.7s ease-in-out infinite}
+.cell.loot-omen{opacity:1!important;filter:none!important}
+.eyeMark{position:absolute;right:-6px;top:-9px;font-size:11px;z-index:11;pointer-events:none}
+.cell.eye-known .floor{border-style:dashed;border-color:#a5c2ee!important;opacity:1!important}
+.cell.eye-known .icon{color:#bdd6ff}
+@keyframes lootShimmer{50%{filter:brightness(1.5);text-shadow:0 0 14px #ffe7a0}}
+@media(max-height:520px){.eventCard{gap:5px;padding-bottom:0}#monsterThreat{font-size:14px;line-height:14px}.swipeCue{top:40%}}
+@media(prefers-reduced-motion:reduce){.swipeCue::before{animation:none;opacity:.3}.swipeCue::after{animation:none;opacity:.65;left:45%}.resourceFlight{animation:none;display:none}.effectNotice{animation:none}.effectPulse,.cell.loot-omen .clueMark{animation:none}}
+
 </style>
 </head>
 <body>
 <div id="game">
 <div id="hud"><div class="stat"><div class="label">Health</div><div class="value" id="hp"></div></div><div class="stat"><div class="label">Gold</div><div class="value" id="gold">0</div></div><div class="stat"><div class="label">Floor</div><div class="value" id="floorNo">1</div></div><div class="stat"><div class="label">Fate</div><div class="value" id="combo">x1.0</div></div></div>
-<div id="board"><div id="feedbackLayer"></div></div><div id="message"></div></div>
-<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
+<div id="board"><div id="feedbackLayer"></div></div><div id="footer"><div id="message"></div><div id="relicBar"><div id="trinkets" aria-label="Owned trinkets"></div><span id="bargainState"></span><button id="consumableSlot" type="button" aria-label="Empty consumable slot">◇</button></div></div></div>
+<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div id="monsterThreat" aria-hidden="true"></div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
 
+<div id="effectLayer" aria-live="polite"><div id="effectNotices"></div></div>
+<div id="itemChoice" hidden role="dialog" aria-modal="true" aria-label="Choose one consumable to keep"><div class="itemChoicePanel"><div aria-hidden="true">↔</div><button id="keepItem" type="button"></button><button id="takeItem" type="button"></button></div></div>
 <script>
 (function(){
 "use strict";
 var W=9,H=9,N=W*H,rooms=[],startId=0,exitId=0,currentId=0,history=[],searched={},hp=3,shield=false,gold=0,score=0,combo=1,floorNo=1,gameOver=false,totalMoves=0,floorDamage=0,perfectFloors=0,pendingAction=null,fastTravelTimer=null,fastTravelTarget=null,fastTraveling=false,encounterResolved=false,encounterCloseAction=null,holdAction=null,arrivalId=null,arrivalTimer=null,floorPerfectAwarded=false,scoreAnimation=null;
 var hintProfile={range:1,strength:.32,accuracy:.68,exactRevealChance:0,frontierMinStrength:.13};
 function $(id){return document.getElementById(id)} function room(id){return rooms[id]}
+// V2.14 effect definitions are behavior; relicState contains only serializable run data.
+function freshRelicState(){return{trinkets:[],consumable:null,floorUsed:{},bargainCharges:0,bargainRoom:null,pendingItem:null}}
+var relicState=freshRelicState(),encounterMonster="basic",slotGesture=null;
+var MONSTERS={
+ basic:{icon:"👹",name:"Guardian",resource:"♥"},
+ thief:{icon:"🥷",name:"Thief",resource:"🪙"},
+ spirit:{icon:"👻",name:"Spirit",resource:"✦"}
+};
+function monsterWeights(depth){
+ if(depth<=1)return{basic:1,thief:0,spirit:0};
+ if(depth===2)return{basic:.75,thief:.25,spirit:0};
+ if(depth<=4)return{basic:.6,thief:.2,spirit:.2};
+ return{basic:.4,thief:.3,spirit:.3}
+}
+function pickMonster(depth,roll){var w=monsterWeights(depth);return roll<w.basic?"basic":roll<w.basic+w.thief?"thief":"spirit"}
+var TRINKETS={
+ doll:{icon:"🪆",name:"Voodoo Doll",description:"Prevents 1 heart of damage once per floor; resets Fate.",hooks:{
+  onDamage:function(ctx){if(!ctx.prevented&&!relicState.floorUsed.doll){ctx.prevented=true;ctx.protector="doll";combo=1;relicState.floorUsed.doll=true;announceRelic("doll","♥ → 🪆 → ♥ ✓   ✦ ×1","hp")}}
+ }},
+ blood:{icon:"🩸",name:"Vampire's Blood",description:"First useful monster victory each floor restores 1 heart.",hooks:{
+  onMonsterVictory:function(){if(hp<3&&!relicState.floorUsed.blood){hp++;relicState.floorUsed.blood=true;announceRelic("blood","🩸 → +1 ♥","hp")}}
+ }},
+ eye:{icon:"🧿",name:"Evil Eye",description:"Identifies only monster rooms on every floor.",hooks:{
+  onFloorStart:function(){identifyMonsters()},
+  onAcquire:function(){identifyMonsters()}
+ }},
+ horseshoe:{icon:"🍀",name:"Golden Horseshoe",description:"Every perfect encounter roll grants bonus Gold.",hooks:{
+  onPerfectRoll:function(){var gain=25+floorNo*5;addRelicGold(gain);announceRelic("horseshoe","⚅ → 🍀 → +"+gain+" 🪙","gold")}
+ }}
+};
+var CONSUMABLES={
+ flask:{icon:"🧪",name:"Healing Flask",description:"+1 heart; kept if health is full.",use:function(){if(hp>=3)return false;hp++;resourceFlight("🧪","hp");return true}},
+ charm:{icon:"🛡",name:"Divine Charm",description:"Grants one Divine Shield; kept if shield is active.",use:function(){if(shield)return false;shield=true;resourceFlight("🛡","hp");return true}},
+ bargain:{icon:"☠",name:"Death's Bargain",description:"Hold: set health to 1; block HP damage for the next 3 new rooms.",dangerous:true,use:function(){if(relicState.bargainCharges>0||relicState.bargainRoom!==null)return false;hp=1;relicState.bargainCharges=3;relicState.bargainRoom=null;effectNotice("☠ ③   ♥ 1");return true}}
+};
+function emitEffect(hook,ctx){
+ ctx=ctx||{};
+ relicState.trinkets.slice().forEach(function(id){var fn=TRINKETS[id].hooks[hook];if(fn)fn(ctx)});
+ return ctx
+}
+function addRelicGold(amount){gold+=amount;score+=amount;emitEffect("onGoldGain",{amount:amount})}
+function identifyMonsters(){rooms.forEach(function(r){if(r.active&&r.event==="monster"){r.known=true;r.eyeMarked=true}})}
+function effectNotice(text){
+ var layer=$("effectNotices"),notice=document.createElement("div");notice.className="effectNotice";notice.textContent=text;
+ while(layer.children.length>=3)layer.firstChild.remove();layer.appendChild(notice);
+ setTimeout(function(){notice.remove()},1600)
+}
+function resourceFlight(symbol,targetId){
+ var target=$(targetId),source=$("diceOverlay").style.display==="flex"?$("eventCard"):$("consumableSlot");
+ var a=source.getBoundingClientRect(),b=target.getBoundingClientRect(),particle=document.createElement("span");
+ particle.className="resourceFlight";particle.textContent=symbol;particle.style.left=(a.left+a.width/2)+"px";particle.style.top=(a.top+a.height/2)+"px";
+ particle.style.setProperty("--flight-x",(b.left+b.width/2-a.left-a.width/2)+"px");particle.style.setProperty("--flight-y",(b.top+b.height/2-a.top-a.height/2)+"px");
+ $("effectLayer").appendChild(particle);target.classList.remove("effectPulse");void target.offsetWidth;target.classList.add("effectPulse");
+ setTimeout(function(){particle.remove();target.classList.remove("effectPulse")},1000)
+}
+function announceRelic(id,text,target){effectNotice(text);resourceFlight(TRINKETS[id].icon,target)}
+function acquireTrinket(id){
+ if(!TRINKETS[id]||relicState.trinkets.indexOf(id)>=0)return false;
+ relicState.trinkets.push(id);if(TRINKETS[id].hooks.onAcquire)TRINKETS[id].hooks.onAcquire();
+ update();effectNotice("✦ "+TRINKETS[id].icon+" ✦");showLocalFeedback(currentId,TRINKETS[id].icon,"fate",TRINKETS[id].name,1450);return true
+}
+function offerConsumable(id){
+ if(!CONSUMABLES[id])return false;
+ if(!relicState.consumable){relicState.consumable=id;update();effectNotice("✦ "+CONSUMABLES[id].icon+" ✦");return true}
+ relicState.pendingItem=id;pendingAction="item-choice";
+ $("keepItem").textContent=CONSUMABLES[relicState.consumable].icon+" ✓";$("takeItem").textContent=CONSUMABLES[id].icon+" ✦";
+ $("keepItem").setAttribute("aria-label","Keep "+CONSUMABLES[relicState.consumable].name);
+ $("takeItem").setAttribute("aria-label","Take "+CONSUMABLES[id].name);
+ $("itemChoice").hidden=false;$("keepItem").focus({preventScroll:true});updateRelicHUD();return true
+}
+function chooseConsumable(take){
+ if(pendingAction!=="item-choice"||!relicState.pendingItem)return;
+ if(take)relicState.consumable=relicState.pendingItem;
+ relicState.pendingItem=null;pendingAction=null;$("itemChoice").hidden=true;update();updateContext()
+}
+function discoverItem(){
+ var available=Object.keys(TRINKETS).filter(function(id){return relicState.trinkets.indexOf(id)<0});
+ if(available.length&&Math.random()<.5)acquireTrinket(available[Math.floor(Math.random()*available.length)]);
+ else{var ids=Object.keys(CONSUMABLES);offerConsumable(ids[Math.floor(Math.random()*ids.length)])}
+}
+function useConsumable(held){
+ if(gameOver||pendingAction||fastTraveling||!relicState.consumable)return false;
+ var item=CONSUMABLES[relicState.consumable];if(item.dangerous&&!held)return false;
+ if(!item.use()){effectNotice(item.icon+" =");return false}
+ relicState.consumable=null;update();updateContext();return true
+}
+function updateRelicHUD(){
+ var bar=$("trinkets");bar.textContent="";
+ relicState.trinkets.forEach(function(id){var icon=document.createElement("span");icon.className="trinket"+(relicState.floorUsed[id]?" spent":"");icon.textContent=TRINKETS[id].icon;icon.title=TRINKETS[id].name+" — "+TRINKETS[id].description;icon.setAttribute("aria-label",icon.title+(relicState.floorUsed[id]?" Used this floor.":""));bar.appendChild(icon)});
+ var slot=$("consumableSlot"),item=CONSUMABLES[relicState.consumable];
+ slot.textContent=item?item.icon:"◇";slot.classList.toggle("dangerous",!!(item&&item.dangerous));slot.classList.toggle("empty",!item);
+ slot.disabled=!!(gameOver||pendingAction||fastTraveling);slot.setAttribute("aria-label",item?item.name+" — "+item.description:"Empty consumable slot");slot.title=slot.getAttribute("aria-label");
+ var remaining=relicState.bargainCharges,protectedNow=relicState.bargainRoom!==null;
+ $("bargainState").textContent=remaining?"☠ "+["","①","②","③"][remaining]:protectedNow?"☠ ◉":"";
+ $("bargainState").setAttribute("aria-label",remaining?"Death's Bargain: "+remaining+" new room entries remaining":protectedNow?"Death's Bargain protects this room":"")
+}
+function cancelSlotGesture(){
+ if(slotGesture){clearTimeout(slotGesture.timer);slotGesture=null}
+ $("consumableSlot").classList.remove("holding");$("consumableSlot").style.removeProperty("--charge")
+}
+$("consumableSlot").addEventListener("pointerdown",function(e){
+ if(e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0)||slotGesture||pendingAction||fastTraveling||gameOver)return;
+ var item=CONSUMABLES[relicState.consumable];if(!item||!item.dangerous)return;
+ e.preventDefault();e.stopPropagation();this.setPointerCapture(e.pointerId);
+ var gesture={id:e.pointerId,x:e.clientX,y:e.clientY,started:performance.now()};slotGesture=gesture;this.classList.add("holding");
+ function charge(now){if(slotGesture!==gesture)return;$("consumableSlot").style.setProperty("--charge",Math.min(360,(now-gesture.started)/550*360)+"deg");requestAnimationFrame(charge)}
+ requestAnimationFrame(charge);
+ gesture.timer=setTimeout(function(){if(slotGesture!==gesture)return;cancelSlotGesture();useConsumable(true)},550)
+},{passive:false});
+$("consumableSlot").addEventListener("pointermove",function(e){if(slotGesture&&slotGesture.id===e.pointerId&&Math.hypot(e.clientX-slotGesture.x,e.clientY-slotGesture.y)>14)cancelSlotGesture()});
+["pointerup","pointercancel","lostpointercapture","blur"].forEach(function(name){$("consumableSlot").addEventListener(name,cancelSlotGesture)});
+$("consumableSlot").addEventListener("click",function(e){e.preventDefault();e.stopPropagation();useConsumable(false)});
+$("consumableSlot").addEventListener("keydown",function(e){
+ var item=CONSUMABLES[relicState.consumable];if(!item||!item.dangerous||(e.key!==" "&&e.key!=="Enter"))return;
+ e.preventDefault();if(e.repeat||slotGesture)return;
+ slotGesture={timer:setTimeout(function(){cancelSlotGesture();useConsumable(true)},550)};this.classList.add("holding")
+});
+$("consumableSlot").addEventListener("keyup",cancelSlotGesture);
+$("consumableSlot").addEventListener("contextmenu",function(e){e.preventDefault()});
+$("keepItem").addEventListener("click",function(e){e.stopPropagation();chooseConsumable(false)});
+$("takeItem").addEventListener("click",function(e){e.stopPropagation();chooseConsumable(true)});
+$("itemChoice").addEventListener("contextmenu",function(e){e.preventDefault()});
+function beginRoomEffects(id,isNew){
+ relicState.bargainRoom=null;
+ if(isNew&&relicState.bargainCharges>0){relicState.bargainCharges--;relicState.bargainRoom=id}
+ emitEffect("onRoomEnter",{id:id,isNew:isNew})
+}
+function finishRoomEffects(){relicState.bargainRoom=null;updateRelicHUD()}
+function resolveSpecialMonster(kind,roll){
+ var result="",detail="",gain=0;
+ if(kind==="thief"){
+  if(roll<=2){var stolen=Math.min(gold,Math.min(250+floorNo*50,Math.ceil(gold*.2)));gold-=stolen;result="🪙 −"+stolen;detail="Thief stole Gold"}
+  else if(roll<=4){result="🪙 ✓";detail="Thief escaped; Gold safe"}
+  else{gain=Math.floor((roll===6?200:90)*combo);combo=Math.min(6,combo+(roll===6?.4:.2));result="🥷 ✓";detail="+"+gain+" 🪙"}
+ }else{
+  if(roll<=2){combo=1;result="✦ ×1";detail="Fate broken"}
+  else if(roll<=4){combo=Math.max(1,Math.round(combo*.55*100)/100);result="✦ ↓ ×"+combo.toFixed(1);detail="Fate drained"}
+  else{gain=Math.floor((roll===6?140:55)*combo);if(roll===6)combo=Math.min(6,combo+.7);result="👻 ✓";detail="+"+gain+" 🪙   ✦ ×"+combo.toFixed(1)}
+ }
+ score+=gain;finishDiceResult(result,detail)
+}
+
 var runtimeLearned={};
 function learned(name){try{return localStorage.getItem("dof."+name)==="1"}catch(e){return!!runtimeLearned[name]}}
 function learn(name){runtimeLearned[name]=true;try{localStorage.setItem("dof."+name,"1")}catch(e){}}
@@ -196,7 +383,7 @@ function generateDungeon(){
  var connected={},frontier=[root];connected[root]=true;
  while(frontier.length){var fi=Math.floor(Math.random()*frontier.length),from=room(frontier[fi]),opts=adjacent(from).filter(function(n){return n.active&&!connected[n.id]});if(!opts.length){frontier.splice(fi,1);continue}var to=opts[Math.floor(Math.random()*opts.length)];from.links.push(to.id);to.links.push(from.id);connected[to.id]=true;frontier.push(to.id)}
  var possible=[];for(i=0;i<N;i++){var rr=room(i);if(!rr.active)continue;adjacent(rr).forEach(function(n){if(n.active&&n.id>rr.id&&rr.links.indexOf(n.id)<0)possible.push([rr,n])})}shuffle(possible);for(i=0;i<Math.floor(target*.14)&&i<possible.length;i++){possible[i][0].links.push(possible[i][1].id);possible[i][1].links.push(possible[i][0].id)}
- chooseEndpoints();placeEvents();assignRoomHints();
+ chooseEndpoints();placeEvents();rooms.forEach(function(r){if(r.event==="monster")r.monsterKind=pickMonster(floorNo,Math.random())});assignRoomHints();
 }
 function chooseEndpoints(){var d=[],q=[],i;do{startId=Math.floor(Math.random()*N)}while(!room(startId).active);for(i=0;i<N;i++)d[i]=-1;d[startId]=0;q.push(startId);for(i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(d[id]<0){d[id]=d[q[i]]+1;q.push(id)}});var far=[];for(i=0;i<N;i++)if(room(i).active&&i!==startId)far.push(i);far.sort(function(a,b){return d[b]-d[a]});exitId=far[Math.floor(Math.random()*Math.min(5,far.length))]}
 function distancesFrom(id){var d={},q=[id];d[id]=0;for(var i=0;i<q.length;i++)room(q[i]).links.forEach(function(n){if(d[n]===undefined){d[n]=d[q[i]]+1;q.push(n)}});return d}
@@ -281,8 +468,8 @@ $("eventCard").addEventListener("keydown",function(e){
  if((e.key==="Enter"||e.key===" ")&&!e.repeat){e.preventDefault();if(combatReady)commitCombat(1,0);else if(encounterResolved)continueEncounter()}
 });
 
-function beginRun(){hp=3;shield=false;gold=0;score=0;combo=1;floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
-function newFloor(first,announcement){clearFeedback();generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;updateContext(announcement||"");update();markArrival(startId)}
+function beginRun(){cancelSlotGesture();encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;combo=1;floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
+function newFloor(first,announcement){cancelSlotGesture();clearFeedback();relicState.floorUsed={};relicState.bargainRoom=null;generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;emitEffect("onFloorStart",{floor:floorNo});updateContext(announcement||"");update();markArrival(startId)}
 function markArrival(id){arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340)}
 
 function usefulFastTravelExists(){return rooms.some(function(r){return r.visited&&r.id!==currentId&&room(currentId).links.indexOf(r.id)<0&&shortestVisitedPath(currentId,r.id)})}
@@ -348,18 +535,21 @@ function showLocalFeedback(id,reward,kind,calc,duration){
  entry.timer=setTimeout(function(){removeFeedback(entry);layoutFeedback()},(duration||1000)+80);return el
 }
 if(typeof ResizeObserver!=="undefined")new ResizeObserver(layoutFeedback).observe($("board"));
-function revealClue(sourceId,target){
+function revealClue(sourceId,target,type){
+ type=type||"exploration";
  var floorRooms=rooms;
  showLocalFeedback(sourceId,"⌁","clue","",450);
  setTimeout(function(){
-  if(rooms!==floorRooms||target.searched)return;
-  target.known=true;target.clued=true;
-  target.clueTendency=target.id===exitId?"stairs":eventTendency(target.event);
-  if(target.clueTendency==="neutral")target.clueTendency="safe";
+  
+  if(rooms!==floorRooms||(type==="loot"?(target.scavenged||!target.searched||target.id===exitId):target.searched))return;
+  target.known=true;
+  if(type==="loot"){target.lootClued=true;target.hiddenScavengeReward={kind:"gold",base:45+floorNo*6}}
+  else{target.clued=true;target.clueTendency=target.id===exitId?"stairs":eventTendency(target.event);if(target.clueTendency==="neutral")target.clueTendency="safe"}
+  emitEffect("onClueReveal",{id:target.id,type:type});
   target.clueRevealUntil=performance.now()+1800;
   update();
   var symbols={danger:"⚠",fortune:"✦",safe:"✚",stairs:"▼"},labels={danger:"Danger",fortune:"Fortune",safe:"Quiet / blessing",stairs:"Stairs"};
-  showLocalFeedback(target.id,"⌁ "+symbols[target.clueTendency],"clue clue-"+target.clueTendency,labels[target.clueTendency],1500);
+  showLocalFeedback(target.id,type==="loot"?"⌁ 🪙":"⌁ "+symbols[target.clueTendency],"clue clue-"+(type==="loot"?"fortune":target.clueTendency),type==="loot"?"":labels[target.clueTendency],1500);
   setTimeout(function(){if(rooms===floorRooms)update()},1850)
  },180)
 }
@@ -494,7 +684,7 @@ function startFastTravel(id){
  hop()
 }
 
-function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;currentId=id;markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){update();updateContext();return}pendingAction="room-entry";update();var rid=id;setTimeout(function(){var el=document.querySelector('.cell[data-id="'+rid+'"]');if(el)el.classList.add("entry-pulse");setTimeout(function(){searchCurrentRoom(rid)},170)},20)}
+function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();return}pendingAction="room-entry";update();var rid=id;setTimeout(function(){var el=document.querySelector('.cell[data-id="'+rid+'"]');if(el)el.classList.add("entry-pulse");setTimeout(function(){searchCurrentRoom(rid)},170)},20)}
 function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
 function resolveSimpleEvent(event){
  var gain,base,goldBefore=gold,fateBefore=combo;
@@ -502,16 +692,18 @@ function resolveSimpleEvent(event){
   case"treasure":base=Math.floor(180*(1+Math.floor((floorNo-1)/5)*.1));gain=Math.floor(base*combo);gold+=gain;score+=gain;combo=Math.min(5,combo+.35);update();(function(roomId,b,g,f,s){setTimeout(function(){celebrateTreasure(roomId,b,g,f,false,s)},210)})(currentId,base,gain,fateBefore,goldBefore);break;
   case"rich":base=Math.floor(600*(1+Math.floor((floorNo-1)/5)*.15));gain=Math.floor(base*combo);gold+=gain;score+=gain;combo=Math.min(6,combo+.6);update();(function(roomId,b,g,f,s){setTimeout(function(){celebrateTreasure(roomId,b,g,f,true,s)},210)})(currentId,base,gain,fateBefore,goldBefore);break;
   case"key":gain=Math.floor((125+floorNo*10)*combo);gold+=gain;score+=gain+125;combo=Math.min(5,combo+.5);update();showLocalFeedback(currentId,"+"+gain+" GOLD","","ANCIENT KEY",1000);animateGold(goldBefore,gold,850);break;
-  default:gain=Math.floor(35*combo*(1+floorNo*.04));score+=gain;update();(function(roomId){setTimeout(function(){if(currentId===roomId)showLocalFeedback(roomId,"ROOM SEARCHED","","",1150)},210)})(currentId)
+  default:gain=Math.floor(35*combo*(1+floorNo*.04));score+=gain;update()
  }
  if(combo-fateBefore>=.3)(function(roomId,newFate){setTimeout(function(){showLocalFeedback(roomId,"FATE ↑ ×"+newFate.toFixed(1),"fate","",900)},1450)})(currentId,combo);
- if(!awardPerfectFloor())updateContext()
+ finishRoomEffects();if(!awardPerfectFloor())updateContext()
 }
-function resolveDice(type,roll){var result="",detail="";if(type==="monster"){if(roll<=2){hp--;combo=1;floorDamage++;result="WOUNDED";detail="The monster hits you. -1 ❤️"}else if(roll<=4){var safe=Math.floor(80*combo);score+=safe;result="ESCAPED";detail="You slip away. +"+safe+" score"}else if(roll===5){var win=Math.floor(220*combo);score+=win;combo=Math.min(6,combo+.5);result="VICTORY";detail="Guardian defeated! +"+win+" score"}else{var crit=Math.floor(450*combo);score+=crit;combo=Math.min(6,combo+1);result="CRITICAL!";detail="Perfect strike! +"+crit+" score"}}else if(type==="trap"){if(roll<=2){hp--;combo=1;floorDamage++;result="TRIGGERED";detail="The trap catches you. -1 ❤️"}else if(roll<=4){combo=1;result="CLOSE CALL";detail="You avoid the worst, but lose your FATE."}else{var tg=Math.floor(90*combo);score+=tg;combo=Math.min(6,combo+.2);result="AVOIDED";detail="You spot the mechanism. +"+tg+" score"}}else{if(roll<=2){result="FADED";detail="The shrine has no power."}else if(roll<=4){hp=Math.min(3,hp+1);result="RESTORED";detail="+1 ❤️"}else if(roll===5){hp=Math.min(3,hp+1);var hg=Math.floor((120+floorNo*10)*combo);score+=hg;result="BLESSED";detail="+1 ❤️ and +"+hg+" score"}else{hp=3;var fg=Math.floor((250+floorNo*20)*combo);score+=fg;combo=Math.min(6,combo+.4);result="MIRACLE";detail="Full heal! +"+fg+" score"}}$("diceResult").textContent=result;$("diceDetail").textContent=detail;$("message").textContent=detail;encounterResolved=true;$("diceOverlay").classList.add("resolved");encounterCloseAction=function(){$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved");encounterResolved=false;encounterCloseAction=null;pendingAction=null;update();if(hp<=0)finish("YOU DIED")}}
+function resolveDice(type,roll){var result="",detail="";if(type==="monster"){if(roll<=2){hp--;combo=1;floorDamage++;result="WOUNDED";detail="The monster hits you. -1 ❤️"}else if(roll<=4){var safe=Math.floor(80*combo);score+=safe;result="ESCAPED";detail="You slip away. +"+safe+" score"}else if(roll===5){var win=Math.floor(220*combo);score+=win;combo=Math.min(6,combo+.5);result="VICTORY";detail="Guardian defeated! +"+win+" score"}else{var crit=Math.floor(450*combo);score+=crit;combo=Math.min(6,combo+1);result="CRITICAL!";detail="Perfect strike! +"+crit+" score"}}else if(type==="trap"){if(roll<=2){hp--;combo=1;floorDamage++;result="TRIGGERED";detail="The trap catches you. -1 ❤️"}else if(roll<=4){combo=1;result="CLOSE CALL";detail="You avoid the worst, but lose your FATE."}else{var tg=Math.floor(90*combo);score+=tg;combo=Math.min(6,combo+.2);result="AVOIDED";detail="You spot the mechanism. +"+tg+" score"}}else{if(roll<=2){result="FADED";detail="The shrine has no power."}else if(roll<=4){hp=Math.min(3,hp+1);result="RESTORED";detail="+1 ❤️"}else if(roll===5){hp=Math.min(3,hp+1);var hg=Math.floor((120+floorNo*10)*combo);score+=hg;result="BLESSED";detail="+1 ❤️ and +"+hg+" score"}else{hp=3;var fg=Math.floor((250+floorNo*20)*combo);score+=fg;combo=Math.min(6,combo+.4);result="MIRACLE";detail="Full heal! +"+fg+" score"}}finishDiceResult(result,detail)}
+function finishDiceResult(result,detail){$("diceResult").textContent=result;$("diceDetail").textContent=detail;$("message").textContent=detail;encounterResolved=true;$("diceOverlay").classList.add("resolved");encounterCloseAction=function(){$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved");encounterResolved=false;encounterCloseAction=null;pendingAction=null;update();if(hp<=0)finish("YOU DIED")}}
 function showDice(type){
+ encounterMonster=type==="monster"?(room(currentId).monsterKind||"basic"):"basic";
  var serial=++encounterSerial;combatReady=null;combatPointer=null;continuePointer=null;
  encounterResolved=false;encounterCloseAction=null;var o=$("diceOverlay"),c=$("eventCard"),die=$("die"),result=$("diceResult"),detail=$("diceDetail");
- o.classList.remove("resolved","awaiting-swipe");c.className="eventCard "+type;$("eventArt").textContent=type==="monster"?"👹":type==="trap"?"⚠️":"✚";$("diceTitle").textContent=type==="monster"?"MONSTER ENCOUNTER":type==="trap"?"TRAP":"SHRINE";
+ o.classList.remove("resolved","awaiting-swipe");c.className="eventCard "+type+(type==="monster"?" "+encounterMonster:"");$("eventArt").textContent=type==="monster"?MONSTERS[encounterMonster].icon:type==="trap"?"⚠️":"✚";$("monsterThreat").textContent=type==="monster"?MONSTERS[encounterMonster].resource:"";$("diceTitle").textContent=type==="monster"?MONSTERS[encounterMonster].name:type==="trap"?"TRAP":"SHRINE";
  die.className="die";die.textContent="⚄";result.className="diceResult";result.textContent=type==="monster"?"BATTLE ROLL":type==="heal"?"BLESSING ROLL":"FATE ROLL";detail.textContent="GET READY...";o.style.display="flex";
  function startRoll(){setTimeout(function(){
   if(serial!==encounterSerial||o.style.display!=="flex")return;c.classList.remove("swipe-impact");die.className="die rolling";result.textContent=type==="monster"?"BATTLE ROLL":type==="heal"?"BLESSING ROLL":"FATE ROLL";detail.textContent="ROLLING...";
@@ -528,38 +720,64 @@ function showDice(type){
  },250)}
  c.setAttribute("aria-label",type==="monster"?"Monster: swipe anywhere on screen, or press Enter to confront it.":type==="trap"?"Trap encounter":"Shrine encounter");
  if(type==="monster"){
-  o.classList.add("awaiting-swipe");detail.textContent="Swipe anywhere";result.textContent="↔";combatReady=startRoll;
+  o.classList.add("awaiting-swipe");detail.textContent="";result.textContent="";combatReady=startRoll;
  }else startRoll();
  c.focus({preventScroll:true})
 }
 var resolveDiceCore=resolveDice;
 resolveDice=function(type,roll){
  var fateBefore=combo,hpBefore=hp,shieldBefore=shield,scoreBefore=score,goldBefore=gold,damageBefore=floorDamage;
- resolveDiceCore(type,roll);
+ if(type==="monster"&&encounterMonster!=="basic")resolveSpecialMonster(encounterMonster,roll);else resolveDiceCore(type,roll);
  var encounterGold=score-scoreBefore;if(encounterGold>0){gold+=encounterGold;$("diceDetail").textContent=$("diceDetail").textContent.replace(/score/gi,"Gold")}
- if(hp<hpBefore&&shieldBefore){hp=hpBefore;shield=false;floorDamage=damageBefore;$("diceResult").textContent="BLOCKED";$("diceDetail").textContent="Divine Shield absorbs the damage. 🛡"}
+ 
+ if(hp<hpBefore){
+  var damage={amount:hpBefore-hp,source:type,prevented:false,protector:null};
+  // Temporary immunity preserves the shield; shield preserves the once-per-floor Doll.
+  if(relicState.bargainCharges>0||relicState.bargainRoom===currentId){damage.prevented=true;damage.protector="bargain"}
+  else if(shieldBefore){damage.prevented=true;damage.protector="shield";shield=false}
+  emitEffect("onDamage",damage);
+  if(damage.prevented){hp=hpBefore;floorDamage=damageBefore;$("diceResult").textContent=damage.protector==="doll"?"🪆 ♥ ✓":damage.protector==="bargain"?"☠ ♥ ✓":"🛡 ♥ ✓";$("diceDetail").textContent=damage.protector==="doll"?"✦ → ×1":"♥ preserved"}
+ }
  if(type==="heal"&&roll<=2){$("diceResult").textContent="SILENT";$("diceDetail").textContent="The shrine is silent."}
  if(type==="heal"&&roll>=3&&hpBefore>=3){
   hp=3;gold=goldBefore;score=scoreBefore;combo=fateBefore;
   if(!shieldBefore){shield=true;$("diceResult").textContent="DIVINE SHIELD";$("diceDetail").textContent="The next point of damage will be absorbed. 🛡"}
   else{var blessing=Math.floor((55+floorNo*5)*combo);shield=true;gold=goldBefore+blessing;score=scoreBefore+blessing;combo=Math.min(6,combo+.15);$("diceResult").textContent="BLESSING";$("diceDetail").textContent="Shield renewed • +"+blessing+" Gold"}
  }
- if(fateBefore>1.04&&combo===1)$("diceDetail").textContent+=" • FATE BROKEN ×"+fateBefore.toFixed(1)+" → ×1";update()
+ 
+ if(type==="monster"&&roll>=5)emitEffect("onMonsterVictory",{kind:encounterMonster,roll:roll});
+ if(roll===6)emitEffect("onPerfectRoll",{type:type,roll:roll});
+ if(fateBefore>1.04&&combo===1){$("diceDetail").textContent+=" • ✦ ×"+fateBefore.toFixed(1)+" → ×1";emitEffect("onFateBreak",{before:fateBefore})}
+ finishRoomEffects();update()
 };
 function scavenge(id,forcedRoll){
  if(id!==currentId||id===exitId||!room(id).searched||room(id).scavenged||pendingAction||fastTraveling)return false;
- var r=room(id),first=!learned("learnedScavenge"),goldBefore=gold,fateBefore=combo;r.scavenged=true;var roll=first?.55:(forcedRoll===undefined?Math.random():forcedRoll),gain,candidates,clue,omen;
+ var r=room(id),first=!learned("learnedScavenge"),goldBefore=gold,fateBefore=combo;r.scavenged=true;
+ emitEffect("onScavenge",{id:id});
+ if(r.hiddenScavengeReward){
+  var promised=r.hiddenScavengeReward;r.hiddenScavengeReward=null;r.lootClued=false;
+  var loot=Math.max(1,Math.floor(promised.base*combo));addRelicGold(loot);learn("learnedScavenge");update();showLocalFeedback(id,"+"+loot+" 🪙","fate","⌁ ✓",1200);animateGold(goldBefore,gold,850);updateContext();return true
+ }
+ var roll=first?.55:(forcedRoll===undefined?Math.random():forcedRoll),gain,candidates,clue;
  if(roll<.45){update();showLocalFeedback(id,"NOTHING FOUND","","SCAVENGED",950)}
  else if(roll<.75){gain=Math.floor((25+floorNo*4)*combo);gold+=gain;score+=gain;update();showLocalFeedback(id,"+"+gain+" GOLD","",first?"FIRST FIND!":"SCAVENGED",1000);animateGold(goldBefore,gold,700)}
  else if(roll<.85){gain=Math.floor((80+floorNo*8)*combo);gold+=gain;score+=gain;combo=Math.min(6,combo+.15);update();showLocalFeedback(id,"+"+gain+" GOLD","fate","LUCKY FIND!",1050);animateGold(goldBefore,gold,800)}
- else if(roll<.95){candidates=rooms.filter(function(x){return x.active&&!x.searched&&!x.clued&&x.id!==exitId});if(!candidates.length)candidates=rooms.filter(function(x){return x.active&&!x.searched&&!x.clued});if(candidates.length){clue=candidates[Math.floor(Math.random()*candidates.length)];update();revealClue(id,clue)}else{update();showLocalFeedback(id,"⌁ —","clue","No new clues",1000)}}
+ else if(roll<.91){
+  var lootTargets=rooms.filter(function(x){return x.active&&x.searched&&!x.scavenged&&!x.hiddenScavengeReward&&x.id!==exitId});
+  candidates=rooms.filter(function(x){return x.active&&!x.searched&&!x.clued&&x.id!==exitId});if(!candidates.length)candidates=rooms.filter(function(x){return x.active&&!x.searched&&!x.clued});
+  var lootClue=lootTargets.length&&(!candidates.length||Math.random()<.4);
+  var targets=lootClue?lootTargets:candidates;
+  if(targets.length){clue=targets[Math.floor(Math.random()*targets.length)];update();revealClue(id,clue,lootClue?"loot":"exploration")}
+  else{update();showLocalFeedback(id,"⌁ —","clue","No new clues",1000)}
+ }
+ else if(roll<.95){update();discoverItem()}
  else{pendingAction="trap";update();showLocalFeedback(id,"TRAP!","bad","SCAVENGE",750);showDice("trap")}
  if(first)learn("learnedScavenge");if(combo-fateBefore>=.1)setTimeout(function(){showLocalFeedback(id,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},500);updateContext();return true
 }
 function descend(){
  if(currentId!==exitId||!room(exitId).searched||pendingAction||fastTraveling)return false;
  var perfect=unexploredCount()===0;if(perfect&&!floorPerfectAwarded)awardPerfectFloor();var exitBonus=Math.floor((300+floorNo*80)*combo),oldFate=combo;
- score+=exitBonus;learn("learnedDescend");floorNo++;combo=Math.min(6,combo+.25);newFloor(false,"You descend deeper.");
+ score+=exitBonus;emitEffect("onFloorEnd",{floor:floorNo});learn("learnedDescend");floorNo++;combo=Math.min(6,combo+.25);newFloor(false,"You descend deeper.");
  showLocalFeedback(currentId,"DEEPER","","DESCENDED",950);if(combo-oldFate>=.2)setTimeout(function(){showLocalFeedback(currentId,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},520);return true
 }
 function finish(title){gameOver=true;$("endTitle").textContent=title;$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";$("overlay").style.display="flex"}
@@ -589,13 +807,15 @@ function render(){
   if(r.searched)cell.className+=" searched";
   if(r.scavenged)cell.className+=" scavenged";
   if(r.clued)cell.className+=" clued";
-  if(r.clued&&!r.searched){
-   var mark=document.createElement("span");mark.className="clueMark";mark.textContent=r.clueTendency==="stairs"?"⌁ ▼":"⌁";cell.appendChild(mark);
+  if((r.clued&&!r.searched)||(r.lootClued&&!r.scavenged)){
+   if(r.lootClued&&!r.scavenged)cell.className+=" loot-omen";
+   var mark=document.createElement("span");mark.className="clueMark";mark.textContent=r.lootClued?"⌁ 🪙":r.clueTendency==="stairs"?"⌁ ▼":"⌁";cell.appendChild(mark);
    if(r.clueRevealUntil>performance.now()){
     cell.className+=" clue-reveal";cell.style.setProperty("--clue-delay",(r.clueRevealUntil-performance.now()-1800)+"ms");
     var ring=document.createElement("i");ring.className="clueRing";cell.appendChild(ring)
    }
   }
+  if(r.eyeMarked&&!r.searched){cell.className+=" eye-known";var eye=document.createElement("span");eye.className="eyeMark";eye.textContent="🧿";cell.appendChild(eye)}
   if(r.searched&&r.event!=="empty")cell.className+=" "+r.event;
   if(r.id!==currentId&&room(currentId).links.indexOf(r.id)>=0)cell.className+=" available";
   if(hintData&&hintData.tendency!=="neutral"){
@@ -621,7 +841,7 @@ function render(){
   }
 
   var floor=document.createElement("div");floor.className="floor";cell.appendChild(floor);
-  var icon=document.createElement("div");icon.className="icon"+(r.id===currentId?" currentGlyph":"");icon.textContent=r.id===currentId?"◆":r.searched?"·":"?";cell.appendChild(icon);
+  var icon=document.createElement("div");icon.className="icon"+(r.id===currentId?" currentGlyph":"");icon.textContent=r.id===currentId?"◆":r.searched?"·":r.eyeMarked?"👹":"?";cell.appendChild(icon);
 
   if(r.id===startId&&r.searched){
    var sm=document.createElement("div");sm.className="startMark";sm.textContent="◇ START";cell.appendChild(sm)
@@ -634,7 +854,7 @@ function render(){
   }
   if(r.searched&&r.event!=="empty"){
    var ev=document.createElement("div");ev.className="event";
-   ev.textContent={treasure:"🪙",rich:"💎",monster:"👹",trap:"⚠️",heal:"✚",key:"🗝"}[r.event]||"";
+   ev.textContent=r.event==="monster"?MONSTERS[r.monsterKind||"basic"].icon:({treasure:"🪙",rich:"💎",trap:"⚠️",heal:"✚",key:"🗝"}[r.event]||"");
    cell.appendChild(ev)
   }
 
@@ -685,11 +905,14 @@ function render(){
  hint.textContent="Tap adjacent • Hold current to Scavenge / Descend • Hold distant to Travel";
  board.appendChild(hint)
 }
-function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="x"+combo.toFixed(1);render()}
+function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="x"+combo.toFixed(1);updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 window.__dofTest={
- state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event}}),startId:startId,exitId:exitId,currentId:currentId,floorNo:floorNo,hp:hp,shield:shield,gold:gold,score:score,combo:combo,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
- revealClue:function(source,id){revealClue(source,room(id))},showDice:function(type){pendingAction=type;showDice(type)},clearFeedback:clearFeedback,enter:enterRoom,search:searchCurrentRoom,scavenge:scavenge,descend:descend,travel:startFastTravel,update:update,awardPerfectFloor:awardPerfectFloor,resolveSimple:resolveSimpleEvent,resolveDice:resolveDice,showFeedback:showLocalFeedback,celebrateTreasure:celebrateTreasure,resetLearning:resetLearning,newFloor:function(){newFloor(true,"")},
+ state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event,monsterKind:r.monsterKind,eyeMarked:!!r.eyeMarked,lootClued:!!r.lootClued,hiddenScavengeReward:r.hiddenScavengeReward?Object.assign({},r.hiddenScavengeReward):null}}),startId:startId,exitId:exitId,currentId:currentId,floorNo:floorNo,hp:hp,shield:shield,gold:gold,score:score,combo:combo,relics:JSON.parse(JSON.stringify(relicState)),pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
+ revealClue:function(source,id,type){revealClue(source,room(id),type)},showDice:function(type,kind){if(type==="monster")room(currentId).monsterKind=kind||"basic";pendingAction=type;showDice(type)},acquireTrinket:acquireTrinket,offerConsumable:offerConsumable,chooseConsumable:chooseConsumable,useConsumable:useConsumable,emitEffect:emitEffect,monsterWeights:monsterWeights,pickMonster:pickMonster,newRun:beginRun,
+ setRoomFixture:function(id,patch){Object.assign(room(id),patch);update()},setMonster:function(kind){encounterMonster=kind;room(currentId).monsterKind=kind},
+ setGold:function(value){gold=value;update()},setFloor:function(value){floorNo=value;newFloor(false,"")},
+ clearFeedback:clearFeedback,enter:enterRoom,search:searchCurrentRoom,scavenge:scavenge,descend:descend,travel:startFastTravel,update:update,awardPerfectFloor:awardPerfectFloor,resolveSimple:resolveSimpleEvent,resolveDice:resolveDice,showFeedback:showLocalFeedback,celebrateTreasure:celebrateTreasure,resetLearning:resetLearning,newFloor:function(){newFloor(true,"")},
  setCurrent:function(id){currentId=id;room(id).known=true;room(id).visited=true;update()},
  markVisited:function(ids){ids.forEach(function(id){room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id)});update()},
  setCombo:function(value){combo=value;update()},setVitals:function(health,hasShield){hp=health;shield=hasShield;update()},setRoomEvent:function(id,event){room(id).event=event;room(id).searched=true;room(id).eventResolved=true;searched[id]=true;update()},
@@ -710,3 +933,4 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
 </script>
 </body>
 </html>
+
