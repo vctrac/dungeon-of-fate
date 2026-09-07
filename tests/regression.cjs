@@ -200,7 +200,7 @@ let browser;
  await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await context.setOffline(true);await page.goto(url+'index.html');assert(await page.locator('.current').count());
- assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.14'))),true);
+ assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.14.1'))),true);
  await page.goto(url);assert(await page.locator('.current').count());
  await context.setOffline(false);
  assert.deepEqual(errors,[]);

@@ -187,7 +187,8 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 #trinkets:empty{display:none}.trinket{font-size:17px;text-align:center;line-height:22px}.trinket.spent{opacity:.38;filter:grayscale(.65)}
 #consumableSlot{position:relative;width:44px;height:44px;border:1px solid #b29465;border-radius:10px;background:#28221a;color:#e9d9b6;font-size:27px;padding:0;touch-action:none}
 #consumableSlot.empty{border-color:#484039;color:#7b7163;font-size:20px}
-#consumableSlot.dangerous{border-color:#bc787c}#consumableSlot:disabled{opacity:.5}
+#consumableSlot.dangerous{border-color:#bc787c}/* Brief room-entry locks must not make the slot blink. */
+#consumableSlot:disabled{opacity:1}
 #consumableSlot.holding::after{content:"";position:absolute;inset:-3px;border-radius:12px;padding:2px;pointer-events:none;background:conic-gradient(#ffd995 var(--charge,0deg),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 #bargainState{font-size:14px;white-space:nowrap;color:#e2bad0}#bargainState:empty{display:none}
 #effectLayer{position:fixed;inset:0;z-index:70;pointer-events:none}

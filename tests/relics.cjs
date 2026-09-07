@@ -17,6 +17,26 @@ let browser;
  const clear=()=>page.evaluate(()=>__dofTest.clearPending());
  const resolve=async(kind,roll)=>{await page.evaluate(({kind,roll})=>{__dofTest.setMonster(kind);__dofTest.resolveDice('monster',roll)},{kind,roll});const s=await state();await clear();return s};
  await page.waitForTimeout(400);
+
+ // Room reveals briefly lock input, but the consumable slot must not dim.
+ for(const held of [null,'flask']){
+  await reset();await page.waitForTimeout(400);
+  if(held)await page.evaluate(id=>__dofTest.offerConsumable(id),held);
+  const before=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent}));
+  await page.evaluate(()=>{
+   const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);
+   __dofTest.setRoomFixture(id,{event:'empty',eventResolved:false,visited:false,searched:false});
+   __dofTest.enter(id);
+  });
+  const during=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent,disabled:el.disabled}));
+  assert.equal(during.opacity,before.opacity);assert.equal(during.text,before.text);assert(during.disabled);
+  assert.equal(await page.evaluate(()=>__dofTest.useConsumable(false)),false);
+  await page.waitForFunction(()=>__dofTest.state().pendingAction===null);
+  const after=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent,disabled:el.disabled}));
+  assert.equal(after.opacity,before.opacity);assert.equal(after.text,before.text);assert.equal(after.disabled,false);
+ }
+ await reset();
+ console.log('PASS stable empty/filled item slot across room reveals; input locks preserved');
  // Resolve each archetype, isolating HP, Gold and Fate threats.
  await page.evaluate(()=>{__dofTest.setGold(1000);__dofTest.setCombo(4)});
  let s=await resolve('basic',1);assert.equal(s.hp,2);assert.equal(s.combo,1);assert.equal(s.gold,1000);
