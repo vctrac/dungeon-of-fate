@@ -168,10 +168,10 @@ let browser;
   await page.waitForSelector('#die.rolling');await page.waitForSelector('#diceOverlay.resolved');
  }
  await clear();
- for(const [event,base,after] of [['treasure',180,2.35],['rich',600,2.6]]){
+ for(const [event,base,after] of [['treasure',30,2.35],['rich',90,2.6]]){
   const before=await state();await page.evaluate(event=>{__dofTest.setCombo(2);__dofTest.resolveSimple(event)},event);
-  const afterState=await state();assert.equal(afterState.gold-before.gold,base*2);assert.equal(afterState.score-before.score,base*2);assert.equal(afterState.combo,after);
-  await page.waitForTimeout(300);assert.equal(await page.locator('.roomFeedback .reward').filter({hasText:'+'+(base*2)+' 🪙'}).count(),1);
+  const afterState=await state();assert.equal(afterState.gold-before.gold,Math.floor(base*1.35));assert.equal(afterState.score-before.score,Math.floor(base*1.35));assert.equal(afterState.combo,after);
+  await page.waitForTimeout(300);assert.equal(await page.locator('.roomFeedback .reward').filter({hasText:'+'+(Math.floor(base*1.35))+' 🪙'}).count(),1);
   await clear();
  }
  await page.evaluate(()=>{__dofTest.setVitals(3,true);__dofTest.resolveDice('monster',1)});
@@ -192,10 +192,10 @@ let browser;
  let exit=await page.locator('.cell[data-id="'+travel.target+'"]').boundingBox();
  await page.mouse.move(exit.x+exit.width/2,exit.y+exit.height/2);await page.mouse.down();await page.waitForTimeout(380);await page.mouse.up();
  await page.waitForFunction(id=>__dofTest.state().currentId===id&&!__dofTest.state().fastTraveling,travel.target);
- s=await state();assert.equal(s.combo,1);assert.equal(s.floorNo,travel.floor);
+ s=await state();assert.equal(s.combo,1.6);assert.equal(s.floorNo,travel.floor);
  current=await page.locator('.current').boundingBox();await page.mouse.move(current.x+current.width/2,current.y+current.height/2);await page.mouse.down();await page.waitForTimeout(370);await page.mouse.up();
  assert.equal((await state()).floorNo,travel.floor+1);
- console.log('PASS Scavenge hold, distant EXIT Fast Travel hold, FATE reset, current EXIT descend hold');
+ console.log('PASS Scavenge hold, distant EXIT Fast Travel hold, FATE halved, current EXIT descend hold');
  await clear();
  await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
@@ -207,4 +207,5 @@ let browser;
  console.log('PASS actual service worker install, offline file and directory launch, no runtime errors');
  await browser.close();browser=null;server.close();
 })().catch(async e=>{console.error(e);if(browser)await browser.close();server.close();process.exitCode=1});
+
 
