@@ -39,12 +39,12 @@ let browser;
  console.log('PASS stable empty/filled item slot across room reveals; input locks preserved');
  // Resolve each archetype, isolating HP, Gold and Fate threats.
  await page.evaluate(()=>{__dofTest.setGold(1000);__dofTest.setCombo(4)});
- let s=await resolve('basic',1);assert.equal(s.hp,2);assert.equal(s.combo,1);assert.equal(s.gold,1000);
+ let s=await resolve('basic',1);assert.equal(s.hp,2);assert.equal(s.combo,3);assert.equal(s.gold,1000);
  await reset();await page.evaluate(()=>{__dofTest.setGold(1000);__dofTest.setCombo(4)});
- s=await resolve('thief',1);assert.equal(s.hp,3);assert.equal(s.gold,800);assert.equal(s.combo,4);
+ s=await resolve('thief',1);assert.equal(s.hp,3);assert.equal(s.gold,750);assert.equal(s.combo,4);
  await page.evaluate(()=>__dofTest.setGold(0));s=await resolve('thief',1);assert.equal(s.gold,0);
- await page.evaluate(()=>__dofTest.setGold(100000));s=await resolve('thief',1);assert.equal(s.gold,99700);
- await page.evaluate(()=>__dofTest.setCombo(4));s=await resolve('spirit',3);assert.equal(s.combo,2.2);assert.equal(s.hp,3);assert.equal(s.gold,99700);
+ await page.evaluate(()=>__dofTest.setGold(100000));s=await resolve('thief',1);assert.equal(s.gold,75000);
+ await page.evaluate(()=>__dofTest.setCombo(4));s=await resolve('spirit',3);assert.equal(s.combo,3);assert.equal(s.hp,3);assert.equal(s.gold,75000);
  s=await resolve('spirit',1);assert.equal(s.combo,1);assert.equal(s.hp,3);
  for(const kind of ['basic','thief','spirit']){
   await reset();await page.evaluate(()=>__dofTest.setCombo(2));s=await resolve(kind,6);assert(s.gold>0&&s.combo>2&&s.hp===3);
@@ -95,7 +95,7 @@ let browser;
   await page.evaluate(n=>__dofTest.setFloor(n),floor);
   const info=await page.evaluate(()=>{
    const s=__dofTest.state();
-   return{all:s.rooms.filter(r=>r.active&&r.event==='monster').every(r=>r.known&&r.eyeMarked),only:s.rooms.filter(r=>r.eyeMarked).every(r=>r.event==='monster'),icons:[...document.querySelectorAll('.eye-known .icon')].every(el=>el.textContent==='👹')}
+   return{all:s.rooms.filter(r=>r.active&&r.known&&!r.searched&&r.event==='monster').every(r=>r.eyeMarked),only:s.rooms.filter(r=>r.eyeMarked).every(r=>r.event==='monster'&&r.known&&!r.searched),icons:[...document.querySelectorAll('.eye-known .icon')].every(el=>el.textContent==='👹')}
   });assert(info.all&&info.only&&info.icons);
  }
  console.log('PASS Doll/Blood floor limits, protection priority, Evil Eye on every floor, perfect-roll hook, coexistence without duplicates');
@@ -138,7 +138,7 @@ let browser;
  s=await state();assert.equal(s.relics.bargainRoom,null);assert.equal(s.relics.bargainCharges,0);
  await page.evaluate(()=>__dofTest.setVitals(2,false));s=await resolve('basic',1);assert.equal(s.hp,1,'Protection must expire');
  await page.evaluate(()=>{__dofTest.offerConsumable('bargain');__dofTest.useConsumable(true);__dofTest.setGold(1000);__dofTest.setCombo(4)});
- s=await resolve('thief',1);assert.equal(s.gold,800);assert.equal(s.hp,1);
+ s=await resolve('thief',1);assert.equal(s.gold,750);assert.equal(s.hp,1);
  s=await resolve('spirit',1);assert.equal(s.combo,1);assert.equal(s.hp,1);
  console.log('PASS slot choice, Flask/Charm no-waste rules, safe Bargain hold, 3 NEW entries, expiry, non-HP losses');
  // Scavenge item odds are a dedicated rare band, with guaranteed first-learning Gold.
@@ -184,3 +184,4 @@ let browser;
  console.log('PASS rare Scavenge items, persistent guaranteed loot clue, serializable/reset state, compact mobile footer; no runtime errors');
  await browser.close();browser=null;server.close();
 })().catch(async e=>{console.error(e);if(browser)await browser.close();server.close();process.exitCode=1});
+
