@@ -24,7 +24,7 @@ let browser;
  const state=()=>page.evaluate(()=>__dofTest.state());
  const clear=()=>page.evaluate(()=>{__dofTest.clearPending();__dofTest.clearFeedback()});
  await page.goto(url);await page.waitForTimeout(400);
- assert.match(await page.title(),/V2.14/);assert.equal((await state()).hp,3);
+ assert.match(await page.title(),/V2\.15\.1/);assert.equal((await state()).hp,3);
  assert(await page.locator('.cell').count()>1);assert.match(await page.locator('#hp').innerText(),/❤️/);
  assert(await page.locator('#gold').innerText());assert.equal(await page.locator('.current').count(),1);
  console.log('PASS startup and PWA metadata');
@@ -108,7 +108,7 @@ let browser;
   await page.mouse.up();assert.equal(await page.locator('#diceOverlay.resolved').count(),1);
   assert.equal(await page.evaluate(()=>rngCalls),10);
   assert.equal(await page.locator('#diceResult').innerText(),'ROLLED 5');
-  assert.equal((await state()).combo,2.5);
+  assert.equal((await state()).combo,2.48);
   await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
   assert.equal(await page.locator('#diceOverlay').evaluate(el=>el.style.display),'none');
  }
@@ -168,7 +168,7 @@ let browser;
   await page.waitForSelector('#die.rolling');await page.waitForSelector('#diceOverlay.resolved');
  }
  await clear();
- for(const [event,base,after] of [['treasure',30,2.35],['rich',90,2.6]]){
+ for(const [event,base,after] of [['treasure',30,2.33],['rich',90,2.57]]){
   const before=await state();await page.evaluate(event=>{__dofTest.setCombo(2);__dofTest.resolveSimple(event)},event);
   const afterState=await state();assert.equal(afterState.gold-before.gold,Math.floor(base*1.35));assert.equal(afterState.score-before.score,Math.floor(base*1.35));assert.equal(afterState.combo,after);
   await page.waitForTimeout(300);assert.equal(await page.locator('.roomFeedback .reward').filter({hasText:'+'+(Math.floor(base*1.35))+' 🪙'}).count(),1);
@@ -200,7 +200,7 @@ let browser;
  await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await context.setOffline(true);await page.goto(url+'index.html');assert(await page.locator('.current').count());
- assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.14.1'))),true);
+ assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.15.1-items-1'))),true);
  await page.goto(url);assert(await page.locator('.current').count());
  await context.setOffline(false);
  assert.deepEqual(errors,[]);
