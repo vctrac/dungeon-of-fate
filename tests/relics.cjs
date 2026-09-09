@@ -13,15 +13,20 @@ let browser;
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:'+server.address().port+'/');
  const state=()=>page.evaluate(()=>__dofTest.state());
- const reset=()=>page.evaluate(()=>__dofTest.newRun());
+ const reset=()=>page.evaluate(()=>{__dofTest.newRun();__dofTest.setConsumable(null)});
  const clear=()=>page.evaluate(()=>__dofTest.clearPending());
  const resolve=async(kind,roll)=>{await page.evaluate(({kind,roll})=>{__dofTest.setMonster(kind);__dofTest.resolveDice('monster',roll)},{kind,roll});const s=await state();await clear();return s};
+ await page.evaluate(()=>{
+  window.giveTrinket=id=>{__dofTest.acquireTrinket(id);if(__dofTest.state().cards.active&&!__dofTest.state().cards.active.decision)__dofTest.closeItemCard()};
+  window.giveConsumable=id=>{__dofTest.offerConsumable(id);if(__dofTest.state().cards.active&&!__dofTest.state().cards.active.decision)__dofTest.closeItemCard()};
+ });
+ const holdSlot=async()=>{const b=await page.locator('#consumableSlot').boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.waitForTimeout(610);await page.mouse.up()};
  await page.waitForTimeout(400);
 
  // Room reveals briefly lock input, but the consumable slot must not dim.
  for(const held of [null,'flask']){
   await reset();await page.waitForTimeout(400);
-  if(held)await page.evaluate(id=>__dofTest.offerConsumable(id),held);
+  if(held)await page.evaluate(id=>giveConsumable(id),held);
   const before=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent}));
   await page.evaluate(()=>{
    const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);
@@ -58,7 +63,7 @@ let browser;
   await page.waitForSelector('#diceOverlay.resolved');await clear();
  }
  const weights=await page.evaluate(()=>[1,2,3,8].map(n=>{const counts={basic:0,thief:0,spirit:0};for(let i=0;i<100;i++)counts[__dofTest.pickMonster(n,(i+.5)/100)]++;return counts}));
- assert.deepEqual(weights,[{basic:100,thief:0,spirit:0},{basic:75,thief:25,spirit:0},{basic:60,thief:20,spirit:20},{basic:40,thief:30,spirit:30}]);
+ assert.deepEqual(weights,[{basic:100,thief:0,spirit:0},{basic:80,thief:20,spirit:0},{basic:78,thief:20,spirit:2},{basic:67,thief:23,spirit:10}]);
  console.log('PASS monster resource threats, reward bands, controlled depth weights, identities and screen-wide swipes');
  await reset();await page.evaluate(()=>__dofTest.showDice('monster'));
  const cue=await page.evaluate(()=>{
@@ -70,14 +75,14 @@ let browser;
  await clear();await page.evaluate(()=>__dofTest.resolveSimple('empty'));await page.waitForTimeout(600);
  assert(!await page.locator('.roomFeedback').filter({hasText:'ROOM SEARCHED'}).count());
  console.log('PASS large slow demo crosses card, input-transparent instruction, no ROOM SEARCHED popup');
- // Doll: once per floor; shield takes precedence, and x1 still permits protection.
- await reset();await page.evaluate(()=>__dofTest.acquireTrinket('doll'));s=await resolve('basic',1);assert.equal(s.hp,3);assert(s.relics.floorUsed.doll);
- s=await resolve('basic',1);assert.equal(s.hp,2);
- await page.evaluate(()=>{__dofTest.newFloor();__dofTest.setVitals(3,true)});
- s=await resolve('basic',1);assert.equal(s.hp,3);assert.equal(s.shield,false);assert(!s.relics.floorUsed.doll);
- s=await resolve('basic',1);assert.equal(s.hp,3);assert(s.relics.floorUsed.doll);
+ // Doll only rescues lethal hits, is destroyed, and never consumes a shield first.
+ await reset();await page.evaluate(()=>{giveTrinket('doll');__dofTest.setCombo(6)});
+ s=await resolve('basic',1);assert.equal(s.hp,2);assert(s.relics.trinkets.includes('doll'));assert.equal(s.combo,5);
+ await page.evaluate(()=>__dofTest.setVitals(1,true));s=await resolve('basic',1);assert.equal(s.hp,1);assert.equal(s.shield,false);assert(s.relics.trinkets.includes('doll'));
+ s=await resolve('basic',1);assert.equal(s.hp,1);assert.equal(s.combo,1);assert(!s.relics.trinkets.includes('doll'));
+ s=await resolve('basic',1);assert.equal(s.hp,0);
  // Blood: a victory at full HP must not consume its use.
- await reset();await page.evaluate(()=>__dofTest.acquireTrinket('blood'));
+ await reset();await page.evaluate(()=>giveTrinket('blood'));
  s=await resolve('basic',5);assert(!s.relics.floorUsed.blood);
  await page.evaluate(()=>__dofTest.setVitals(1,false));s=await resolve('thief',5);assert.equal(s.hp,2);assert(s.relics.floorUsed.blood);
  s=await resolve('spirit',6);assert.equal(s.hp,2);
@@ -86,11 +91,11 @@ let browser;
  for(const type of ['monster','trap','heal']){
   await reset();await page.evaluate(type=>{__dofTest.setVitals(2,false);__dofTest.resolveDice(type,6)},type);
   const baseline=await state();await reset();
-  await page.evaluate(type=>{__dofTest.acquireTrinket('horseshoe');__dofTest.setVitals(2,false);__dofTest.resolveDice(type,6)},type);
+  await page.evaluate(type=>{giveTrinket('horseshoe');__dofTest.setVitals(2,false);__dofTest.resolveDice(type,6)},type);
   const withItem=await state();assert.equal(withItem.gold-baseline.gold,30);assert.equal(withItem.score-baseline.score,30);
  }
- await reset();await page.evaluate(()=>{['doll','blood','eye','horseshoe','doll'].forEach(__dofTest.acquireTrinket)});
- s=await state();assert.equal(s.relics.trinkets.length,4);
+ await reset();await page.evaluate(()=>{['doll','blood','eye','doll'].forEach(giveTrinket)});
+ s=await state();assert.equal(s.relics.trinkets.length,3);
  for(let floor=1;floor<=3;floor++){
   await page.evaluate(n=>__dofTest.setFloor(n),floor);
   const info=await page.evaluate(()=>{
@@ -98,22 +103,22 @@ let browser;
    return{all:s.rooms.filter(r=>r.active&&r.known&&!r.searched&&r.event==='monster').every(r=>r.eyeMarked),only:s.rooms.filter(r=>r.eyeMarked).every(r=>r.event==='monster'&&r.known&&!r.searched),icons:[...document.querySelectorAll('.eye-known .icon')].every(el=>el.textContent==='👹')}
   });assert(info.all&&info.only&&info.icons);
  }
- console.log('PASS Doll/Blood floor limits, protection priority, Evil Eye on every floor, perfect-roll hook, coexistence without duplicates');
+ console.log('PASS lethal-only Doll and Blood floor limits, protection priority, Evil Eye on every floor, perfect-roll hook, coexistence without duplicates');
  // Ordinary consumables are never wasted.
- await reset();await page.evaluate(()=>__dofTest.offerConsumable('flask'));
- await page.locator('#consumableSlot').tap();assert.equal((await state()).relics.consumable,'flask');
- await page.evaluate(()=>__dofTest.setVitals(2,false));await page.locator('#consumableSlot').tap();
+ await reset();await page.evaluate(()=>giveConsumable('flask'));
+ await holdSlot();assert.equal((await state()).relics.consumable,'flask');
+ await page.evaluate(()=>__dofTest.setVitals(2,false));await holdSlot();
  s=await state();assert.equal(s.hp,3);assert.equal(s.relics.consumable,null);
- await page.evaluate(()=>{__dofTest.offerConsumable('charm');__dofTest.setVitals(3,true)});
- await page.locator('#consumableSlot').tap();assert.equal((await state()).relics.consumable,'charm');
- await page.evaluate(()=>__dofTest.setVitals(3,false));await page.locator('#consumableSlot').tap();
+ await page.evaluate(()=>{giveConsumable('charm');__dofTest.setVitals(3,true)});
+ await holdSlot();assert.equal((await state()).relics.consumable,'charm');
+ await page.evaluate(()=>__dofTest.setVitals(3,false));await holdSlot();
  s=await state();assert(s.shield);assert.equal(s.relics.consumable,null);
  // Full slot: either choice is explicit.
- await page.evaluate(()=>{__dofTest.offerConsumable('flask');__dofTest.offerConsumable('charm')});
- assert.equal((await state()).pendingAction,'item-choice');await page.locator('#keepItem').click();assert.equal((await state()).relics.consumable,'flask');
- await page.evaluate(()=>__dofTest.offerConsumable('bargain'));await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'bargain');
+ await page.evaluate(()=>{giveConsumable('flask');giveConsumable('charm')});
+ assert.equal((await state()).pendingAction,'item-card');await page.locator('#keepItem').click();assert.equal((await state()).relics.consumable,'flask');
+ await page.evaluate(()=>giveConsumable('bargain'));await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'bargain');
  // Dangerous item requires a hold; movement/cancel and a tap do not spend it.
- await page.locator('#consumableSlot').tap();assert.equal((await state()).hp,3);
+ await page.locator('#consumableSlot').tap();assert.equal((await state()).hp,3);await page.locator('#closeItem').click();
  let slot=await page.locator('#consumableSlot').boundingBox();
  await page.mouse.move(slot.x+20,slot.y+20);await page.mouse.down();await page.mouse.move(slot.x+50,slot.y+20);await page.waitForTimeout(600);await page.mouse.up();
  assert.equal((await state()).relics.bargainCharges,0);
@@ -137,7 +142,7 @@ let browser;
  }
  s=await state();assert.equal(s.relics.bargainRoom,null);assert.equal(s.relics.bargainCharges,0);
  await page.evaluate(()=>__dofTest.setVitals(2,false));s=await resolve('basic',1);assert.equal(s.hp,1,'Protection must expire');
- await page.evaluate(()=>{__dofTest.offerConsumable('bargain');__dofTest.useConsumable(true);__dofTest.setGold(1000);__dofTest.setCombo(4)});
+ await page.evaluate(()=>{giveConsumable('bargain');__dofTest.useConsumable(true);__dofTest.setGold(1000);__dofTest.setCombo(4)});
  s=await resolve('thief',1);assert.equal(s.gold,750);assert.equal(s.hp,1);
  s=await resolve('spirit',1);assert.equal(s.combo,1);assert.equal(s.hp,1);
  console.log('PASS slot choice, Flask/Charm no-waste rules, safe Bargain hold, 3 NEW entries, expiry, non-HP losses');
@@ -167,13 +172,13 @@ let browser;
  await page.evaluate(id=>{__dofTest.setCurrent(id);__dofTest.scavenge(id,.99)},target);
  s=await state();assert(s.gold>beforeGold);assert.equal(s.pendingAction,null);assert.equal(s.rooms[target].hiddenScavengeReward,null);assert.equal(s.rooms[target].lootClued,false);
  // Serializable state, floor resets, full run reset.
- await page.evaluate(()=>{__dofTest.acquireTrinket('doll');__dofTest.acquireTrinket('blood')});
+ await page.evaluate(()=>{giveTrinket('doll');giveTrinket('blood')});
  assert.doesNotThrow(()=>JSON.parse(JSON.stringify(s.relics)));
- await reset();s=await state();assert.deepEqual(s.relics,{trinkets:[],consumable:null,floorUsed:{},bargainCharges:0,bargainRoom:null,pendingItem:null});
+ await reset();s=await state();assert.deepEqual(s.relics,{trinkets:[],capacity:3,consumable:null,floorUsed:{},bargainCharges:0,bargainRoom:null,coinCharges:0,coinRoom:null,wardArmed:false,pendingItem:null});
  // All relics fit the original footer height; slot remains touch-sized.
  for(const size of [{width:320,height:568},{width:390,height:844},{width:844,height:390}]){
   await page.setViewportSize(size);
-  await page.evaluate(()=>{['doll','blood','eye','horseshoe'].forEach(__dofTest.acquireTrinket);__dofTest.offerConsumable('bargain');__dofTest.useConsumable(true);__dofTest.offerConsumable('flask')});
+  await page.evaluate(()=>{['doll','blood','eye'].forEach(giveTrinket);giveConsumable('bargain');__dofTest.useConsumable(true);giveConsumable('flask')});
   const geometry=await page.evaluate(()=>{
    const footer=document.querySelector('#footer').getBoundingClientRect(),slot=document.querySelector('#consumableSlot').getBoundingClientRect();
    return{height:footer.height,slot:slot.width,inside:slot.right<=innerWidth&&slot.bottom<=innerHeight,scroll:document.documentElement.scrollWidth<=innerWidth}
