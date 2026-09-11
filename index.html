@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.15.1 — Fortune Refinement &amp; Item UX</title>
+<title>Dungeon of Fate V2.16 — Active FATE: Gates &amp; Altars</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -245,6 +245,19 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @keyframes rescueHeart{10%{opacity:.2}40%{opacity:1;text-shadow:0 0 18px #ffedaf}70%{transform:scale(1.08)}}
 @media(max-height:540px){.itemChoicePanel{gap:5px;padding:10px 14px}.itemChoicePanel #itemArt{font-size:38px}#itemName{font-size:19px}#itemVisual{font-size:18px!important}#itemDescription{font-size:12px}#replaceTrinkets small{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.itemAttention,.dollRescue,.deathRescue{animation:none}.dollRescue{transform:translate(-50%,-50%)}}
+
+/* V2.16: optional FATE connection and explicit hold exchange. */
+.gateRune{position:absolute;left:50%;top:-9px;transform:translateX(-50%);z-index:15;font-size:10px;line-height:15px;font-weight:900;white-space:nowrap;padding:0 3px;border:1px solid #a184bf;border-radius:5px;background:#241c30;color:#efdbff;pointer-events:none;text-shadow:0 1px #000}
+.cell.fateRoom{opacity:1!important}.cell.fateRoom .floor{border:2px solid #9b7ab8!important;background:radial-gradient(ellipse,#5b4167,#292033)!important}.cell.gateReady .floor{border-color:#ffe0a0!important;box-shadow:0 0 12px #efc77988!important}.gateReady .gateRune{color:#ffe7af;border-color:#ffe7af;box-shadow:0 0 8px #f5d28d66}
+.link.gateLink{background:#af8dca!important;opacity:.9!important;box-shadow:0 0 5px #ae90d5}.link.gateSealed{background:repeating-linear-gradient(45deg,#aa8ac3 0 2px,#292030 2px 4px)!important}.link.gateReady{background:#f1d395!important;box-shadow:0 0 8px #f1d395}
+.gateDenied{animation:gateDenied .6s ease-out}.cell.gateEntered.current-arrival .floor{animation:gateCross .7s ease-out}.cell.altarAvailable .floor{border-color:#b7a0d1!important}.cell.altarSpent .event{opacity:.35}
+@keyframes gateDenied{20%,60%{filter:brightness(1.8);transform:translateX(-2px)}40%{transform:translateX(2px)}}
+@keyframes gateCross{35%{box-shadow:0 0 24px #fff0b5;filter:brightness(1.7)}}
+#altarOffer{position:relative;align-self:stretch;min-height:110px;font-size:25px;white-space:pre-line;line-height:1.6;border:2px solid #b99dd0;background:radial-gradient(ellipse,#55405f,#231b2b);touch-action:none}
+#altarOffer::before{content:"HOLD";display:block;font-size:10px;letter-spacing:2px;color:#d5bddf}#altarOffer:disabled{opacity:.35}#altarOffer.holding::after{content:"";position:absolute;inset:-4px;border-radius:12px;padding:3px;pointer-events:none;background:conic-gradient(#ffe1ac var(--charge,0deg),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+#altarOffer[hidden],#closeItem[hidden],#cardContinue[hidden]{display:none}#cardContinue{font-size:10px;letter-spacing:1px;color:#bda887;padding:8px 0}
+@media(max-height:540px){#altarOffer{min-height:88px;font-size:21px}}
+@media(prefers-reduced-motion:reduce){.gateDenied,.cell.gateEntered.current-arrival .floor{animation:none}}
 </style>
 </head>
 <body>
@@ -259,7 +272,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
   <div id="itemReason" class="itemReason"></div><div id="itemArt" aria-hidden="true"></div><h2 id="itemName"></h2>
   <div id="itemVisual" aria-hidden="true"></div><p id="itemDescription"></p><div id="itemState"></div>
   <div id="replaceTrinkets"></div><div id="consumableChoices"><button id="keepItem" type="button"></button><button id="takeItem" type="button"></button></div>
-  <button id="closeItem" type="button">✓</button>
+  <button id="altarOffer" type="button" hidden></button><div id="cardContinue" aria-hidden="true">TAP TO CONTINUE</div><button id="closeItem" type="button">✕ Leave</button>
  </div>
 </div>
 <script>
@@ -267,6 +280,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 "use strict";
 var W=9,H=9,N=W*H,rooms=[],startId=0,exitId=0,currentId=0,history=[],searched={},hp=3,shield=false,gold=0,score=0,combo=1,floorNo=1,gameOver=false,totalMoves=0,floorDamage=0,perfectFloors=0,pendingAction=null,fastTravelTimer=null,fastTravelTarget=null,fastTraveling=false,encounterResolved=false,encounterCloseAction=null,holdAction=null,arrivalId=null,arrivalTimer=null,floorPerfectAwarded=false,scoreAnimation=null;
 // V2.15: serializable floor snapshot; never consulted by dice RNG.
+var fateGate=null,altarRoom=null;
 var floorFortune=1,fortuneBudget=0,fortuneUpgrades=[],floorEconomy=null,fateGainRemainder=0;
 function setFate(value,kind,silent){
  var before=combo;combo=Math.max(1,Math.round((Number.isFinite(value)?value:1)*100)/100);
@@ -297,7 +311,7 @@ function rewardMultiplier(fate){return Math.round((1+.35*Math.sqrt(Math.max(0,(f
 function roomGoldMultiplier(){return relicState.coinRoom===currentId?2:1}
 function goldReward(base){return Math.floor(base*rewardMultiplier())*roomGoldMultiplier()}
 function trackGold(amount){if(floorEconomy){floorEconomy[amount<0?"lost":"gained"]+=Math.abs(amount);floorEconomy.leaving=gold}}
-function debugFloor(){if(floorEconomy)floorEconomy.fateLeaving=combo;if(window.__DOF_DEBUG__&&floorEconomy)console.debug("[DOF economy]",JSON.parse(JSON.stringify(floorEconomy)))}
+function debugFloor(){if(floorEconomy){floorEconomy.fateLeaving=combo;floorEconomy.activeFate=activeFateDebug();}if(window.__DOF_DEBUG__&&floorEconomy)console.debug("[DOF economy]",JSON.parse(JSON.stringify(floorEconomy)))}
 function theftFeedback(before,after){
  var fraction=before?(before-after)/before:0,count=Math.min(9,Math.max(1,Math.ceil(fraction*32))),a=$("gold").getBoundingClientRect(),b=$("eventArt").getBoundingClientRect();
  for(var i=0;i<count;i++){var coin=document.createElement("span");coin.className="resourceFlight";coin.textContent="🪙";coin.style.left=(a.left+a.width/2+i*2)+"px";coin.style.top=a.top+"px";coin.style.setProperty("--flight-x",(b.left+b.width/2-a.left-a.width/2)+"px");coin.style.setProperty("--flight-y",(b.top+b.height/2-a.top)+"px");$("effectLayer").appendChild(coin);setTimeout(function(c){c.remove()},1000,coin)}
@@ -387,7 +401,7 @@ function resourceFlight(symbol,targetId){
 function announceRelic(id,text,target){effectNotice(text);resourceFlight(TRINKETS[id].icon,target)}
 // Serializable queue entries describe cards; gameplay commits once, at presentation/choice.
 // Informational cards are manually advanced today. Decision cards never auto-advance.
-var cardState={queue:[],active:null},itemFocusReturn=null,slotSuppressClick=false;
+var cardState={queue:[],active:null},itemFocusReturn=null,slotSuppressClick=false,cardPointer=null,altarGesture=null;
 var ITEM_VISUALS={eye:"? → 👁",blood:"👹 ✓ → ♥   1× / floor",horseshoe:"⚅ → 🪙",doll:"☠ → ♥   ✦ → ×1   🪆 → ✕",flask:"🧪 → +1 ♥",charm:"🛡 → ♥ ✓",bargain:"♥♥♥ → ♥   🛡 ×3 rooms",coin:"🪙 ×2   ⑤ → ④ → ③ → ② → ①",ward:"✂ → ⚠ ✓"};
 function itemDefinition(kind,id){return(kind==="trinket"?TRINKETS:CONSUMABLES)[id]}
 function queueItem(kind,id,mode){
@@ -411,7 +425,8 @@ function inspectItem(kind,id){
 function pumpCards(){
  if(gameOver||pendingAction||fastTraveling||cardState.active||!cardState.queue.length)return;
  cancelSlotGesture();clearFastPreview();itemFocusReturn=document.activeElement;
- var card=cardState.queue.shift();cardState.active=card;
+ var card=cardState.queue.shift();cardState.active=card;cardPointer=null;
+ if(card.type==="altar"){pendingAction="item-card";update();renderAltarCard();return}
  if(card.mode==="discovery"){
   if(card.kind==="trinket"){
    if(relicState.trinkets.indexOf(card.id)>=0){cardState.active=null;pumpCards();return}
@@ -422,6 +437,7 @@ function pumpCards(){
 }
 function renderItemCard(){
  var card=cardState.active;if(!card)return;
+ $("altarOffer").hidden=true;$("cardContinue").hidden=card.decision;
  var item=itemDefinition(card.kind,card.id);
  $("itemChoice").hidden=false;$("itemArt").textContent=item.icon;$("itemName").textContent=item.name;$("itemVisual").textContent=ITEM_VISUALS[card.id];$("itemDescription").textContent=item.description;
  $("itemReason").textContent=card.decision?"CHOOSE YOUR BUILD":card.mode==="inspect"?(card.kind==="trinket"?"TRINKET":"CONSUMABLE"):"DISCOVERED";
@@ -436,7 +452,7 @@ function renderItemCard(){
  });
  $("consumableChoices").hidden=!(card.decision&&card.kind==="consumable");
  if(!$("consumableChoices").hidden){$("keepItem").textContent=CONSUMABLES[relicState.consumable].icon+" ✓";$("takeItem").textContent=item.icon+" ↔";$("keepItem").setAttribute("aria-label","Keep "+CONSUMABLES[relicState.consumable].name);$("takeItem").setAttribute("aria-label","Replace with "+item.name)}
- $("closeItem").textContent=card.decision?"✕ Leave":"✓";$("closeItem").setAttribute("aria-label",card.decision?"Leave new item":"Close item card");$("closeItem").focus({preventScroll:true})
+ $("closeItem").hidden=!card.decision;$("closeItem").textContent="✕ Leave";$("closeItem").setAttribute("aria-label","Leave new item");$("cardContinue").textContent="TAP TO CONTINUE";if(card.decision)$("closeItem").focus({preventScroll:true});else document.querySelector(".itemChoicePanel").focus({preventScroll:true})
 }
 function removeTrinket(id){
  relicState.trinkets=relicState.trinkets.filter(function(x){return x!==id});
@@ -453,10 +469,40 @@ function chooseConsumable(take){
 }
 function closeItemCard(acquired){
  var card=cardState.active;if(!card)return false;
- cardState.active=null;relicState.pendingItem=null;pendingAction=null;$("itemChoice").hidden=true;
- if((acquired||(!card.decision&&card.mode==="discovery")))resourceFlight(itemDefinition(card.kind,card.id).icon,card.kind==="trinket"?"trinkets":"consumableSlot");
+ cancelAltarHold();cardPointer=null;cardState.active=null;relicState.pendingItem=null;pendingAction=null;$("itemChoice").hidden=true;
+ if(card.type==="item"&&(acquired||(!card.decision&&card.mode==="discovery")))resourceFlight(itemDefinition(card.kind,card.id).icon,card.kind==="trinket"?"trinkets":"consumableSlot");
  update();pumpCards();if(!pendingAction){if(!awardPerfectFloor())updateContext();if(itemFocusReturn&&itemFocusReturn.isConnected)itemFocusReturn.focus({preventScroll:true});else $("consumableSlot").focus({preventScroll:true})}return true
 }
+function openAltar(id){
+ var r=room(id);if(!r||id!==currentId||r.event!=="altar"||r.altarUsed||gameOver||pendingAction)return false;
+ cardState.queue.push({type:"altar",roomId:id,decision:true,autoAdvance:false});pumpCards();return true
+}
+function altarAvailable(){var card=cardState.active;return!!(card&&card.type==="altar"&&card.roomId===currentId&&!room(card.roomId).altarUsed&&combo>1&&hp<3&&hp>0&&!gameOver)}
+function renderAltarCard(){
+ $("itemChoice").hidden=false;$("itemReason").textContent="ALTAR";$("itemArt").textContent="✦";$("itemName").textContent="Altar of Fate";$("itemVisual").textContent="✦ → ♥";$("itemDescription").textContent="";$("itemState").textContent="";
+ $("replaceTrinkets").hidden=true;$("consumableChoices").hidden=true;$("closeItem").hidden=true;$("altarOffer").hidden=false;
+ $("altarOffer").textContent="✦ ×"+formatGateFate(combo)+" → ×1\n♥ +1";$("altarOffer").disabled=!altarAvailable();$("altarOffer").setAttribute("aria-label","Hold to break Fate from "+formatGateFate(combo)+" to 1 and restore one heart");
+ $("cardContinue").hidden=false;$("cardContinue").textContent="TAP OUTSIDE TO LEAVE";document.querySelector(".itemChoicePanel").focus({preventScroll:true})
+}
+function sacrificeAltar(){
+ if(!altarAvailable())return false;
+ var r=room(cardState.active.roomId);r.altarUsed=true;r.altarFateBefore=combo;breakFate();r.altarFateAfter=combo;hp=Math.min(3,hp+1);
+ emitEffect("onAltarSacrifice",{roomId:r.id,before:r.altarFateBefore,after:combo});resourceFlight("♥","hp");showLocalFeedback(r.id,"✦ → ♥ +1","fate","",1000);debugFloor();closeItemCard(false);return true
+}
+function cancelAltarHold(){if(altarGesture){clearTimeout(altarGesture.timer);altarGesture=null}$("altarOffer").classList.remove("holding");$("altarOffer").style.removeProperty("--charge")}
+function startAltarHold(gesture){
+ if(!altarAvailable())return;altarGesture=gesture;$("altarOffer").classList.add("holding");
+ function tick(now){if(altarGesture!==gesture)return;$("altarOffer").style.setProperty("--charge",Math.min(360,(now-gesture.start)/650*360)+"deg");requestAnimationFrame(tick)}
+ requestAnimationFrame(tick);gesture.timer=setTimeout(function(){if(altarGesture!==gesture||cardState.active!==gesture.card)return;cancelAltarHold();sacrificeAltar()},650)
+}
+$("altarOffer").addEventListener("pointerdown",function(e){
+ if(e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0)||altarGesture||!altarAvailable())return;e.preventDefault();e.stopPropagation();this.setPointerCapture(e.pointerId);startAltarHold({id:e.pointerId,x:e.clientX,y:e.clientY,start:performance.now(),card:cardState.active})
+},{passive:false});
+$("altarOffer").addEventListener("pointermove",function(e){if(altarGesture&&altarGesture.id===e.pointerId&&Math.hypot(e.clientX-altarGesture.x,e.clientY-altarGesture.y)>14)cancelAltarHold()});
+["pointerup","pointercancel","lostpointercapture","blur"].forEach(function(name){$("altarOffer").addEventListener(name,function(e){e.stopPropagation();cancelAltarHold()})});
+$("altarOffer").addEventListener("click",function(e){e.preventDefault();e.stopPropagation()});
+$("altarOffer").addEventListener("keydown",function(e){if(e.key!==" "&&e.key!=="Enter")return;e.preventDefault();e.stopPropagation();if(!e.repeat&&!altarGesture)startAltarHold({key:e.key,start:performance.now(),card:cardState.active})});
+$("altarOffer").addEventListener("keyup",function(e){if(e.key===" "||e.key==="Enter"){e.preventDefault();e.stopPropagation();cancelAltarHold()}});
 function dollRescue(){
  effectNotice("☠ → 🪆 → ♥   ✦ ×1");
  var doll=document.createElement("div");doll.className="dollRescue";doll.textContent="🪆";$("effectLayer").appendChild(doll);$("hp").classList.add("deathRescue");
@@ -516,13 +562,23 @@ $("consumableSlot").addEventListener("contextmenu",function(e){e.preventDefault(
 $("keepItem").addEventListener("click",function(e){e.stopPropagation();chooseConsumable(false)});
 $("takeItem").addEventListener("click",function(e){e.stopPropagation();chooseConsumable(true)});
 $("closeItem").addEventListener("click",function(e){e.stopPropagation();closeItemCard(false)});
-["pointerdown","pointerup","click"].forEach(function(name){$("itemChoice").addEventListener(name,function(e){e.stopPropagation()})});
+$("itemChoice").addEventListener("pointerdown",function(e){e.stopPropagation();if(e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;cardPointer={id:e.pointerId,x:e.clientX,y:e.clientY,card:cardState.active}});
+$("itemChoice").addEventListener("pointermove",function(e){if(cardPointer&&Math.hypot(e.clientX-cardPointer.x,e.clientY-cardPointer.y)>14)cardPointer=null});
+$("itemChoice").addEventListener("pointercancel",function(){cardPointer=null;cancelAltarHold()});
+$("itemChoice").addEventListener("pointerup",function(e){e.stopPropagation()});
+$("itemChoice").addEventListener("click",function(e){
+ e.stopPropagation();var pointer=cardPointer,card=cardState.active;cardPointer=null;
+ if(!card||!pointer||pointer.card!==card||e.target.closest("button"))return;
+ if(!card.decision||card.type==="altar")closeItemCard(false)
+});
 $("itemChoice").addEventListener("contextmenu",function(e){e.preventDefault()});
 $("itemChoice").addEventListener("keydown",function(e){
- if(e.key==="Escape"){e.preventDefault();closeItemCard(false)}
+ var card=cardState.active;
+ if(e.key==="Escape"||((e.key==="Enter"||e.key===" ")&&card&&!card.decision)){e.preventDefault();e.stopPropagation();closeItemCard(false);return}
  if(e.key==="Tab"){
   var buttons=Array.prototype.filter.call(this.querySelectorAll("button"),function(b){return!b.disabled&&b.getClientRects().length}),first=buttons[0],last=buttons[buttons.length-1];
-  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+  if(!first){e.preventDefault();return}
+  if(e.shiftKey&&(document.activeElement===first||!buttons.includes(document.activeElement))){e.preventDefault();last.focus()}else if(!e.shiftKey&&(document.activeElement===last||!buttons.includes(document.activeElement))){e.preventDefault();first.focus()}
  }
 });
 function beginRoomEffects(id,isNew){
@@ -561,8 +617,52 @@ function generateDungeon(){
  while(frontier.length){var fi=Math.floor(Math.random()*frontier.length),from=room(frontier[fi]),opts=adjacent(from).filter(function(n){return n.active&&!connected[n.id]});if(!opts.length){frontier.splice(fi,1);continue}var to=opts[Math.floor(Math.random()*opts.length)];from.links.push(to.id);to.links.push(from.id);connected[to.id]=true;frontier.push(to.id)}
  var possible=[];for(i=0;i<N;i++){var rr=room(i);if(!rr.active)continue;adjacent(rr).forEach(function(n){if(n.active&&n.id>rr.id&&rr.links.indexOf(n.id)<0)possible.push([rr,n])})}shuffle(possible);for(i=0;i<Math.floor(target*.14)&&i<possible.length;i++){possible[i][0].links.push(possible[i][1].id);possible[i][1].links.push(possible[i][0].id)}
  chooseEndpoints();placeEvents();scaleMonsters();rooms.forEach(function(r){if(r.event==="monster")r.monsterKind=pickMonster(floorNo,Math.random())});applyFortune();assignRoomHints();
- floorEconomy.monsters={basic:0,thief:0,spirit:0};rooms.forEach(function(r){if(r.active&&r.event==="monster")floorEconomy.monsters[r.monsterKind]++});floorEconomy.monsterCount=Object.values(floorEconomy.monsters).reduce(function(a,b){return a+b},0);debugFloor();
+ floorEconomy.monsters={basic:0,thief:0,spirit:0};rooms.forEach(function(r){if(r.active&&r.event==="monster")floorEconomy.monsters[r.monsterKind]++});floorEconomy.monsterCount=Object.values(floorEconomy.monsters).reduce(function(a,b){return a+b},0);generateActiveFate();debugFloor();
 }
+// Optional additions run after ordinary topology, encounters, Fortune and hints.
+function gateRequirement(fate,roll){
+ var stretch=roll<.5?.5:roll<.85?.75:1,step=fate<20?.1:.01;
+ return Math.round(Math.ceil((fate+stretch*fateGainFactor(fate))/step-1e-9)*step*100)/100
+}
+function gateReward(roll,shrineAllowed){return roll<.55?"treasure":roll<.9?"rich":roll<.98?(shrineAllowed?"heal":"treasure"):roll<.995?"consumable":"trinket"}
+function normalReachableWithoutGate(){
+ var seen={},q=[startId];seen[startId]=true;
+ for(var i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(!seen[id]&&(!fateGate||id!==fateGate.roomId)){seen[id]=true;q.push(id)}});
+ return rooms.every(function(r){return!r.active||(fateGate&&r.id===fateGate.roomId)||seen[r.id]})
+}
+function generateActiveFate(){
+ fateGate=null;altarRoom=null;
+ if(floorNo<3)return;
+ if(Math.random()<.3){
+  var candidates=[];
+  rooms.forEach(function(r){if(!r.active||r.id===startId||r.id===exitId||r.links.length>=4)return;adjacent(r).forEach(function(n){if(!n.active)candidates.push({parent:r.id,id:n.id})})});
+  if(candidates.length){
+   var pick=candidates[Math.floor(Math.random()*candidates.length)],r=room(pick.id);
+   fateGate={roomId:r.id,parentId:pick.parent,requirement:gateRequirement(floorFortune,Math.random()),entered:false,discovered:false,reward:gateReward(Math.random(),rooms.filter(function(x){return x.active&&x.event==="heal"}).length<2)};
+   r.active=true;r.links=[pick.parent];r.event=fateGate.reward;r.hint=eventTendency(r.event);room(pick.parent).links.push(r.id);
+   if(!normalReachableWithoutGate()){room(pick.parent).links=room(pick.parent).links.filter(function(id){return id!==r.id});r.active=false;r.links=[];fateGate=null}
+  }
+ }
+ if(Math.random()<.22){
+  var empty=rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId&&r.event==="empty"});
+  if(empty.length){var altar=empty[Math.floor(Math.random()*empty.length)];altar.event="altar";altar.altarUsed=false;altar.hint="safe";altarRoom=altar.id}
+ }
+}
+function gateAccess(from,to,travel){
+ if(!fateGate||to!==fateGate.roomId||from===fateGate.roomId)return true;
+ return combo>=fateGate.requirement&&(!travel||fateGate.entered)
+}
+function gateDenied(){
+ if(!fateGate)return;
+ var el=document.querySelector('.cell[data-id="'+fateGate.roomId+'"]');if(el){el.classList.remove("gateDenied");void el.offsetWidth;el.classList.add("gateDenied")}
+ $("combo").classList.remove("gateDenied");void $("combo").offsetWidth;$("combo").classList.add("gateDenied");
+ showLocalFeedback(fateGate.roomId,"✦ ×"+formatGateFate(fateGate.requirement),"fate","",800);emitEffect("onGateDenied",{required:fateGate.requirement,current:combo})
+}
+function formatGateFate(value){return Number(value.toFixed(2)).toString()}
+function discoverGate(){
+ if(fateGate&&!fateGate.discovered&&room(fateGate.roomId).known){fateGate.discovered=true;emitEffect("onGateDiscovered",{roomId:fateGate.roomId,requirement:fateGate.requirement})}
+}
+function activeFateDebug(){return{gate:fateGate?Object.assign({},fateGate):null,altar:altarRoom===null?null:{roomId:altarRoom,discovered:room(altarRoom).known,used:!!room(altarRoom).altarUsed,before:room(altarRoom).altarFateBefore===undefined?null:room(altarRoom).altarFateBefore,after:room(altarRoom).altarFateAfter===undefined?null:room(altarRoom).altarFateAfter}}}
 function chooseEndpoints(){var d=[],q=[],i;do{startId=Math.floor(Math.random()*N)}while(!room(startId).active);for(i=0;i<N;i++)d[i]=-1;d[startId]=0;q.push(startId);for(i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(d[id]<0){d[id]=d[q[i]]+1;q.push(id)}});var far=[];for(i=0;i<N;i++)if(room(i).active&&i!==startId)far.push(i);far.sort(function(a,b){return d[b]-d[a]});exitId=far[Math.floor(Math.random()*Math.min(5,far.length))]}
 function distancesFrom(id){var d={},q=[id];d[id]=0;for(var i=0;i<q.length;i++)room(q[i]).links.forEach(function(n){if(d[n]===undefined){d[n]=d[q[i]]+1;q.push(n)}});return d}
 function placeEvents(){
@@ -577,7 +677,7 @@ function placeEvents(){
  ids=shuffle(ids.filter(function(id){return!used[id]}));
  for(i=0;i<events.length&&i<ids.length;i++)room(ids[i]).event=events[i]
 }
-function eventTendency(event){if(event==="monster"||event==="trap")return"danger";if(event==="treasure"||event==="rich"||event==="key")return"fortune";if(event==="heal")return"safe";return"neutral"}
+function eventTendency(event){if(event==="monster"||event==="trap")return"danger";if(event==="treasure"||event==="rich"||event==="key"||event==="trinket"||event==="consumable")return"fortune";if(event==="heal"||event==="altar")return"safe";return"neutral"}
 function assignRoomHints(){
  var kinds=["danger","fortune","safe","neutral"];
  rooms.forEach(function(r){
@@ -593,7 +693,7 @@ function hintForRoom(r,distance){
  var nearby=distance<=hintProfile.range,strength=nearby?hintProfile.strength*(1-(distance-1)*.35):hintProfile.frontierMinStrength;
  return{tendency:r.hint,strength:Math.max(0,Math.min(1,strength)),exactEvent:nearby?r.exactHint:null}
 }
-function revealNeighbors(id){room(id).links.forEach(function(n){room(n).known=true});if(relicState.trinkets.indexOf("eye")>=0)identifyMonsters()}
+function revealNeighbors(id){room(id).links.forEach(function(n){room(n).known=true});discoverGate();if(relicState.trinkets.indexOf("eye")>=0)identifyMonsters()}
 function knownDistance(id){if(id===currentId)return 0;var dist={},q=[currentId];dist[currentId]=0;for(var k=0;k<q.length;k++)room(q[k]).links.forEach(function(n){if(!room(n).known||dist[n]!==undefined)return;dist[n]=dist[room(q[k]).id]+1;q.push(n)});return dist[id]===undefined?6:dist[id]}
 function routeDistance(id){var best=999;for(var i=0;i<history.length;i++)if(history[i]===id)best=Math.min(best,history.length-1-i);return best<999?best:knownDistance(id)}
 
@@ -646,7 +746,7 @@ $("eventCard").addEventListener("keydown",function(e){
  if((e.key==="Enter"||e.key===" ")&&!e.repeat){e.preventDefault();if(combatReady)commitCombat(1,0);else if(encounterResolved)continueEncounter()}
 });
 
-function beginRun(){cancelSlotGesture();cardState={queue:[],active:null};slotSuppressClick=false;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();relicState.consumable=Math.random()<.5?"coin":"ward";encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;setFate(1,"reset",true);floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
+function beginRun(){cancelAltarHold();cardPointer=null;cancelSlotGesture();cardState={queue:[],active:null};slotSuppressClick=false;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();relicState.consumable=Math.random()<.5?"coin":"ward";encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;setFate(1,"reset",true);floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
 function newFloor(first,announcement){cancelSlotGesture();clearFeedback();relicState.floorUsed={};relicState.bargainRoom=null;relicState.coinRoom=null;generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;emitEffect("onFloorStart",{floor:floorNo});updateContext(announcement||"");update();markArrival(startId)}
 function markArrival(id){arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340)}
 
@@ -720,7 +820,7 @@ function revealClue(sourceId,target,type){
  setTimeout(function(){
   
   if(rooms!==floorRooms||(type==="loot"?(target.scavenged||!target.searched||target.id===exitId):target.searched))return;
-  target.known=true;
+  target.known=true;discoverGate();
   if(type==="loot"){target.lootClued=true;target.hiddenScavengeReward={kind:"gold",base:10+floorNo*2}}
   else{target.clued=true;target.clueTendency=target.id===exitId?"stairs":eventTendency(target.event);if(target.clueTendency==="neutral")target.clueTendency="safe"}
   emitEffect("onClueReveal",{id:target.id,type:type});
@@ -750,8 +850,9 @@ function awardPerfectFloor(){
  floorPerfectAwarded=true;perfectFloors++;var bonus=Math.floor((250+floorNo*100)*combo);score+=bonus;update();showLocalFeedback(currentId,"Every room explored","fate","✦ PERFECT FLOOR! ✦",1200);updateContext("✦ PERFECT FLOOR! ✦  Every room explored");return true
 }
 
-function activeRoomCount(){return rooms.filter(function(r){return r.active}).length}
-function searchedRoomCount(){return rooms.filter(function(r){return r.active&&r.searched}).length}
+function countsForCompletion(r){return r.active&&(!fateGate||r.id!==fateGate.roomId||fateGate.entered)}
+function activeRoomCount(){return rooms.filter(countsForCompletion).length}
+function searchedRoomCount(){return rooms.filter(function(r){return countsForCompletion(r)&&r.searched}).length}
 function unexploredCount(){return activeRoomCount()-searchedRoomCount()}
 function exitMessage(){var left=unexploredCount();return "EXIT REACHED — Hold to descend"+(left?" • "+left+" room"+(left===1?"":"s")+" unexplored":" • PERFECT FLOOR")}
 
@@ -760,7 +861,7 @@ function shortestVisitedPath(from,to){
  for(var k=0;k<q.length;k++){
   var at=q[k];if(at===to)break;
   room(at).links.forEach(function(n){
-   if(seen[n]||!room(n).visited)return;
+   if(seen[n]||!room(n).visited||!gateAccess(at,n,true))return;
    seen[n]=true;prev[n]=at;q.push(n)
   })
  }
@@ -825,6 +926,8 @@ function previewCurrentAction(id){
  return true
 }
 function startFastTravel(id){
+ if(gameOver||pendingAction||fastTraveling)return;
+ if(!gateAccess(currentId,id,true)){gateDenied();return}
  var path=shortestVisitedPath(currentId,id);
  if(!path||path.length<3){clearFastPreview();return}
  var fateBefore=combo;
@@ -842,10 +945,11 @@ function startFastTravel(id){
    scaleFate(.5);
    fastTraveling=false;
    update();
-   showLocalFeedback(currentId,"×"+fateBefore.toFixed(1)+" → ×"+combo.toFixed(1),"bad","⚡",1100);learn("learnedFastTravel");updateContext();
+   showLocalFeedback(currentId,"×"+fateBefore.toFixed(1)+" → ×"+combo.toFixed(1),"bad","⚡",1100);learn("learnedFastTravel");updateContext();openAltar(currentId);
    return
   }
 
+  if(!gateAccess(currentId,path[step],true)){fastTraveling=false;gateDenied();update();return}
   currentId=path[step];markArrival(currentId);
   history.push(currentId);
   totalMoves++;
@@ -863,8 +967,15 @@ function startFastTravel(id){
  hop()
 }
 
-function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();return}pendingAction="room-entry";update();var rid=id;setTimeout(function(){var el=document.querySelector('.cell[data-id="'+rid+'"]');if(el)el.classList.add("entry-pulse");setTimeout(function(){searchCurrentRoom(rid)},170)},20)}
-function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
+function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openAltar(id);return}pendingAction="room-entry";update();var rid=id;setTimeout(function(){var el=document.querySelector('.cell[data-id="'+rid+'"]');if(el)el.classList.add("entry-pulse");setTimeout(function(){searchCurrentRoom(rid)},170)},20)}
+function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="altar"){finishRoomEffects();openAltar(id);return}if(r.event==="trinket"||r.event==="consumable"){resolveGateItem(r.event);finishRoomEffects();return}if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
+function resolveGateItem(kind){
+ if(kind==="trinket"){
+  var available=Object.keys(TRINKETS).filter(function(id){return relicState.trinkets.indexOf(id)<0});
+  if(available.length){acquireTrinket(available[Math.floor(Math.random()*available.length)]);return}
+ }
+ var ids=Object.keys(CONSUMABLES);offerConsumable(ids[Math.floor(Math.random()*ids.length)])
+}
 function resolveSimpleEvent(event){
  var gain,base,goldBefore=gold,fateBefore=combo;
  switch(event){
@@ -966,7 +1077,7 @@ function descend(){
  showLocalFeedback(currentId,"DEEPER","","DESCENDED",950);if(combo-oldFate>=.2)setTimeout(function(){showLocalFeedback(currentId,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},520);return true
 }
 function finish(title){debugFloor();gameOver=true;$("endTitle").textContent=title;$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";$("overlay").style.display="flex"}
-function addLink(a,b){var e=document.createElement("div");e.className="link";var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}$("board").appendChild(e)}
+function addLink(a,b){var e=document.createElement("div");e.className="link";if(fateGate&&((a.id===fateGate.roomId&&b.id===fateGate.parentId)||(b.id===fateGate.roomId&&a.id===fateGate.parentId)))e.className+=" gateLink"+(combo>=fateGate.requirement?" gateReady":" gateSealed");var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}$("board").appendChild(e)}
 function render(){
  var board=$("board"),feedbackLayer=$("feedbackLayer");Array.prototype.slice.call(board.children).forEach(function(el){if(el!==feedbackLayer)el.remove()});if(!feedbackLayer){feedbackLayer=document.createElement("div");feedbackLayer.id="feedbackLayer";board.appendChild(feedbackLayer)}
 
@@ -1001,6 +1112,8 @@ function render(){
    }
   }
   if(r.eyeMarked&&!r.searched){cell.className+=" eye-known";var eye=document.createElement("span");eye.className="eyeMark";eye.textContent="🧿";cell.appendChild(eye)}
+  if(fateGate&&r.id===fateGate.roomId){cell.className+=" fateRoom"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.entered?" gateEntered":"");var rune=document.createElement("span");rune.className="gateRune";rune.textContent="✦"+formatGateFate(fateGate.requirement);if(r.x===0){rune.style.left="0";rune.style.transform="none"}else if(r.x===W-1){rune.style.left="auto";rune.style.right="0";rune.style.transform="none"}cell.appendChild(rune);cell.setAttribute("aria-label","Fate Gate: requires "+formatGateFate(fateGate.requirement)+" Fate")}
+  if(r.event==="altar"&&r.searched)cell.className+=r.altarUsed?" altarSpent":" altarAvailable";
   if(r.searched&&r.event!=="empty")cell.className+=" "+r.event;
   if(r.id!==currentId&&room(currentId).links.indexOf(r.id)>=0)cell.className+=" available";
   if(hintData&&hintData.tendency!=="neutral"){
@@ -1039,7 +1152,7 @@ function render(){
   }
   if(r.searched&&r.event!=="empty"){
    var ev=document.createElement("div");ev.className="event";
-   ev.textContent=r.event==="monster"?MONSTERS[r.monsterKind||"basic"].icon:({treasure:"🪙",rich:"💎",trap:"⚠️",heal:"✚",key:"🗝"}[r.event]||"");
+   ev.textContent=r.event==="monster"?MONSTERS[r.monsterKind||"basic"].icon:({treasure:"🪙",rich:"💎",trap:"⚠️",heal:"✚",altar:"✦",trinket:"✧",consumable:"✧",key:"🗝"}[r.event]||"");
    cell.appendChild(ev)
   }
 
@@ -1093,15 +1206,16 @@ function render(){
 function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 window.__dofTest={
+ gateRequirement:gateRequirement,gateReward:gateReward,gateAccess:gateAccess,normalReachableWithoutGate:normalReachableWithoutGate,openAltar:openAltar,sacrificeAltar:sacrificeAltar,unexploredCount:unexploredCount,
  inspectItem:inspectItem,closeItemCard:closeItemCard,replaceTrinket:replaceTrinket,pumpCards:pumpCards,beginRoomEffects:beginRoomEffects,finishRoomEffects:finishRoomEffects,monsterRate:monsterRate,fateGainFactor:fateGainFactor,continueEncounter:continueEncounter,
  setConsumable:function(id){relicState.consumable=id;update()},
  damageFate:damageFate,scaleFate:scaleFate,breakFate:breakFate,gainFate:gainFate,rewardMultiplier:rewardMultiplier,generateDungeon:generateDungeon,
- state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event,monsterKind:r.monsterKind,eyeMarked:!!r.eyeMarked,lootClued:!!r.lootClued,hiddenScavengeReward:r.hiddenScavengeReward?Object.assign({},r.hiddenScavengeReward):null}}),startId:startId,exitId:exitId,currentId:currentId,floorNo:floorNo,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:JSON.parse(JSON.stringify(fortuneUpgrades)),floorEconomy:JSON.parse(JSON.stringify(floorEconomy)),hp:hp,shield:shield,gold:gold,score:score,combo:combo,relics:JSON.parse(JSON.stringify(relicState)),cards:JSON.parse(JSON.stringify(cardState)),fateGainRemainder:fateGainRemainder,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
+ state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event,monsterKind:r.monsterKind,altarUsed:!!r.altarUsed,altarFateBefore:r.altarFateBefore,altarFateAfter:r.altarFateAfter,eyeMarked:!!r.eyeMarked,lootClued:!!r.lootClued,hiddenScavengeReward:r.hiddenScavengeReward?Object.assign({},r.hiddenScavengeReward):null}}),startId:startId,exitId:exitId,currentId:currentId,fateGate:fateGate?Object.assign({},fateGate):null,altarRoom:altarRoom,floorNo:floorNo,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:JSON.parse(JSON.stringify(fortuneUpgrades)),floorEconomy:JSON.parse(JSON.stringify(floorEconomy)),hp:hp,shield:shield,gold:gold,score:score,combo:combo,relics:JSON.parse(JSON.stringify(relicState)),cards:JSON.parse(JSON.stringify(cardState)),fateGainRemainder:fateGainRemainder,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
  revealClue:function(source,id,type){revealClue(source,room(id),type)},showDice:function(type,kind){if(type==="monster")room(currentId).monsterKind=kind||"basic";pendingAction=type;showDice(type)},acquireTrinket:acquireTrinket,offerConsumable:offerConsumable,chooseConsumable:chooseConsumable,useConsumable:useConsumable,emitEffect:emitEffect,monsterWeights:monsterWeights,pickMonster:pickMonster,newRun:beginRun,
  setRoomFixture:function(id,patch){Object.assign(room(id),patch);update()},setMonster:function(kind){encounterMonster=kind;room(currentId).monsterKind=kind},
  setGold:function(value){gold=value;update()},setFloor:function(value){floorNo=value;newFloor(false,"")},
  clearFeedback:clearFeedback,enter:enterRoom,search:searchCurrentRoom,scavenge:scavenge,descend:descend,travel:startFastTravel,update:update,awardPerfectFloor:awardPerfectFloor,resolveSimple:resolveSimpleEvent,resolveDice:resolveDice,showFeedback:showLocalFeedback,celebrateTreasure:celebrateTreasure,resetLearning:resetLearning,newFloor:function(){newFloor(true,"")},
- setCurrent:function(id){currentId=id;room(id).known=true;room(id).visited=true;update()},
+ setCurrent:function(id){if(!gateAccess(currentId,id,true))return false;currentId=id;room(id).known=true;room(id).visited=true;update()},
  markVisited:function(ids){ids.forEach(function(id){room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id)});update()},
  setCombo:function(value){setFate(value,"debug",true);update()},setVitals:function(health,hasShield){hp=health;shield=hasShield;update()},setRoomEvent:function(id,event){room(id).event=event;room(id).searched=true;room(id).eventResolved=true;searched[id]=true;update()},
  hintProfile:function(){return{range:hintProfile.range,strength:hintProfile.strength,accuracy:hintProfile.accuracy,exactRevealChance:hintProfile.exactRevealChance,frontierMinStrength:hintProfile.frontierMinStrength}},

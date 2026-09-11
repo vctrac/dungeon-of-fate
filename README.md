@@ -6,7 +6,33 @@ Dungeon of Fate is a mobile-friendly procedural dungeon game prototype focused o
 
 Active prototype.
 
-## V2.15.1 — Fortune Refinement & Item UX
+## V2.16 — Active FATE: Gates & Altars
+
+### Active FATE
+
+V2.16 adds optional access and voluntary healing without changing the existing reward, danger, item, Fortune Budget, diminishing-gain or Fast Travel balance constants.
+
+**FATE Gates:** from floor 3, a 30% spawn attempt can add one room in a previously inactive adjacent map cell. Its parent is a normal non-start/non-exit room with fewer than four links. Only one reciprocal connection is added, making the new room a leaf. Existing corridors and rooms remain intact. Generation validates that every normal room, including EXIT, stays reachable with the gated room excluded; invalid additions are rolled back. If no legal attachment exists, no Gate spawns.
+
+Let entering FATE be `F`, and let `D = 1 / (1 + ((F − 1) / 5)²)` (the existing gain factor). Choose stretch `S = 0.5 / 0.75 / 1.0` with probabilities `50% / 35% / 15%`. The frozen requirement is **`ceil((F + S × D) / step) × step`**, rounded to two decimals, where `step = 0.1` below entering FATE 20, otherwise `0.01`. For example, entering at ×3.4 gives thresholds ×3.9, ×4.1 or ×4.3. Small high-FATE steps avoid demanding gains the diminishing curve makes unrealistic.
+
+The Gate is hidden until its room is revealed through exploration or an existing Clue. A rune displays its exact requirement. Outside-to-inside movement always checks current FATE; entry does not spend FATE and merely reaching the threshold elsewhere does not permanently unlock anything. Once inside, leaving is unrestricted. Fast Travel additionally requires a previous legitimate entry, so it cannot discover/open a Gate; revisiting still checks the current threshold. Its existing half-FATE cost is applied after travel, so arriving inside may leave the player below the threshold without trapping them.
+
+| Gate primary opportunity | Probability |
+| --- | ---: |
+| Treasure | 55% |
+| Rich Treasure | 35% |
+| Shrine | 8% |
+| Consumable | 1.5% |
+| Trinket | 0.5% |
+
+If two Shrines already exist, the Shrine outcome becomes Treasure (63% Treasure, 0% additional Shrine). Normal and Fortune Shrine rules are unchanged. Items use existing definitions, slot choices and cards; a Trinket outcome selects an unowned Trinket or falls back to a Consumable if none remains. No ordinary Monster or empty primary reward is generated. The Gate room can be scavenged normally after entry.
+
+**Altars:** an independent 22% spawn attempt from floor 3 places at most one Altar in a remaining normal empty room. It does not replace a reward or danger and uses no Fortune Budget. Entering opens an explicit exchange card with no die roll: **hold 650 ms to break current FATE to ×1 and restore exactly one heart**. Full health or FATE ×1 disables the offer. Tapping the offer never spends anything; tapping elsewhere leaves. A canceled/moved hold does nothing. Dismissed Altars remain available on later visits; successful use marks the room spent before applying its one-time reward. Revisits, including arrival by Fast Travel, can reopen an unused Altar. The Doll is neither consumed nor consulted. This deliberately can remove access to a discovered Gate.
+
+**Completion:** an unentered Gate room is excluded from normal active/searched completion counts and cannot block Perfect Floor or descent. Once entered it follows normal searched-room semantics; the existing Perfect Floor award remains one-time, so entering a bonus room after earning it cannot pay it again. Unused Altars count as explored when entered; spending FATE is never required for completion. Descending discards the floor, its Gate and its Altar. There is no upward travel or resource respawn.
+
+Gate identity, fixed requirement, reward, discovery and legitimate-entry status are serializable in `fateGate`. Altar identity is `altarRoom`, with spent and before/after FATE fields on its room. `floorEconomy.activeFate` logs these through the existing debug switch. New discovery/crossing/denial and Altar-sacrifice effect hooks can support future presentation without adding audio now.
 
 Room feedback uses a compact stack. Clues pulse at the identified room and retain a true tendency marker without revealing the exact event. Swipe anywhere on screen while a monster is waiting to begin its battle roll; gesture direction, speed, and distance do not change the outcome. Keyboard users can focus the card and press Enter or Space. Traps and shrines still roll automatically, and map holds retain their existing actions.
 
@@ -25,7 +51,7 @@ HP protection priority remains Death's Bargain → Divine Shield → Voodoo Doll
 
 ### Item Cards and starters
 
-`cardState` holds a serializable queue and one active card with kind, item ID, discovery/inspection mode, and decision flag. Acquisition commits once, or waits for an explicit replacement choice. Unresolved encounters retain control; important loot waits until encounter continuation. Closing advances queued cards, then returns to exploration. Current cards all wait for input; decision cards never auto-advance. Routine Gold/FATE/HP and passive item effects remain normal feedback, not cards. The shared renderer contains icon, name, visual effect summary, description and relevant state. It supports touch, mouse, keyboard focus trapping and a constrained, internally scrollable layout for short screens.
+`cardState` holds a serializable queue and one active card with kind, item ID, discovery/inspection mode, and decision flag. Acquisition commits once, or waits for an explicit replacement choice. Unresolved encounters retain control; important loot waits until encounter continuation. Informational discovery/inspection cards have no confirmation button: tap anywhere to continue, without using the item. Pointer ownership and movement checks prevent opening gestures or scrolling from dismissing the next card. Replacement cards retain explicit replace/reject controls and ignore background taps. Altar cards share the queue and use their own hold action. Closing advances queued cards, then returns to exploration; no cards auto-advance. Routine Gold/FATE/HP and passive item effects remain normal feedback, not cards. The shared renderer contains icon, name, visual effect summary, description and relevant state. It supports touch, mouse, keyboard focus trapping and a constrained, internally scrollable layout for short screens.
 
 Every run starts with exactly one unused **Fortune Coin or Trap Ward**, chosen 50/50. No starter modal. The slot gently pulses until its first interaction; the existing learning mechanism remembers this. Both items join normal Consumable discoveries.
 
@@ -85,6 +111,10 @@ Also run `node tests/relics.cjs` for monster balance/identities, passive hooks, 
 Run `node tests/items.cjs` for starter randomness, touch inspection, hold ring and activation, three-slot replace/reject, queued battle loot, Coin entry accounting and all Gold paths, Ward roll bypass, Doll continuation, and phone/landscape card bounds.
 
 V2.15.1 validation ran all four browser suites with headless Chromium, plus DOM-free logic, syntax and diff checks. Actual service-worker installation and offline file/directory launches passed. Sample Monster rates were ~14–15% early, ~17% at floor 5, ~21% at floor 10 and ~30% at floors 20/40; no sampled floor exceeded two Shrines. Winning five-floor sweeps with normal Scavenge finds ended around 6.8–7.5k Gold. Physical-phone emoji rendering, touch feel, item readability and survival/difficulty pacing still need playtesting.
+
+Run `node tests/active-fate.cjs` for 1,000 seeded floors, exact reward weights, Gate topology/frozen requirements/entry/exit/Fast Travel restrictions, optional completion/descent, Altar hold/revisit/spent rules, Gate–Altar conflict, item dismissal and phone layouts. V2.16 checks passed with headless Chromium, including the existing combat, item, balance and actual service-worker offline-launch suites. The seeded sample produced 287 Gates and 210 Altars in 1,000 eligible floors.
+
+Manual phone playtesting remains needed for rune readability in dense/dim maps, hold feel, perceived Gate reward value, threshold attainability during real runs, and whether the Altar/Gate trade-off makes FATE worth preserving.
 
 ## Install and play
 
