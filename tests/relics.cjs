@@ -174,7 +174,7 @@ let browser;
  // Serializable state, floor resets, full run reset.
  await page.evaluate(()=>{giveTrinket('doll');giveTrinket('blood')});
  assert.doesNotThrow(()=>JSON.parse(JSON.stringify(s.relics)));
- await reset();s=await state();assert.deepEqual(s.relics,{trinkets:[],capacity:3,consumable:null,floorUsed:{},bargainCharges:0,bargainRoom:null,coinCharges:0,coinRoom:null,wardArmed:false,pendingItem:null});
+ await reset();s=await state();assert.deepEqual(s.relics,{trinkets:[],capacity:3,consumable:null,starterItem:s.relics.starterItem,starterInspected:false,floorUsed:{},bargainCharges:0,bargainRoom:null,coinCharges:0,coinRoom:null,wardArmed:false,pendingItem:null});
  // All relics fit the original footer height; slot remains touch-sized.
  for(const size of [{width:320,height:568},{width:390,height:844},{width:844,height:390}]){
   await page.setViewportSize(size);

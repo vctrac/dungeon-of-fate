@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.16 — Active FATE: Gates &amp; Altars</title>
+<title>Dungeon of Fate V2.16.1 — Exploration &amp; Feedback</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -229,8 +229,8 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 #trinkets{grid-template-columns:repeat(3,32px);gap:1px}
 .trinket{width:32px;height:44px;border:1px solid #68583e;border-radius:8px;background:#252018;color:#eed7ac;font-size:21px;padding:0;touch-action:manipulation}.trinket.empty{color:#716654;border-color:#403930}.trinket:disabled{opacity:1}.trinket.spent{opacity:.45}
 #activeItems{display:flex;flex-direction:column;font-size:11px;line-height:14px;white-space:nowrap;color:#eacb91}#activeItems:has(span:not(:empty)){min-width:28px}#activeItems:empty{display:none}
-#bargainState{font-size:11px}.itemAttention{animation:itemAttention 2.5s ease-in-out infinite}
-@keyframes itemAttention{50%{box-shadow:0 0 12px #efca7488;border-color:#ffe1a2}}
+#bargainState{font-size:11px}.itemAttention{animation:itemAttention 4.5s ease-in-out infinite}
+@keyframes itemAttention{0%,65%,100%{transform:translateY(0)}74%,88%{transform:translateY(-2px);box-shadow:0 0 17px #efca74bb;border-color:#ffe1a2}81%{transform:translateY(0)}}
 #itemChoice{padding:calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));touch-action:pan-y}
 .itemChoicePanel{width:min(420px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;padding:18px 14px;background:radial-gradient(ellipse at top,#51402a,#1c1713 75%);box-shadow:0 0 30px #c5a56422;display:flex;flex-direction:column;align-items:stretch;gap:10px}
 .itemChoicePanel>div{font-size:inherit;margin:0}.itemChoicePanel .itemReason{font-size:10px;letter-spacing:2px;color:#c3ab82}
@@ -258,13 +258,20 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 #altarOffer[hidden],#closeItem[hidden],#cardContinue[hidden]{display:none}#cardContinue{font-size:10px;letter-spacing:1px;color:#bda887;padding:8px 0}
 @media(max-height:540px){#altarOffer{min-height:88px;font-size:21px}}
 @media(prefers-reduced-motion:reduce){.gateDenied,.cell.gateEntered.current-arrival .floor{animation:none}}
+/* V2.16.1: resolved landmarks stay visible without competing for attention. */
+.cell.gateResolved .floor,.link.gateResolved{box-shadow:none!important;filter:saturate(.35);animation:none!important}
+.cell.gateResolved .gateRune{opacity:.45;box-shadow:none}.link.gateResolved{opacity:.35!important}
+.attentionArrival .floor{animation:attentionArrival .4s ease-out}.cell.loot-omen .clueMark{font-size:14px}.cell.fateRoom.loot-omen .clueMark{left:auto;right:-5px;top:10px;transform:none}
+@keyframes attentionArrival{40%{filter:brightness(1.8);box-shadow:0 0 14px #ffc768}}
+#deathCause{font-size:28px;color:#f5c0a5;margin:10px 0}
+@media(prefers-reduced-motion:reduce){.attentionArrival .floor{animation:none}}
 </style>
 </head>
 <body>
 <div id="game">
 <div id="hud"><div class="stat"><div class="label">Health</div><div class="value" id="hp"></div></div><div class="stat"><div class="label">Gold</div><div class="value" id="gold">0</div></div><div class="stat"><div class="label">Floor</div><div class="value" id="floorNo">1</div></div><div class="stat"><div class="label">Fate</div><div class="value" id="combo">x1.0</div></div></div>
 <div id="board"><div id="feedbackLayer"></div></div><div id="footer"><div id="message"></div><div id="relicBar"><div id="trinkets" aria-label="Owned trinkets"></div><span id="activeItems"><span id="bargainState"></span><span id="coinState"></span><span id="wardState"></span></span><button id="consumableSlot" type="button" aria-label="Empty consumable slot">◇</button></div></div></div>
-<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div id="monsterThreat" aria-hidden="true"></div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
+<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div id="monsterThreat" aria-hidden="true"></div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="die" id="die">⚄</div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><div id="deathCause" role="status"></div><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
 
 <div id="effectLayer" aria-live="polite"><div id="effectNotices"></div></div>
 <div id="itemChoice" hidden role="dialog" aria-modal="true" aria-labelledby="itemName" aria-describedby="itemDescription">
@@ -281,6 +288,8 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 var W=9,H=9,N=W*H,rooms=[],startId=0,exitId=0,currentId=0,history=[],searched={},hp=3,shield=false,gold=0,score=0,combo=1,floorNo=1,gameOver=false,totalMoves=0,floorDamage=0,perfectFloors=0,pendingAction=null,fastTravelTimer=null,fastTravelTarget=null,fastTraveling=false,encounterResolved=false,encounterCloseAction=null,holdAction=null,arrivalId=null,arrivalTimer=null,floorPerfectAwarded=false,scoreAnimation=null;
 // V2.15: serializable floor snapshot; never consulted by dice RNG.
 var fateGate=null,altarRoom=null;
+var travelHopTimer=null,travelSerial=0,deathTimer=null,deathPending=false,causeOfDeath=null;
+var AUTO_WALK_MS=150,ATTENTION_WALK_MS=400,LETHAL_BEAT_MS=1000;
 var floorFortune=1,fortuneBudget=0,fortuneUpgrades=[],floorEconomy=null,fateGainRemainder=0;
 function setFate(value,kind,silent){
  var before=combo;combo=Math.max(1,Math.round((Number.isFinite(value)?value:1)*100)/100);
@@ -336,7 +345,7 @@ function applyFortune(){
 var hintProfile={range:1,strength:.32,accuracy:.68,exactRevealChance:0,frontierMinStrength:.13};
 function $(id){return document.getElementById(id)} function room(id){return rooms[id]}
 // V2.14 effect definitions are behavior; relicState contains only serializable run data.
-function freshRelicState(){return{trinkets:[],capacity:3,consumable:null,floorUsed:{},bargainCharges:0,bargainRoom:null,coinCharges:0,coinRoom:null,wardArmed:false,pendingItem:null}}
+function freshRelicState(){return{trinkets:[],capacity:3,consumable:null,starterItem:null,starterInspected:false,floorUsed:{},bargainCharges:0,bargainRoom:null,coinCharges:0,coinRoom:null,wardArmed:false,pendingItem:null}}
 var relicState=freshRelicState(),encounterMonster="basic",slotGesture=null;
 var MONSTERS={
  basic:{icon:"👹",name:"Guardian",resource:"♥"},
@@ -420,7 +429,7 @@ function offerConsumable(id){return queueItem("consumable",id,"discovery")}
 function inspectItem(kind,id){
  if(gameOver||pendingAction||fastTraveling)return false;
  if(kind==="trinket"?relicState.trinkets.indexOf(id)<0:relicState.consumable!==id)return false;
- learn("learnedItems");return queueItem(kind,id,"inspect")
+ learn("learnedItems");if(kind==="consumable")relicState.starterInspected=true;return queueItem(kind,id,"inspect")
 }
 function pumpCards(){
  if(gameOver||pendingAction||fastTraveling||cardState.active||!cardState.queue.length)return;
@@ -471,10 +480,11 @@ function closeItemCard(acquired){
  var card=cardState.active;if(!card)return false;
  cancelAltarHold();cardPointer=null;cardState.active=null;relicState.pendingItem=null;pendingAction=null;$("itemChoice").hidden=true;
  if(card.type==="item"&&(acquired||(!card.decision&&card.mode==="discovery")))resourceFlight(itemDefinition(card.kind,card.id).icon,card.kind==="trinket"?"trinkets":"consumableSlot");
- update();pumpCards();if(!pendingAction){if(!awardPerfectFloor())updateContext();if(itemFocusReturn&&itemFocusReturn.isConnected)itemFocusReturn.focus({preventScroll:true});else $("consumableSlot").focus({preventScroll:true})}return true
+ resolveGateOpportunity();update();pumpCards();if(!pendingAction){if(!awardPerfectFloor())updateContext();if(itemFocusReturn&&itemFocusReturn.isConnected)itemFocusReturn.focus({preventScroll:true});else $("consumableSlot").focus({preventScroll:true})}return true
 }
-function openAltar(id){
- var r=room(id);if(!r||id!==currentId||r.event!=="altar"||r.altarUsed||gameOver||pendingAction)return false;
+function openAltar(id,automatic){
+ var r=room(id);if(!r||id!==currentId||r.event!=="altar"||r.altarUsed||(automatic&&r.altarCardSeen)||gameOver||pendingAction)return false;
+ r.altarCardSeen=true;
  cardState.queue.push({type:"altar",roomId:id,decision:true,autoAdvance:false});pumpCards();return true
 }
 function altarAvailable(){var card=cardState.active;return!!(card&&card.type==="altar"&&card.roomId===currentId&&!room(card.roomId).altarUsed&&combo>1&&hp<3&&hp>0&&!gameOver)}
@@ -517,7 +527,7 @@ function useConsumable(held){
  if(gameOver||pendingAction||fastTraveling||!relicState.consumable)return false;
  var item=CONSUMABLES[relicState.consumable];if(!held)return false;learn("learnedItems");
  if(!item.use()){effectNotice(item.icon+" =");return false}
- relicState.consumable=null;update();updateContext();return true
+ relicState.starterInspected=true;relicState.consumable=null;update();updateContext();return true
 }
 function updateRelicHUD(){
  var bar=$("trinkets");bar.textContent="";
@@ -527,7 +537,7 @@ function updateRelicHUD(){
  }
  var slot=$("consumableSlot"),item=CONSUMABLES[relicState.consumable];
  slot.textContent=item?item.icon:"◇";slot.classList.toggle("dangerous",!!(item&&item.dangerous));slot.classList.toggle("empty",!item);
- slot.disabled=!!(gameOver||pendingAction||fastTraveling);slot.setAttribute("aria-label",item?item.name+" — "+item.description:"Empty consumable slot");slot.title=slot.getAttribute("aria-label");slot.classList.toggle("itemAttention",!!item&&!learned("learnedItems"));
+ slot.disabled=!!(gameOver||pendingAction||fastTraveling);slot.setAttribute("aria-label",item?item.name+" — "+item.description:"Empty consumable slot");slot.title=slot.getAttribute("aria-label");slot.classList.toggle("itemAttention",!!item&&relicState.consumable===relicState.starterItem&&!relicState.starterInspected);
  var remaining=relicState.bargainCharges,protectedNow=relicState.bargainRoom!==null;
  $("bargainState").textContent=remaining?"☠ "+["","①","②","③"][remaining]:protectedNow?"☠ ◉":"";
  var digits=["","①","②","③","④","⑤"];$("coinState").textContent=relicState.coinCharges?"🪙×2 "+digits[relicState.coinCharges]:relicState.coinRoom!==null?"🪙×2 ◉":"";$("wardState").textContent=relicState.wardArmed?"✂ ✓":"";
@@ -544,7 +554,7 @@ function beginSlotHold(gesture){
 }
 $("consumableSlot").addEventListener("pointerdown",function(e){
  if(e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0)||slotGesture||pendingAction||fastTraveling||gameOver||!relicState.consumable)return;
- e.preventDefault();e.stopPropagation();slotSuppressClick=false;learn("learnedItems");this.classList.remove("itemAttention");this.setPointerCapture(e.pointerId);
+ e.preventDefault();e.stopPropagation();slotSuppressClick=false;this.setPointerCapture(e.pointerId);
  beginSlotHold({id:e.pointerId,x:e.clientX,y:e.clientY,started:performance.now()})
 },{passive:false});
 $("consumableSlot").addEventListener("pointermove",function(e){if(slotGesture&&slotGesture.id===e.pointerId&&Math.hypot(e.clientX-slotGesture.x,e.clientY-slotGesture.y)>14){slotSuppressClick=true;cancelSlotGesture()}});
@@ -587,7 +597,8 @@ function beginRoomEffects(id,isNew){
  if(isNew&&relicState.bargainCharges>0){relicState.bargainCharges--;relicState.bargainRoom=id}
  emitEffect("onRoomEnter",{id:id,isNew:isNew})
 }
-function finishRoomEffects(){relicState.bargainRoom=null;updateRelicHUD()}
+function resolveGateOpportunity(){if(fateGate&&fateGate.entered&&currentId===fateGate.roomId&&room(currentId).eventResolved&&!cardState.active&&!cardState.queue.length)fateGate.resolved=true}
+function finishRoomEffects(){resolveGateOpportunity();relicState.bargainRoom=null;updateRelicHUD()}
 function resolveSpecialMonster(kind,roll){
  var result="",detail="",gain=0;
  if(kind==="thief"){
@@ -638,14 +649,14 @@ function generateActiveFate(){
   rooms.forEach(function(r){if(!r.active||r.id===startId||r.id===exitId||r.links.length>=4)return;adjacent(r).forEach(function(n){if(!n.active)candidates.push({parent:r.id,id:n.id})})});
   if(candidates.length){
    var pick=candidates[Math.floor(Math.random()*candidates.length)],r=room(pick.id);
-   fateGate={roomId:r.id,parentId:pick.parent,requirement:gateRequirement(floorFortune,Math.random()),entered:false,discovered:false,reward:gateReward(Math.random(),rooms.filter(function(x){return x.active&&x.event==="heal"}).length<2)};
+   fateGate={roomId:r.id,parentId:pick.parent,requirement:gateRequirement(floorFortune,Math.random()),entered:false,discovered:false,resolved:false,reward:gateReward(Math.random(),rooms.filter(function(x){return x.active&&x.event==="heal"}).length<2)};
    r.active=true;r.links=[pick.parent];r.event=fateGate.reward;r.hint=eventTendency(r.event);room(pick.parent).links.push(r.id);
    if(!normalReachableWithoutGate()){room(pick.parent).links=room(pick.parent).links.filter(function(id){return id!==r.id});r.active=false;r.links=[];fateGate=null}
   }
  }
  if(Math.random()<.22){
   var empty=rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId&&r.event==="empty"});
-  if(empty.length){var altar=empty[Math.floor(Math.random()*empty.length)];altar.event="altar";altar.altarUsed=false;altar.hint="safe";altarRoom=altar.id}
+  if(empty.length){var altar=empty[Math.floor(Math.random()*empty.length)];altar.event="altar";altar.altarUsed=false;altar.altarCardSeen=false;altar.hint="safe";altarRoom=altar.id}
  }
 }
 function gateAccess(from,to,travel){
@@ -662,7 +673,7 @@ function formatGateFate(value){return Number(value.toFixed(2)).toString()}
 function discoverGate(){
  if(fateGate&&!fateGate.discovered&&room(fateGate.roomId).known){fateGate.discovered=true;emitEffect("onGateDiscovered",{roomId:fateGate.roomId,requirement:fateGate.requirement})}
 }
-function activeFateDebug(){return{gate:fateGate?Object.assign({},fateGate):null,altar:altarRoom===null?null:{roomId:altarRoom,discovered:room(altarRoom).known,used:!!room(altarRoom).altarUsed,before:room(altarRoom).altarFateBefore===undefined?null:room(altarRoom).altarFateBefore,after:room(altarRoom).altarFateAfter===undefined?null:room(altarRoom).altarFateAfter}}}
+function activeFateDebug(){return{gate:fateGate?Object.assign({},fateGate):null,altar:altarRoom===null?null:{roomId:altarRoom,discovered:room(altarRoom).known,cardSeen:!!room(altarRoom).altarCardSeen,used:!!room(altarRoom).altarUsed,before:room(altarRoom).altarFateBefore===undefined?null:room(altarRoom).altarFateBefore,after:room(altarRoom).altarFateAfter===undefined?null:room(altarRoom).altarFateAfter}}}
 function chooseEndpoints(){var d=[],q=[],i;do{startId=Math.floor(Math.random()*N)}while(!room(startId).active);for(i=0;i<N;i++)d[i]=-1;d[startId]=0;q.push(startId);for(i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(d[id]<0){d[id]=d[q[i]]+1;q.push(id)}});var far=[];for(i=0;i<N;i++)if(room(i).active&&i!==startId)far.push(i);far.sort(function(a,b){return d[b]-d[a]});exitId=far[Math.floor(Math.random()*Math.min(5,far.length))]}
 function distancesFrom(id){var d={},q=[id];d[id]=0;for(var i=0;i<q.length;i++)room(q[i]).links.forEach(function(n){if(d[n]===undefined){d[n]=d[q[i]]+1;q.push(n)}});return d}
 function placeEvents(){
@@ -679,11 +690,11 @@ function placeEvents(){
 }
 function eventTendency(event){if(event==="monster"||event==="trap")return"danger";if(event==="treasure"||event==="rich"||event==="key"||event==="trinket"||event==="consumable")return"fortune";if(event==="heal"||event==="altar")return"safe";return"neutral"}
 function assignRoomHints(){
- var kinds=["danger","fortune","safe","neutral"];
  rooms.forEach(function(r){
   if(!r.active||r.id===startId){r.hint="neutral";return}
   var trueHint=r.id===exitId?"neutral":eventTendency(r.event);
-  r.hint=Math.random()<hintProfile.accuracy?trueHint:kinds[Math.floor(Math.random()*kinds.length)];
+  // Keep the old RNG draw count; uncertainty now stays neutral rather than lying.
+  if(Math.random()<hintProfile.accuracy)r.hint=trueHint;else{Math.random();r.hint="neutral";}
   r.exactHint=hintProfile.exactRevealChance>0&&Math.random()<hintProfile.exactRevealChance?r.event:null
  })
 }
@@ -699,6 +710,7 @@ function routeDistance(id){var best=999;for(var i=0;i<history.length;i++)if(hist
 
 var combatReady=null,combatPointer=null,continuePointer=null,encounterSerial=0;
 function continueEncounter(){
+ if(deathPending)return;
  if(!encounterResolved||!encounterCloseAction)return;
  var fn=encounterCloseAction;continuePointer=null;fn();
  setTimeout(function(){if(!pendingAction&&!gameOver){if(!awardPerfectFloor())updateContext()}},0)
@@ -746,7 +758,7 @@ $("eventCard").addEventListener("keydown",function(e){
  if((e.key==="Enter"||e.key===" ")&&!e.repeat){e.preventDefault();if(combatReady)commitCombat(1,0);else if(encounterResolved)continueEncounter()}
 });
 
-function beginRun(){cancelAltarHold();cardPointer=null;cancelSlotGesture();cardState={queue:[],active:null};slotSuppressClick=false;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();relicState.consumable=Math.random()<.5?"coin":"ward";encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;setFate(1,"reset",true);floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
+function beginRun(){clearTimeout(deathTimer);clearTimeout(travelHopTimer);clearTimeout(fastTravelTimer);travelSerial++;deathPending=false;causeOfDeath=null;cancelAltarHold();cardPointer=null;cancelSlotGesture();cardState={queue:[],active:null};slotSuppressClick=false;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();relicState.consumable=Math.random()<.5?"coin":"ward";relicState.starterItem=relicState.consumable;relicState.starterInspected=false;encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;setFate(1,"reset",true);floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
 function newFloor(first,announcement){cancelSlotGesture();clearFeedback();relicState.floorUsed={};relicState.bargainRoom=null;relicState.coinRoom=null;generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;emitEffect("onFloorStart",{floor:floorNo});updateContext(announcement||"");update();markArrival(startId)}
 function markArrival(id){arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340)}
 
@@ -757,7 +769,7 @@ function updateContext(temporary){
  var r=room(currentId);
  if(currentId===exitId&&r.searched){$("message").textContent="▼ EXIT — Hold ◆ to descend"+(unexploredCount()?" • "+unexploredCount()+" unexplored":" • Floor complete");return}
  if(pendingAction){$("message").textContent="";return}
- if(!learned("learnedFastTravel")&&usefulFastTravelExists()){$("message").textContent="⚡ Hold a distant visited room to Fast Travel • FATE is halved (minimum ×1)";return}
+ if(!learned("learnedFastTravel")&&usefulFastTravelExists()){$("message").textContent="◆ Hold a visited room to auto-walk";return}
  if(r.scavenged){$("message").textContent="✓ Nothing more to search here";return}
  if(r.searched){$("message").textContent="✦ Hold ◆ to Scavenge";return}
  $("message").textContent=""
@@ -816,18 +828,18 @@ if(typeof ResizeObserver!=="undefined")new ResizeObserver(layoutFeedback).observ
 function revealClue(sourceId,target,type){
  type=type||"exploration";
  var floorRooms=rooms;
- showLocalFeedback(sourceId,"⌁","clue","",450);
+ if(!fastTraveling)showLocalFeedback(sourceId,"⌁","clue","",450);
  setTimeout(function(){
   
   if(rooms!==floorRooms||(type==="loot"?(target.scavenged||!target.searched||target.id===exitId):target.searched))return;
   target.known=true;discoverGate();
-  if(type==="loot"){target.lootClued=true;target.hiddenScavengeReward={kind:"gold",base:10+floorNo*2}}
+  if(type==="loot"){target.lootClued=true;target.attentionActive=true;target.attentionSource="loot-clue";target.attentionEmphasized=!fastTraveling;target.hiddenScavengeReward={kind:"gold",base:10+floorNo*2}}
   else{target.clued=true;target.clueTendency=target.id===exitId?"stairs":eventTendency(target.event);if(target.clueTendency==="neutral")target.clueTendency="safe"}
   emitEffect("onClueReveal",{id:target.id,type:type});
   target.clueRevealUntil=performance.now()+1800;
   update();
   var symbols={danger:"⚠",fortune:"✦",safe:"✚",stairs:"▼"},labels={danger:"Danger",fortune:"Fortune",safe:"Quiet / blessing",stairs:"Stairs"};
-  showLocalFeedback(target.id,type==="loot"?"⌁ 🪙":"⌁ "+symbols[target.clueTendency],"clue clue-"+(type==="loot"?"fortune":target.clueTendency),type==="loot"?"":labels[target.clueTendency],1500);
+  if(!fastTraveling)showLocalFeedback(target.id,type==="loot"?"⌁ 🪙":"⌁ "+symbols[target.clueTendency],"clue clue-"+(type==="loot"?"fortune":target.clueTendency),type==="loot"?"":labels[target.clueTendency],1500);
   setTimeout(function(){if(rooms===floorRooms)update()},1850)
  },180)
 }
@@ -883,7 +895,7 @@ function clearFastPreview(){
 function previewFastTravel(id){
  if(fastTraveling||pendingAction||gameOver||id===currentId||!room(id).visited)return false;
  var path=shortestVisitedPath(currentId,id);
- if(!path||path.length<3)return false;
+ if(!path||path.length<2)return false;
 
  clearFastPreview();
  fastTravelTarget=id;
@@ -904,7 +916,7 @@ function previewFastTravel(id){
  }
  requestAnimationFrame(charge);
 
- $("message").textContent="⚡ FAST TRAVEL — FATE ×"+combo.toFixed(1)+" → ×"+Math.max(1,combo*.5).toFixed(1);
+ $("message").textContent="◆ → ◆ AUTO-WALK";
  fastTravelTimer=setTimeout(function(){
   fastTravelTimer=null;
   if(fastTravelTarget===id)startFastTravel(id)
@@ -926,49 +938,29 @@ function previewCurrentAction(id){
  return true
 }
 function startFastTravel(id){
- if(gameOver||pendingAction||fastTraveling)return;
- if(!gateAccess(currentId,id,true)){gateDenied();return}
+ if(gameOver||pendingAction||fastTraveling||id===currentId)return;
  var path=shortestVisitedPath(currentId,id);
- if(!path||path.length<3){clearFastPreview();return}
- var fateBefore=combo;
- relicState.coinRoom=null;
- fastTravelTarget=null;
- fastTraveling=true;
- document.querySelectorAll(".fast-target,.fast-charge").forEach(function(el){
-  el.classList.remove("fast-target","fast-charge");
-  el.style.removeProperty("--charge")
- });
-
- var step=1;
+ if(!path||path.length<2){clearFastPreview();return}
+ clearFastPreview();fastTraveling=true;var serial=++travelSerial,step=1;
+ // Information already visible at departure never adds a delay.
+ rooms.forEach(function(r){if(r.attentionActive)r.attentionEmphasized=true});
  function hop(){
-  if(step>=path.length){
-   scaleFate(.5);
-   fastTraveling=false;
-   update();
-   showLocalFeedback(currentId,"×"+fateBefore.toFixed(1)+" → ×"+combo.toFixed(1),"bad","⚡",1100);learn("learnedFastTravel");updateContext();openAltar(currentId);
-   return
-  }
-
-  if(!gateAccess(currentId,path[step],true)){fastTraveling=false;gateDenied();update();return}
-  currentId=path[step];markArrival(currentId);
-  history.push(currentId);
-  totalMoves++;
-  update();
-
-  var el=document.querySelector('.cell[data-id="'+currentId+'"]');
-  if(el){
-   el.classList.add("travel-step");
-   setTimeout(function(){el.classList.remove("travel-step")},110)
-  }
-
-  step++;
-  setTimeout(hop,Math.max(55,95-step*6))
+  if(serial!==travelSerial||!fastTraveling||gameOver)return;
+  if(step>=path.length){fastTraveling=false;update();learn("learnedFastTravel");updateContext();return}
+  var next=path[step],r=room(next);
+  if(!r.visited||room(currentId).links.indexOf(next)<0||!gateAccess(currentId,next,true)){fastTraveling=false;gateDenied();update();return}
+  currentId=next;beginRoomEffects(next,false);finishRoomEffects();markArrival(next);history.push(next);totalMoves++;
+  var fresh=r.attentionActive&&!r.attentionEmphasized;
+  if(fresh)r.attentionEmphasized=true;
+  update();var el=document.querySelector('.cell[data-id="'+next+'"]');
+  if(el)el.classList.add(fresh?"attentionArrival":"travel-step");
+  step++;travelHopTimer=setTimeout(hop,fresh?ATTENTION_WALK_MS:AUTO_WALK_MS)
  }
- hop()
+ travelHopTimer=setTimeout(hop,AUTO_WALK_MS)
 }
 
-function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openAltar(id);return}pendingAction="room-entry";update();var rid=id;setTimeout(function(){var el=document.querySelector('.cell[data-id="'+rid+'"]');if(el)el.classList.add("entry-pulse");setTimeout(function(){searchCurrentRoom(rid)},170)},20)}
-function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="altar"){finishRoomEffects();openAltar(id);return}if(r.event==="trinket"||r.event==="consumable"){resolveGateItem(r.event);finishRoomEffects();return}if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
+function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openAltar(id,true);return}pendingAction="room-entry";update();var rid=id;setTimeout(function(){var el=document.querySelector('.cell[data-id="'+rid+'"]');if(el)el.classList.add("entry-pulse");setTimeout(function(){searchCurrentRoom(rid)},170)},20)}
+function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="altar"){finishRoomEffects();openAltar(id,true);return}if(r.event==="trinket"||r.event==="consumable"){resolveGateItem(r.event);finishRoomEffects();return}if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
 function resolveGateItem(kind){
  if(kind==="trinket"){
   var available=Object.keys(TRINKETS).filter(function(id){return relicState.trinkets.indexOf(id)<0});
@@ -996,7 +988,7 @@ function disarmTrap(){
 function showDice(type){
  if(type==="trap"&&disarmTrap())return;
  encounterMonster=type==="monster"?(room(currentId).monsterKind||"basic"):"basic";
- var serial=++encounterSerial;combatReady=null;combatPointer=null;continuePointer=null;
+ $("tapContinue").style.visibility="";var serial=++encounterSerial;combatReady=null;combatPointer=null;continuePointer=null;
  encounterResolved=false;encounterCloseAction=null;var o=$("diceOverlay"),c=$("eventCard"),die=$("die"),result=$("diceResult"),detail=$("diceDetail");
  o.classList.remove("resolved","awaiting-swipe");c.className="eventCard "+type+(type==="monster"?" "+encounterMonster:"");$("eventArt").textContent=type==="monster"?MONSTERS[encounterMonster].icon:type==="trap"?"⚠️":"✚";$("monsterThreat").textContent=type==="monster"?MONSTERS[encounterMonster].resource:"";$("diceTitle").textContent=type==="monster"?MONSTERS[encounterMonster].name:type==="trap"?"TRAP":"SHRINE";
  die.className="die";die.textContent="⚄";result.className="diceResult";result.textContent=type==="monster"?"BATTLE ROLL":type==="heal"?"BLESSING ROLL":"FATE ROLL";detail.textContent="GET READY...";o.style.display="flex";
@@ -1021,6 +1013,7 @@ function showDice(type){
 }
 var resolveDiceCore=resolveDice;
 resolveDice=function(type,roll){
+ if(gameOver||deathPending)return;
  if(type==="trap"&&disarmTrap())return;
  var fateBefore=combo,hpBefore=hp,shieldBefore=shield,scoreBefore=score,goldBefore=gold,damageBefore=floorDamage;
  if(type==="monster"&&encounterMonster!=="basic")resolveSpecialMonster(encounterMonster,roll);else if(type==="heal"&&roll>=3&&hpBefore>=3)finishDiceResult("","");else resolveDiceCore(type,roll);
@@ -1044,11 +1037,17 @@ resolveDice=function(type,roll){
  trackGold(gold-goldBefore);
  if(type==="monster"&&roll>=5)emitEffect("onMonsterVictory",{kind:encounterMonster,roll:roll});
  if(roll===6)emitEffect("onPerfectRoll",{type:type,roll:roll});
- finishRoomEffects();update();if(gold<goldBefore)theftFeedback(goldBefore,gold)
+ finishRoomEffects();update();if(gold<goldBefore)theftFeedback(goldBefore,gold);
+ if(hp<=0){
+  causeOfDeath={type:type,icon:type==="trap"?"⚠":"👹",label:type==="trap"?"TRAP":"MONSTER"};deathPending=true;pendingAction="lethal";
+  $("tapContinue").style.visibility="hidden";$("diceDetail").textContent+=" · ♥ 0";
+  deathTimer=setTimeout(function(){if(!deathPending||gameOver)return;deathPending=false;$("diceOverlay").style.display="none";encounterResolved=false;encounterCloseAction=null;finish("RUN OVER")},LETHAL_BEAT_MS);
+ }
 };
 function scavenge(id,forcedRoll){
+ if(gameOver||deathPending)return false;
  if(id!==currentId||id===exitId||!room(id).searched||room(id).scavenged||pendingAction||fastTraveling)return false;
- var r=room(id),first=!learned("learnedScavenge"),goldBefore=gold,fateBefore=combo;r.scavenged=true;
+ var r=room(id),first=!learned("learnedScavenge"),goldBefore=gold,fateBefore=combo;r.scavenged=true;r.attentionResolved=true;r.attentionActive=false;
  emitEffect("onScavenge",{id:id});
  if(r.hiddenScavengeReward){
   var promised=r.hiddenScavengeReward;r.hiddenScavengeReward=null;r.lootClued=false;
@@ -1076,8 +1075,8 @@ function descend(){
  score+=exitBonus;emitEffect("onFloorEnd",{floor:floorNo});debugFloor();learn("learnedDescend");floorNo++;gainFate(.25);newFloor(false,"You descend deeper.");
  showLocalFeedback(currentId,"DEEPER","","DESCENDED",950);if(combo-oldFate>=.2)setTimeout(function(){showLocalFeedback(currentId,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},520);return true
 }
-function finish(title){debugFloor();gameOver=true;$("endTitle").textContent=title;$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";$("overlay").style.display="flex"}
-function addLink(a,b){var e=document.createElement("div");e.className="link";if(fateGate&&((a.id===fateGate.roomId&&b.id===fateGate.parentId)||(b.id===fateGate.roomId&&a.id===fateGate.parentId)))e.className+=" gateLink"+(combo>=fateGate.requirement?" gateReady":" gateSealed");var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}$("board").appendChild(e)}
+function finish(title){if(gameOver)return;debugFloor();gameOver=true;$("endTitle").textContent=title;$("deathCause").textContent=causeOfDeath?causeOfDeath.icon+" "+causeOfDeath.label:"";$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";$("overlay").style.display="flex"}
+function addLink(a,b){var e=document.createElement("div");e.className="link";if(fateGate&&((a.id===fateGate.roomId&&b.id===fateGate.parentId)||(b.id===fateGate.roomId&&a.id===fateGate.parentId)))e.className+=" gateLink"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.resolved?" gateResolved":"");var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}$("board").appendChild(e)}
 function render(){
  var board=$("board"),feedbackLayer=$("feedbackLayer");Array.prototype.slice.call(board.children).forEach(function(el){if(el!==feedbackLayer)el.remove()});if(!feedbackLayer){feedbackLayer=document.createElement("div");feedbackLayer.id="feedbackLayer";board.appendChild(feedbackLayer)}
 
@@ -1105,14 +1104,14 @@ function render(){
   if(r.clued)cell.className+=" clued";
   if((r.clued&&!r.searched)||(r.lootClued&&!r.scavenged)){
    if(r.lootClued&&!r.scavenged)cell.className+=" loot-omen";
-   var mark=document.createElement("span");mark.className="clueMark";mark.textContent=r.lootClued?"⌁ 🪙":r.clueTendency==="stairs"?"⌁ ▼":"⌁";cell.appendChild(mark);
+   var mark=document.createElement("span");mark.className="clueMark";if(r.lootClued)mark.setAttribute("aria-label","Unresolved Scavenge clue");mark.textContent=r.lootClued?"❗":r.clueTendency==="stairs"?"⌁ ▼":"⌁";cell.appendChild(mark);
    if(r.clueRevealUntil>performance.now()){
     cell.className+=" clue-reveal";cell.style.setProperty("--clue-delay",(r.clueRevealUntil-performance.now()-1800)+"ms");
     var ring=document.createElement("i");ring.className="clueRing";cell.appendChild(ring)
    }
   }
   if(r.eyeMarked&&!r.searched){cell.className+=" eye-known";var eye=document.createElement("span");eye.className="eyeMark";eye.textContent="🧿";cell.appendChild(eye)}
-  if(fateGate&&r.id===fateGate.roomId){cell.className+=" fateRoom"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.entered?" gateEntered":"");var rune=document.createElement("span");rune.className="gateRune";rune.textContent="✦"+formatGateFate(fateGate.requirement);if(r.x===0){rune.style.left="0";rune.style.transform="none"}else if(r.x===W-1){rune.style.left="auto";rune.style.right="0";rune.style.transform="none"}cell.appendChild(rune);cell.setAttribute("aria-label","Fate Gate: requires "+formatGateFate(fateGate.requirement)+" Fate")}
+  if(fateGate&&r.id===fateGate.roomId){cell.className+=" fateRoom"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.entered?" gateEntered":"")+(fateGate.resolved?" gateResolved":"");var rune=document.createElement("span");rune.className="gateRune";rune.textContent="✦"+formatGateFate(fateGate.requirement);if(r.x===0){rune.style.left="0";rune.style.transform="none"}else if(r.x===W-1){rune.style.left="auto";rune.style.right="0";rune.style.transform="none"}cell.appendChild(rune);cell.setAttribute("aria-label","Fate Gate: requires "+formatGateFate(fateGate.requirement)+" Fate")}
   if(r.event==="altar"&&r.searched)cell.className+=r.altarUsed?" altarSpent":" altarAvailable";
   if(r.searched&&r.event!=="empty")cell.className+=" "+r.event;
   if(r.id!==currentId&&room(currentId).links.indexOf(r.id)>=0)cell.className+=" available";
@@ -1157,12 +1156,12 @@ function render(){
   }
 
   (function(id,node){
-   var down=false,startX=0,startY=0,holdCandidate=false;
+   var down=false,startX=0,startY=0,holdCandidate=false,downAt=0;
 
    node.addEventListener("pointerdown",function(e){
     if(e.pointerType==="mouse"&&e.button!==0)return;
-    down=true;startX=e.clientX;startY=e.clientY;
-    holdCandidate=(id===currentId&&room(id).searched)||(room(id).visited&&id!==currentId&&room(currentId).links.indexOf(id)<0);
+    down=true;downAt=performance.now();startX=e.clientX;startY=e.clientY;
+    holdCandidate=(id===currentId&&room(id).searched)||(room(id).visited&&id!==currentId);
     if(id===currentId&&room(id).searched)previewCurrentAction(id);else if(holdCandidate)previewFastTravel(id)
    },{passive:true});
 
@@ -1181,15 +1180,18 @@ function render(){
     e.preventDefault();
     if(e.pointerType==="mouse"&&e.button!==0)return;
 
+    if(!down)return;
     var wasTraveling=fastTraveling;
     var wasFastTarget=(fastTravelTarget===id);
     down=false;
 
     if(wasFastTarget){
      clearFastPreview();
+     if(!wasTraveling){if(id===currentId)openAltar(id);else enterRoom(id)}
      return
     }
-    if(wasTraveling||holdCandidate)return;
+    if(wasTraveling)return;
+    if(holdCandidate){if(downAt&&performance.now()-downAt<320&&id===currentId)openAltar(id);return;}
 
     enterRoom(id)
    },{passive:false})
@@ -1200,7 +1202,7 @@ function render(){
 
  var hint=document.createElement("div");
  hint.id="hint";
- hint.textContent="Tap adjacent • Hold current to Scavenge / Descend • Hold distant to Travel";
+ hint.textContent="Tap adjacent • Hold current to Scavenge / Descend • Hold visited to Auto-walk";
  board.appendChild(hint)
 }
 function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
@@ -1210,7 +1212,7 @@ window.__dofTest={
  inspectItem:inspectItem,closeItemCard:closeItemCard,replaceTrinket:replaceTrinket,pumpCards:pumpCards,beginRoomEffects:beginRoomEffects,finishRoomEffects:finishRoomEffects,monsterRate:monsterRate,fateGainFactor:fateGainFactor,continueEncounter:continueEncounter,
  setConsumable:function(id){relicState.consumable=id;update()},
  damageFate:damageFate,scaleFate:scaleFate,breakFate:breakFate,gainFate:gainFate,rewardMultiplier:rewardMultiplier,generateDungeon:generateDungeon,
- state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event,monsterKind:r.monsterKind,altarUsed:!!r.altarUsed,altarFateBefore:r.altarFateBefore,altarFateAfter:r.altarFateAfter,eyeMarked:!!r.eyeMarked,lootClued:!!r.lootClued,hiddenScavengeReward:r.hiddenScavengeReward?Object.assign({},r.hiddenScavengeReward):null}}),startId:startId,exitId:exitId,currentId:currentId,fateGate:fateGate?Object.assign({},fateGate):null,altarRoom:altarRoom,floorNo:floorNo,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:JSON.parse(JSON.stringify(fortuneUpgrades)),floorEconomy:JSON.parse(JSON.stringify(floorEconomy)),hp:hp,shield:shield,gold:gold,score:score,combo:combo,relics:JSON.parse(JSON.stringify(relicState)),cards:JSON.parse(JSON.stringify(cardState)),fateGainRemainder:fateGainRemainder,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
+ state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event,monsterKind:r.monsterKind,altarCardSeen:!!r.altarCardSeen,attentionActive:!!r.attentionActive,attentionEmphasized:!!r.attentionEmphasized,attentionResolved:!!r.attentionResolved,altarUsed:!!r.altarUsed,altarFateBefore:r.altarFateBefore,altarFateAfter:r.altarFateAfter,eyeMarked:!!r.eyeMarked,lootClued:!!r.lootClued,hiddenScavengeReward:r.hiddenScavengeReward?Object.assign({},r.hiddenScavengeReward):null}}),startId:startId,exitId:exitId,currentId:currentId,fateGate:fateGate?Object.assign({},fateGate):null,altarRoom:altarRoom,floorNo:floorNo,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:JSON.parse(JSON.stringify(fortuneUpgrades)),floorEconomy:JSON.parse(JSON.stringify(floorEconomy)),causeOfDeath:causeOfDeath,deathPending:deathPending,gameOver:gameOver,hp:hp,shield:shield,gold:gold,score:score,combo:combo,relics:JSON.parse(JSON.stringify(relicState)),cards:JSON.parse(JSON.stringify(cardState)),fateGainRemainder:fateGainRemainder,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
  revealClue:function(source,id,type){revealClue(source,room(id),type)},showDice:function(type,kind){if(type==="monster")room(currentId).monsterKind=kind||"basic";pendingAction=type;showDice(type)},acquireTrinket:acquireTrinket,offerConsumable:offerConsumable,chooseConsumable:chooseConsumable,useConsumable:useConsumable,emitEffect:emitEffect,monsterWeights:monsterWeights,pickMonster:pickMonster,newRun:beginRun,
  setRoomFixture:function(id,patch){Object.assign(room(id),patch);update()},setMonster:function(kind){encounterMonster=kind;room(currentId).monsterKind=kind},
  setGold:function(value){gold=value;update()},setFloor:function(value){floorNo=value;newFloor(false,"")},
@@ -1219,7 +1221,7 @@ window.__dofTest={
  markVisited:function(ids){ids.forEach(function(id){room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id)});update()},
  setCombo:function(value){setFate(value,"debug",true);update()},setVitals:function(health,hasShield){hp=health;shield=hasShield;update()},setRoomEvent:function(id,event){room(id).event=event;room(id).searched=true;room(id).eventResolved=true;searched[id]=true;update()},
  hintProfile:function(){return{range:hintProfile.range,strength:hintProfile.strength,accuracy:hintProfile.accuracy,exactRevealChance:hintProfile.exactRevealChance,frontierMinStrength:hintProfile.frontierMinStrength}},
- clearPending:function(){encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;$("diceOverlay").classList.remove("resolved","awaiting-swipe");pendingAction=null;$("diceOverlay").style.display="none";encounterResolved=false;encounterCloseAction=null;update();pumpCards()}
+ clearPending:function(){clearTimeout(deathTimer);deathPending=false;causeOfDeath=null;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;$("diceOverlay").classList.remove("resolved","awaiting-swipe");pendingAction=null;$("diceOverlay").style.display="none";encounterResolved=false;encounterCloseAction=null;update();pumpCards()}
 };
 beginRun();
 })();
