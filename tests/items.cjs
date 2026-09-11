@@ -7,7 +7,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  browser=await chromium.launch({headless:true,...(process.env.PWA_BROWSER?{executablePath:process.env.PWA_BROWSER}:{})});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:'+server.address().port);const state=()=>page.evaluate(()=>__dofTest.state()),reset=()=>page.evaluate(()=>__dofTest.newRun());
- const close=()=>page.locator('#closeItem').click();
+ const close=()=>page.locator('#closeItem:visible, .itemChoicePanel:has(#closeItem[hidden]) #itemName').click();
  const hold=async()=>{const b=await page.locator('#consumableSlot').boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.waitForTimeout(250);assert.equal(await page.locator('#consumableSlot.holding').count(),1);await page.waitForTimeout(370);await page.mouse.up()};
  const starters=await page.evaluate(()=>{const found={coin:0,ward:0};for(let i=0;i<60;i++){__dofTest.newRun();const s=__dofTest.state();if(s.cards.active||s.relics.coinCharges||s.relics.wardArmed||s.relics.trinkets.length)throw Error('starter effects');found[s.relics.consumable]++}return found});assert(starters.coin>0&&starters.ward>0);
  const held=(await state()).relics.consumable;assert.equal(await page.locator('#consumableSlot.itemAttention').count(),1);

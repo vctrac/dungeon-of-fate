@@ -24,7 +24,7 @@ module.exports=()=>{
   for(let i=1;i<=300;i++){
    seed(i);t.setCombo(1);t.generateDungeon();const a=state();check(a.fortuneBudget===0,'baseline');
    seed(i);t.setCombo(7);t.generateDungeon();const b=state();check(b.fortuneUpgrades.filter(u=>u.to==='heal').length<=1,'one bonus shrine');check(b.floorFortune===7&&b.fortuneBudget<=5&&b.fortuneUpgrades.length<=3,'cap/snapshot');
-   check(JSON.stringify(a.rooms.map(r=>[r.active,r.links]))===JSON.stringify(b.rooms.map(r=>[r.active,r.links])),'topology');
+   const normal=s=>s.rooms.filter(r=>!s.fateGate||r.id!==s.fateGate.roomId).filter(r=>r.active).map(r=>[r.id,r.links.filter(id=>!s.fateGate||id!==s.fateGate.roomId)]);check(JSON.stringify(normal(a))===JSON.stringify(normal(b)),'topology');
    check(a.exitId===b.exitId&&a.startId===b.startId,'endpoints');
    for(const r of a.rooms)if(['monster','trap'].includes(r.event))check(b.rooms[r.id].event===r.event,'danger');
    for(const u of b.fortuneUpgrades){check(b.rooms[u.id].active&&u.id!==b.exitId&&u.id!==b.startId,'placement');if(u.to==='rich')rich++}
@@ -36,12 +36,12 @@ module.exports=()=>{
   for(const depth of [1,2,5,10,20,40]){
    let monsters=0,eligible=0,maxShrines=0;
    for(let i=0;i<80;i++){
-    t.setCombo(12);t.setFloor(depth);const s=state(),active=s.rooms.filter(r=>r.active&&r.id!==s.startId&&r.id!==s.exitId);
+    t.setCombo(12);t.setFloor(depth);const s=state(),active=s.rooms.filter(r=>r.active&&r.id!==s.startId&&r.id!==s.exitId&&(!s.fateGate||r.id!==s.fateGate.roomId));
     const count=active.filter(r=>r.event==='monster').length;
     monsters+=count;eligible+=active.length;maxShrines=Math.max(maxShrines,active.filter(r=>r.event==='heal').length);
     check(count<=Math.round(active.length*.30),'monster ceiling');check(s.floorEconomy.bonusShrines<=1&&s.floorEconomy.naturalShrines===1,'shrine telemetry');
     check(Object.values(s.floorEconomy.monsters).reduce((a,b)=>a+b,0)===count,'archetype telemetry');
-    const reached=new Set([s.startId]),q=[s.startId];for(let j=0;j<q.length;j++)for(const n of s.rooms[q[j]].links)if(!reached.has(n)){reached.add(n);q.push(n)}check(reached.size===active.length+2,'reachable rooms');
+    const reached=new Set([s.startId]),q=[s.startId];for(let j=0;j<q.length;j++)for(const n of s.rooms[q[j]].links)if(!reached.has(n)){reached.add(n);q.push(n)}check(reached.size===active.length+2+(s.fateGate?1:0),'reachable rooms');
    }
    depthStats.push({depth,rate:monsters/eligible,maxShrines});check(maxShrines<=2,'total shrines');
   }
@@ -62,7 +62,7 @@ module.exports=()=>{
    t.newRun();
    for(let floor=1;floor<=5;floor++){
     t.setFloor(floor);let s=state();
-    for(const r of s.rooms.filter(r=>r.active&&r.id!==s.startId&&r.id!==s.exitId)){
+    for(const r of s.rooms.filter(r=>r.active&&r.id!==s.startId&&r.id!==s.exitId&&(!s.fateGate||r.id!==s.fateGate.roomId))){
      t.setCurrent(r.id);t.setVitals(3,true);
      if(['monster','trap','heal'].includes(r.event)){t.setMonster(r.monsterKind||'basic');t.resolveDice(r.event,5);t.clearPending()}
      else t.resolveSimple(r.event);
