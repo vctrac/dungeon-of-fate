@@ -12,7 +12,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  const starters=await page.evaluate(()=>{const found={coin:0,ward:0};for(let i=0;i<60;i++){__dofTest.newRun();const s=__dofTest.state();if(s.cards.active||s.relics.coinCharges||s.relics.wardArmed||s.relics.trinkets.length)throw Error('starter effects');found[s.relics.consumable]++}return found});assert(starters.coin>0&&starters.ward>0);
  const held=(await state()).relics.consumable;assert.equal(await page.locator('#consumableSlot.itemAttention').count(),1);
  await page.locator('#consumableSlot').tap();assert.equal(await page.locator('#itemName').innerText(),held==='coin'?'Fortune Coin':'Trap Ward');assert.equal((await state()).relics.consumable,held);assert.equal(await page.locator('#consumableSlot.itemAttention').count(),0);await close();
- assert.equal((await state()).pendingAction,null);await reset();assert.equal(await page.locator('#consumableSlot.itemAttention').count(),0);
+ assert.equal((await state()).pendingAction,null);await reset();assert.equal(await page.locator('#consumableSlot.itemAttention').count(),1);
  await page.evaluate(()=>__dofTest.setConsumable('coin'));await hold();assert.equal((await state()).relics.coinCharges,5);assert.equal((await state()).relics.consumable,null);assert.equal((await state()).cards.active,null);
  console.log('PASS random one-item starter, no automatic activation, tap inspection, learned cue, hold ring and no click after hold');
  // Acquisition cards and full-build decisions commit once; ordinary close cannot move the player.

@@ -6,7 +6,35 @@ Dungeon of Fate is a mobile-friendly procedural dungeon game prototype focused o
 
 Active prototype.
 
-## V2.16 — Active FATE: Gates & Altars
+## V2.16.1 — Exploration & Feedback
+
+This delta preserves V2.16 economy, danger, items, Fortune Budget, diminishing gains, Gate generation/rewards/requirements and Altar costs.
+
+- **Auto-walk:** hold a different visited room for the existing 320 ms. BFS selects a path through physically visited rooms only. Each connection is rechecked while walking. One visible step every **150 ms**, with no FATE, Gold, HP or item cost. Adjacent taps still walk one room; distant taps do nothing. Traversal is deterministic and ignores additional movement input until arrival. It never reveals rooms, repeats encounters or awards rewards, consumes new-room effect charges, or automatically descends at EXIT. Current-room holds still Scavenge; current EXIT holds descend. A Gate still checks current FATE for entry and requires a previous legitimate visit for auto-walk; leaving always works.
+- **Altars:** `altarCardSeen` records first presentation. Dismissal leaves the Altar available without reopening it during subsequent traversal. Tap the current unused Altar to reopen; hold still Scavenges. Successful sacrifice retains the existing one-use, full-health and minimum-FATE rules and spent-map appearance.
+- **Gates:** `fateGate.resolved` becomes true after the primary opportunity resolves (item decisions wait for card completion). Resolved runes fade to 45% opacity; the connection fades to 35%, and its glow stops. Requirements, visibility and access checks remain intact. Optional completion semantics are unchanged; unused Altars, unresolved loot clues and unentered Gates do not block descent.
+- **Room attention:** existing backward loot Clues now leave **❗** on a visited, unscavenged room. The marker represents the existing finite hidden reward, with source/active/emphasized/resolved state on the room. No movement RNG creates markers or rewards. Scavenging resolves the marker with the opportunity. New marker information encountered during auto-walk gets **400 ms total** room emphasis instead of 150 ms, then travel continues. Markers visible at departure do not slow travel. This patch does not change Clue or Scavenge rates.
+- **Starter attention:** each run's uninspected starter has a restrained 4.5-second repeating cue: a brief glow and 2 px lift, quiet for most of the cycle. Inspection or successful use stops it; canceled gestures do not. State lives in `relicState.starterItem/starterInspected`. No automatic card or activation; tap inspection and hold use remain separate.
+- **Lethal feedback:** after all HP protection hooks, an actual lethal result records `{type, icon, label}` in `causeOfDeath`. The event/result and ♥0 remain visible for **1,000 ms** before automatic Run Over. Early continuation taps cannot shorten this beat. Run Over shows **⚠ TRAP** or **👹 MONSTER**. Doll rescue records no death, creates no death timer, and preserves survival. Duplicate damage/finalization are guarded; new runs cancel old death/travel timers.
+
+### Truthful hint semantics
+
+| Color | Meaning |
+| --- | --- |
+| Green | Known non-hostile primary room: Shrine/Altar, or a Clue-confirmed safe empty room. Never Monster/Trap. Does not promise loot or a safe future Scavenge. |
+| Yellow | Known valuable primary opportunity: Treasure/Rich Treasure, key, Trinket or Consumable. |
+| Red | Actual primary danger: Monster (any archetype) or Trap. No false danger colors. |
+| Neutral ? | Unknown information; may contain any event. |
+
+The existing 68% hint-information chance is retained; its uncertain branch now produces neutral rather than a random false color. Existing RNG draw counts are preserved so this semantic change does not alter seeded floor generation. Clues use actual room contents. Evil Eye remains a separate frontier-only creature confirmation and hides archetype.
+
+### V2.16.1 validation
+
+`node tests/exploration.cjs` checks 300 floors for truthful hints; timed visited-only travel; no duplicate rewards/cost; finite backward loot clues and new-only emphasis; quiet Altars and tap/hold separation; lethal Trap/Monster timing/cause; Doll interception; restart safety; starter inspection and canceled gestures. Existing regression, relics, items, fortune, active-fate and DOM-free fortune-logic suites cover the remaining mechanics, mobile layouts and actual service-worker offline launches. The active-fate sample retains 287 Gates and 210 Altars across 1,000 seeded eligible floors. Cache is `dungeon-of-fate-v2.16.1-1`.
+
+Physical phone playtesting remains necessary for auto-walk pacing/orientation, ❗ and starter-cue discoverability without verbal teaching, rune readability/dimming, Altar tap/hold feel, and whether the one-second lethal beat makes the cause immediately understandable. Browser emulation cannot establish those playtest outcomes.
+
+## V2.16 foundation — Active FATE: Gates & Altars
 
 ### Active FATE
 
@@ -16,7 +44,7 @@ V2.16 adds optional access and voluntary healing without changing the existing r
 
 Let entering FATE be `F`, and let `D = 1 / (1 + ((F − 1) / 5)²)` (the existing gain factor). Choose stretch `S = 0.5 / 0.75 / 1.0` with probabilities `50% / 35% / 15%`. The frozen requirement is **`ceil((F + S × D) / step) × step`**, rounded to two decimals, where `step = 0.1` below entering FATE 20, otherwise `0.01`. For example, entering at ×3.4 gives thresholds ×3.9, ×4.1 or ×4.3. Small high-FATE steps avoid demanding gains the diminishing curve makes unrealistic.
 
-The Gate is hidden until its room is revealed through exploration or an existing Clue. A rune displays its exact requirement. Outside-to-inside movement always checks current FATE; entry does not spend FATE and merely reaching the threshold elsewhere does not permanently unlock anything. Once inside, leaving is unrestricted. Fast Travel additionally requires a previous legitimate entry, so it cannot discover/open a Gate; revisiting still checks the current threshold. Its existing half-FATE cost is applied after travel, so arriving inside may leave the player below the threshold without trapping them.
+The Gate is hidden until its room is revealed through exploration or an existing Clue. A rune displays its exact requirement. Outside-to-inside movement always checks current FATE; entry does not spend FATE and merely reaching the threshold elsewhere does not permanently unlock anything. Once inside, leaving is unrestricted. Fast Travel additionally requires a previous legitimate entry, so it cannot discover/open a Gate; revisiting still checks the current threshold. V2.16.1 auto-walk is free, as described above.
 
 | Gate primary opportunity | Probability |
 | --- | ---: |
@@ -28,7 +56,7 @@ The Gate is hidden until its room is revealed through exploration or an existing
 
 If two Shrines already exist, the Shrine outcome becomes Treasure (63% Treasure, 0% additional Shrine). Normal and Fortune Shrine rules are unchanged. Items use existing definitions, slot choices and cards; a Trinket outcome selects an unowned Trinket or falls back to a Consumable if none remains. No ordinary Monster or empty primary reward is generated. The Gate room can be scavenged normally after entry.
 
-**Altars:** an independent 22% spawn attempt from floor 3 places at most one Altar in a remaining normal empty room. It does not replace a reward or danger and uses no Fortune Budget. Entering opens an explicit exchange card with no die roll: **hold 650 ms to break current FATE to ×1 and restore exactly one heart**. Full health or FATE ×1 disables the offer. Tapping the offer never spends anything; tapping elsewhere leaves. A canceled/moved hold does nothing. Dismissed Altars remain available on later visits; successful use marks the room spent before applying its one-time reward. Revisits, including arrival by Fast Travel, can reopen an unused Altar. The Doll is neither consumed nor consulted. This deliberately can remove access to a discovered Gate.
+**Altars:** an independent 22% spawn attempt from floor 3 places at most one Altar in a remaining normal empty room. It does not replace a reward or danger and uses no Fortune Budget. Entering opens an explicit exchange card with no die roll: **hold 650 ms to break current FATE to ×1 and restore exactly one heart**. Full health or FATE ×1 disables the offer. Tapping the offer never spends anything; tapping elsewhere leaves. A canceled/moved hold does nothing. Dismissed Altars remain available on later visits; successful use marks the room spent before applying its one-time reward. V2.16.1 revisits stay quiet; tap the current Altar to reopen it. The Doll is neither consumed nor consulted. This deliberately can remove access to a discovered Gate.
 
 **Completion:** an unentered Gate room is excluded from normal active/searched completion counts and cannot block Perfect Floor or descent. Once entered it follows normal searched-room semantics; the existing Perfect Floor award remains one-time, so entering a bonus room after earning it cannot pay it again. Unused Altars count as explored when entered; spending FATE is never required for completion. Descending discards the floor, its Gate and its Altar. There is no upward travel or resource respawn.
 
@@ -53,7 +81,7 @@ HP protection priority remains Death's Bargain → Divine Shield → Voodoo Doll
 
 `cardState` holds a serializable queue and one active card with kind, item ID, discovery/inspection mode, and decision flag. Acquisition commits once, or waits for an explicit replacement choice. Unresolved encounters retain control; important loot waits until encounter continuation. Informational discovery/inspection cards have no confirmation button: tap anywhere to continue, without using the item. Pointer ownership and movement checks prevent opening gestures or scrolling from dismissing the next card. Replacement cards retain explicit replace/reject controls and ignore background taps. Altar cards share the queue and use their own hold action. Closing advances queued cards, then returns to exploration; no cards auto-advance. Routine Gold/FATE/HP and passive item effects remain normal feedback, not cards. The shared renderer contains icon, name, visual effect summary, description and relevant state. It supports touch, mouse, keyboard focus trapping and a constrained, internally scrollable layout for short screens.
 
-Every run starts with exactly one unused **Fortune Coin or Trap Ward**, chosen 50/50. No starter modal. The slot gently pulses until its first interaction; the existing learning mechanism remembers this. Both items join normal Consumable discoveries.
+Every run starts with exactly one unused **Fortune Coin or Trap Ward**, chosen 50/50. No starter modal. V2.16.1 gives each uninspected starter a periodic attention cue until inspection or use. Both items join normal Consumable discoveries.
 
 - **Fortune Coin:** activation arms five new-room entries; the activation room is excluded. Each new entry spends one charge, even without Gold. Only that entry's room rewards are doubled: Treasure, Rich, Key, encounter Gold, shrine overflow, Scavenge, guaranteed loot clues and the perfect-roll Horseshoe bonus. Ordinary Gold is rounded normally, then doubled once; feedback shows the calculation. The fifth room stays affected through its encounter and Scavenge until leaving. Revisits do not spend charges or regain the bonus. Remaining charges persist across floors; the previous room's eligibility does not. Score-only awards, theft and debug/global wallet changes are not doubled.
 - **Trap Ward:** remains armed across rooms/floors until the next room or Scavenge Trap. It disarms the Trap before dice start, preventing both HP and FATE consequences, then expires. There is no perfect-roll reward because no die was rolled.

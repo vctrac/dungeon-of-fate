@@ -34,12 +34,12 @@ try{
  await page.evaluate(g=>{__dofTest.setCombo(g.requirement+1);__dofTest.setCombo(g.requirement-.01);__dofTest.enter(g.roomId)},g);assert.equal((await state()).currentId,g.parentId);assert(!(await state()).fateGate.entered);
  // Neither Clues nor existing debug teleport helper bypass the gate.
  await page.evaluate(g=>{__dofTest.revealClue(g.parentId,g.roomId);__dofTest.setCurrent(g.roomId);__dofTest.travel(g.roomId)},g);await page.waitForTimeout(230);assert.equal((await state()).currentId,g.parentId);
- await page.evaluate(g=>{__dofTest.setCombo(g.requirement);__dofTest.enter(g.roomId)},g);let s=await state();assert.equal(s.currentId,g.roomId);assert.equal(s.combo,g.requirement);assert(s.fateGate.entered);await page.waitForFunction(()=>__dofTest.state().pendingAction===null);
+ await page.evaluate(g=>{__dofTest.setCombo(g.requirement);__dofTest.enter(g.roomId)},g);let s=await state();assert.equal(s.currentId,g.roomId);assert.equal(s.combo,g.requirement);assert(s.fateGate.entered);assert(!s.fateGate.resolved);await page.waitForFunction(()=>__dofTest.state().pendingAction===null);assert((await state()).fateGate.resolved);await page.waitForSelector('.gateResolved .gateRune');assert.equal(await page.locator('.gateResolved .gateRune').evaluate(el=>getComputedStyle(el).opacity),'0.45');
  await page.evaluate(g=>{__dofTest.setCombo(1);__dofTest.enter(g.parentId)},g);assert.equal((await state()).currentId,g.parentId);
  await page.evaluate(g=>__dofTest.enter(g.roomId),g);assert.equal((await state()).currentId,g.parentId);
  // A legitimate visited Gate still requires current FATE for Fast Travel back in; leaving stays possible.
  await page.evaluate(g=>{const t=__dofTest,s=t.state();t.markVisited(s.rooms.filter(r=>r.active&&r.id!==g.roomId).map(r=>r.id));t.setCurrent(s.startId);t.travel(g.roomId)},g);assert.notEqual((await state()).currentId,g.roomId);
- await page.evaluate(g=>{__dofTest.setCombo(g.requirement+1);__dofTest.travel(g.roomId)},g);await page.waitForFunction(g=>__dofTest.state().currentId===g.roomId&&!__dofTest.state().fastTraveling,g);s=await state();assert.equal(s.combo,Math.round((g.requirement+1)*.5*100)/100);
+ await page.evaluate(g=>{__dofTest.setCombo(g.requirement+1);__dofTest.travel(g.roomId)},g);await page.waitForFunction(g=>__dofTest.state().currentId===g.roomId&&!__dofTest.state().fastTraveling,g);s=await state();assert.equal(s.combo,Math.round((g.requirement+1)*100)/100);
  await page.evaluate(()=>{const s=__dofTest.state();__dofTest.setCombo(1);__dofTest.travel(s.startId)});await page.waitForFunction(()=>__dofTest.state().currentId===__dofTest.state().startId&&!__dofTest.state().fastTraveling);
  g=await findGate();await page.evaluate(g=>{const t=__dofTest,s=t.state();t.markVisited(s.rooms.filter(r=>r.active&&r.id!==g.roomId).map(r=>r.id));t.setCombo(1);t.setCurrent(s.exitId)},g);assert.equal(await page.evaluate(()=>__dofTest.unexploredCount()),0);assert(await page.evaluate(()=>__dofTest.awardPerfectFloor()));const floor=(await state()).floorNo;assert(await page.evaluate(()=>__dofTest.descend()));assert.equal((await state()).floorNo,floor+1);
  console.log('PASS frontier discovery, frozen/equal/current threshold, Clues, entry without cost, escape, Fast Travel restrictions and optional completion/descent');
@@ -48,7 +48,7 @@ try{
  let altar=await findAltar();await page.waitForFunction(()=>__dofTest.state().cards.active?.type==='altar');s=await state();assert.equal(s.combo,5.3);assert.equal(s.hp,1);assert.equal(s.diceOverlay,'none');
  await page.locator('#altarOffer').tap();assert.equal((await state()).combo,5.3);assert.equal((await state()).hp,1);assert((await state()).cards.active);
  await page.locator('#itemName').tap();assert.equal((await state()).cards.active,null);assert(!(await state()).rooms[altar.id].altarUsed);
- await page.evaluate(a=>{__dofTest.enter(a.from);__dofTest.enter(a.id)},altar);await page.waitForFunction(()=>__dofTest.state().cards.active?.type==='altar');
+ await page.evaluate(a=>{__dofTest.enter(a.from);__dofTest.enter(a.id)},altar);assert.equal((await state()).cards.active,null);await page.locator('.current').tap();await page.waitForFunction(()=>__dofTest.state().cards.active?.type==='altar');
  // A canceled hold cannot sacrifice.
  let box=await page.locator('#altarOffer').boundingBox();await page.mouse.move(box.x+30,box.y+30);await page.mouse.down();await page.waitForTimeout(220);await page.mouse.move(box.x+55,box.y+30);await page.waitForTimeout(500);await page.mouse.up();assert.equal((await state()).combo,5.3);
  // Existing Doll does not change an Altar exchange.
