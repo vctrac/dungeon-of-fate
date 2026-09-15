@@ -157,20 +157,20 @@ let browser;
   __dofTest.scavenge(__dofTest.state().currentId,.93);Math.random=realRandom
  });
  assert.equal((await state()).relics.consumable,'bargain');
- // Use the actual clue branch to promise loot on another searched room.
+ // Use the actual clue branch to reveal a pre-existing opportunity.
  await reset();
  const target=await page.evaluate(()=>{
   localStorage.setItem('dof.learnedScavenge','1');const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);
-  __dofTest.markVisited([id]);window.realRandom=Math.random;Math.random=()=>0;
+  __dofTest.markVisited([id]);__dofTest.setRoomFixture(id,{scavengeOpportunity:{roll:.8,resolved:false,passiveLead:false},attentionActive:false});window.realRandom=Math.random;Math.random=()=>0;
   __dofTest.scavenge(s.currentId,.9);Math.random=realRandom;return id
  });
  await page.waitForTimeout(250);
- s=await state();assert(s.rooms[target].lootClued&&s.rooms[target].hiddenScavengeReward);
+ s=await state();assert(s.rooms[target].lootClued&&s.rooms[target].scavengeOpportunity);
  assert.equal(await page.locator('.cell[data-id="'+target+'"].loot-omen').count(),1);
  assert(await page.locator('.roomFeedback[data-room-id="'+target+'"]').count());
  const beforeGold=s.gold;
- await page.evaluate(id=>{__dofTest.setCurrent(id);__dofTest.scavenge(id,.99)},target);
- s=await state();assert(s.gold>beforeGold);assert.equal(s.pendingAction,null);assert.equal(s.rooms[target].hiddenScavengeReward,null);assert.equal(s.rooms[target].lootClued,false);
+ await page.evaluate(id=>{__dofTest.setCurrent(id);__dofTest.scavenge(id)},target);
+ s=await state();assert(s.gold>beforeGold);assert.equal(s.pendingAction,null);assert(s.rooms[target].scavengeOpportunity.resolved);assert.equal(s.rooms[target].lootClued,false);
  // Serializable state, floor resets, full run reset.
  await page.evaluate(()=>{giveTrinket('doll');giveTrinket('blood')});
  assert.doesNotThrow(()=>JSON.parse(JSON.stringify(s.relics)));
@@ -186,7 +186,7 @@ let browser;
   await reset();
  }
  assert.deepEqual(errors,[]);
- console.log('PASS rare Scavenge items, persistent guaranteed loot clue, serializable/reset state, compact mobile footer; no runtime errors');
+ console.log('PASS rare Scavenge items, persistent pre-existing loot clue, serializable/reset state, compact mobile footer; no runtime errors');
  await browser.close();browser=null;server.close();
 })().catch(async e=>{console.error(e);if(browser)await browser.close();server.close();process.exitCode=1});
 

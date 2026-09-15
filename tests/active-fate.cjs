@@ -16,8 +16,8 @@ try{
    if(s.altarRoom!==null){altars++;check(s.rooms[s.altarRoom].event==='altar'&&!s.rooms[s.altarRoom].altarUsed,'altar state')}
    if(s.fateGate){
     gates++;const g=s.fateGate,r=s.rooms[g.roomId];rewards[g.reward]=(rewards[g.reward]||0)+1;
-    check(r.active&&r.links.length===1&&r.links[0]===g.parentId,'leaf');check(s.rooms[g.parentId].links.includes(r.id),'reciprocal');check(g.roomId!==s.startId&&g.roomId!==s.exitId,'endpoints');
-    check(!r.known&&!g.discovered&&!g.entered,'hidden gate');check(g.requirement>3.4&&g.requirement<=4.3,'stretch');check(['treasure','rich','heal','consumable','trinket'].includes(r.event),'nonempty reward');
+    check(r.active&&g.branchIds.length>=1&&g.branchIds.length<=3&&r.links.includes(g.parentId),'branch');check(s.rooms[g.parentId].links.includes(r.id),'reciprocal');check(g.roomId!==s.startId&&g.roomId!==s.exitId,'endpoints');
+    check(!r.known&&!g.discovered&&!g.entered,'hidden gate');check(g.requirement>3.4&&g.requirement<=4.3,'stretch');check(['treasure','rich','heal','consumable','trinket'].includes(s.rooms[g.rewardRoomId].event),'nonempty reward');
     t.setCombo(1);check(t.state().fateGate.requirement===g.requirement,'frozen');
    }
   }
@@ -26,7 +26,7 @@ try{
   const distribution={};for(let i=0;i<10000;i++){const kind=t.gateReward((i+.5)/10000,true);distribution[kind]=(distribution[kind]||0)+1}
   return{floors:1000,gates,altars,rewards,distribution};
  });assert.deepEqual(stats.distribution,{treasure:5500,rich:3500,heal:800,consumable:150,trinket:50});console.log('PASS generation',JSON.stringify(stats));
- const findGate=()=>page.evaluate(()=>{const t=__dofTest;t.newRun();for(let i=0;i<100;i++){t.setCombo(3.4);t.setFloor(3);if(t.state().fateGate){const g=t.state().fateGate;t.setRoomFixture(g.roomId,{event:'treasure'});t.setRoomFixture(g.parentId,{event:'empty',eventResolved:true,visited:true,searched:true});return g}}throw Error('no gate')});
+ const findGate=()=>page.evaluate(()=>{const t=__dofTest;t.newRun();for(let i=0;i<300;i++){t.setCombo(3.4);t.setFloor(3);if(t.state().fateGate?.branchIds.length===1){const g=t.state().fateGate;t.setRoomFixture(g.roomId,{event:'treasure'});t.setRoomFixture(g.parentId,{event:'empty',eventResolved:true,visited:true,searched:true});return g}}throw Error('no gate')});
  let g=await findGate();assert.equal(await page.locator('.gateRune').count(),0);
  await page.evaluate(g=>{__dofTest.markVisited([g.parentId]);__dofTest.setCurrent(g.parentId);__dofTest.setCombo(g.requirement-.01)},g);
  assert.equal(await page.locator('.gateRune').count(),1);assert((await state()).fateGate.discovered);
