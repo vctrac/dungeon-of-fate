@@ -5,6 +5,8 @@ Dungeon of Fate is a mobile-friendly procedural dungeon game prototype focused o
 ## Status
 
 Active prototype.
+try it at:
+https://vctrac.github.io/dungeon-of-fate/
 
 ## V2.16.1 — Exploration & Feedback
 
