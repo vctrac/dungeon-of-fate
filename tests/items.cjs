@@ -17,10 +17,10 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  console.log('PASS random one-item starter, no automatic activation, tap inspection, learned cue, hold ring and no click after hold');
  // Acquisition cards and full-build decisions commit once; ordinary close cannot move the player.
  await reset();
- for(const id of ['doll','eye','blood']){await page.evaluate(id=>__dofTest.acquireTrinket(id),id);assert.equal((await state()).cards.active.id,id);assert(await page.locator('#itemVisual').innerText());await close()}
+ for(const id of ['doll','eye','blood']){await page.evaluate(id=>__dofTest.acquireTrinket(id),id);assert.equal((await state()).cards.active.id,id);await page.waitForSelector('#itemChoice:not([hidden])');assert(await page.locator('#itemVisual').innerText());await close()}
  assert.equal((await state()).relics.trinkets.length,3);assert.equal(await page.locator('#trinkets button').count(),3);
  const before=(await state()).currentId;await page.locator('.trinket[data-item="eye"]').tap();assert.equal((await state()).cards.active.mode,'inspect');await close();assert.equal((await state()).currentId,before);
- await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));assert((await state()).cards.active.decision);assert.equal(await page.locator('#replaceTrinkets button').count(),3);await page.waitForTimeout(1800);assert((await state()).cards.active.decision);await close();assert.deepEqual((await state()).relics.trinkets,['doll','eye','blood']);
+ await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));assert((await state()).cards.active.decision);await page.waitForSelector('#itemChoice:not([hidden])');assert.equal(await page.locator('#replaceTrinkets button').count(),3);await page.waitForTimeout(1800);assert((await state()).cards.active.decision);await close();assert.deepEqual((await state()).relics.trinkets,['doll','eye','blood']);
  await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));await page.locator('.replaceTrinket[data-item="eye"]').click();assert.deepEqual((await state()).relics.trinkets,['doll','blood','horseshoe']);assert(!(await state()).rooms.some(r=>r.eyeMarked));
  assert.equal(await page.evaluate(()=>__dofTest.acquireTrinket('blood')),false);
  await page.evaluate(()=>__dofTest.offerConsumable('flask'));assert((await state()).cards.active.decision);await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'flask');assert.equal((await state()).cards.active,null);
@@ -43,7 +43,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
    const t=__dofTest;t.newRun();t.setConsumable(null);t.setVitals(2,false);if(type==='horseshoe'){t.acquireTrinket('horseshoe');t.closeItemCard()}
    if(coin){t.setConsumable('coin');t.useConsumable(true);t.beginRoomEffects(t.state().currentId,true)}t.setCombo(1);
    if(['treasure','rich','key'].includes(type))t.resolveSimple(type);
-   else if(type==='loot'){t.setRoomFixture(t.state().currentId,{hiddenScavengeReward:{kind:'gold',base:12}});t.scavenge(t.state().currentId,.5)}
+   else if(type==='loot'){t.setRoomFixture(t.state().currentId,{scavengeOpportunity:{roll:.8,resolved:false,passiveLead:false}});t.scavenge(t.state().currentId)}
    else if(type==='scavenge'){localStorage.setItem('dof.learnedScavenge','1');t.scavenge(t.state().currentId,.55)}
    else t.resolveDice(type==='horseshoe'?'monster':type,6);
    return t.state().gold;

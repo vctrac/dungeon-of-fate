@@ -8,7 +8,56 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
-## V2.16.1 — Exploration & Feedback
+## V2.16.2 — Discovery & Visual Language
+
+Built as a delta on current HEAD. The normal economy, danger rates, Fortune Budget, FATE gains, items, starter cue/effects, Gate frequency/threshold/reward weights, Altar exchange and EXIT rules are preserved.
+
+### Finite Scavenge discovery
+
+V2.16.1's loot Clue created `{kind: "gold", base: 10 + floor × 2}` in a previously searched room and marked it. V2.16.2 removes that reward-manufacturing path. Every active non-EXIT room receives a serializable `scavengeOpportunity = {roll, resolved, passiveLead}` at floor generation, before any Clue or visit. Scavenging consumes it once; a Clue only reveals information about it.
+
+The same uniform Scavenge table is now rolled in advance: **45% nothing, 30% ordinary Gold, 10% lucky Gold, 6% Clue, 4% item opportunity, 5% Trap**. Existing reward formulas, item selection/slot decisions and the first-ever Scavenge's safe ordinary-Gold result are unchanged. No additional Gold is assigned for a Clue. An item opportunity chooses its specific existing item through the existing discovery function when resolved.
+
+**Lead eligibility:** an unresolved roll ≥ 0.75 (the lucky Gold, Clue, item and Trap bands: 25% of outcomes). It must be a visited, active, non-EXIT room and not already marked. Thus ❗ identifies something worth investigating, including possible danger, without guaranteeing Gold. Resolving Scavenge atomically clears the attention marker and marks its underlying opportunity resolved, even when the first-Scavenge safeguard applies.
+
+**Normal exploration:** each floor has a **65% chance to preselect at most one** eligible non-START, non-EXIT, normal-dungeon room as a passive lead. If no eligible room exists, none is selected. Its first physical visit reveals ❗. Selection is fixed at generation; repeated walking/tapping/waiting never creates opportunities or new rolls. Gate branches have ordinary Scavenge opportunities but no additional passive-lead allocation.
+
+**Clues:** the existing Scavenge Clue band keeps its **40% backward-lead choice when both backward and exploration targets exist**, or uses an eligible backward target if there is no exploration target. It selects an existing unmarked eligible opportunity in visited territory. Without one, it falls back to a truthful exploration Clue (or the existing no-new-clues feedback if all options are exhausted). Hidden Gate interiors are excluded until legitimately revealed. There is no repeat reveal of an active or consumed lead.
+
+❗ remains optional, survives redraws, and clears with its opportunity. New information encountered during auto-walk receives the existing **400 ms total** room emphasis; other steps remain **150 ms**. Known markers never repeatedly delay travel. No automatic Scavenge, card, reroute or forced stop is added.
+
+### Acquisition and shared gestures
+
+Item discovery uses a reusable **source room → sparkle/actual item icon → Item Card** sequence lasting **650 ms**, with no extra tap. Cards retain the discovery/inspection distinction and source-room identity. Normal auto-equipping still commits once; a full slot/build presents the found candidate before the existing explicit replace/reject decision. Timer/overlay state is transient, tied to the active card and canceled on a new run. Inspection skips this sequence. Routine numeric effects still use feedback rather than cards.
+
+Consumable cards demonstrate a press, ring fill, completion and reset in a **3.8-second CSS-only loop** around the primary icon. The ring uses the real HUD hold appearance and a small hand cue; it never invokes item logic. The existing secondary instruction identifies the HUD slot as the actual target. Reduced-motion settings retain a static gesture cue. Shared art sizing is 64 px, or 44 px on short screens; the existing card title/equation/category/decision layout remains intact. No Codex or card-game system is introduced.
+
+Shared tap/hold controls track the press immediately but show their ring only after **200 ms**, already reflecting elapsed progress. Actual hold thresholds remain **320 ms for room Scavenge/auto-walk/EXIT, 550 ms for HUD Consumables, and 650 ms for the Altar exchange**. The hold-only Altar keeps its immediate ring. Quick taps show no ring. A pressed room node is retained across timed map redraws so the gesture and ring cannot disappear mid-hold; deferred rendering resumes afterward.
+
+### Altar landmarks
+
+Only a discovered (`altarCardSeen`) Altar gets the prominent central ✦ and persistent purple room identity, readable at a distance. It stays quiet at full Hearts or FATE ×1. An unused Altar with missing Hearts, positive HP and FATE > ×1 breathes gently every 3 seconds. Spent Altars retain a dim static icon. First-show, tap-to-reopen, hold-to-Scavenge, one-time healing and non-interrupting revisits/auto-walk remain unchanged.
+
+### Small FATE branches
+
+The original optional Gate entrance is extended after normal generation using previously inactive cells on the existing 9×9 grid. Desired size weights are **1 room: 20%; 2 rooms: 60%; 3 rooms: 20%**. Each new room links to one existing branch room, producing short paths or forks. There is exactly one connection to the normal dungeon. Existing normal corridors/rooms and START/EXIT remain untouched; normal reachability is validated with the entire branch excluded. If space runs out, growth stops at the smaller valid size. If the original entrance cannot fit, the existing no-Gate fallback applies. There are never four rooms, overlapping rooms, extra normal-dungeon connections or map rescaling.
+
+The **30% eligible-floor Gate spawn attempt from floor 3**, frozen FATE threshold formula and guaranteed-reward weights remain unchanged: **55% Treasure, 35% Rich Treasure, 8% Shrine, 1.5% Consumable, 0.5% Trinket**. The existing two-Shrine safeguard converts the Shrine result to Treasure. Exactly one branch room, selected uniformly, receives that guaranteed opportunity. Additional rooms are ordinary: Monster probability is the existing `monsterRate(floorNo)`; Trap probability is the normal floor's Trap count divided by its non-START/non-EXIT room count; otherwise empty. Monsters use existing depth composition. Additional rooms do not roll extra premium primary rewards, Shrines or item drops; their normal finite Scavenge table remains available.
+
+`fateGate.branchIds`, `rewardRoomId`, requested size and existing entry/requirement state are serializable. Outside-to-branch entry checks current FATE; auto-walk also requires a legitimate previous crossing and visited paths. Internal traversal and leaving never require FATE. Discovering the Gate reveals only its first frontier room; later branch rooms reveal through ordinary neighboring exploration. Clues cannot reveal hidden interiors; Evil Eye confirms only legitimately revealed frontier creatures and never archetype.
+
+**Dimming condition:** the Gate is resolved only when **every branch room has been physically visited and its primary encounter has resolved**, with no pending item card/decision. Scavenging every room is not required. The entrance rune/connection then use the existing quiet resolved styling. An unopened branch is excluded from Perfect Floor counts; once entered, normal searched-room completion semantics apply to all its rooms. Descent remains unrestricted by optional content.
+
+### Validation and next playtest
+
+`tests/discovery.cjs` adds seeded opportunity bands/exposure, branch topology/content/fog/access/resolution, truthful Clue fallback, marked Trap risk, item acquisition timing, CSS-only hold demonstration, real pointer timing and Altar landmark checks. Existing active-fate, exploration, items, relics, regression, fortune and DOM-free fortune-logic suites are updated for pre-existing opportunities and branch membership. They cover combat, rewards, item protection, queue/replacement flows, mobile layouts, cause-of-death and actual service-worker offline launches. Cache version: `dungeon-of-fate-v2.16.2-1`.
+
+In a 1,000-floor seeded sample: **294 Gates**; requested sizes **61/170/63**, actual fitted sizes **101/139/54**; **644 passive leads**, with **165 on the shortest normal START→EXIT route**. Across 29,930 pre-rolled opportunities, the six outcome bands counted **13,478 / 9,008 / 2,981 / 1,763 / 1,191 / 1,509**, consistent with the unchanged probabilities. This is generation exposure, not evidence that a player notices the marker or survives to reach it.
+
+Physical phone playtesting still needs to establish whether ❗ is noticed without verbal teaching, the hold demonstration teaches the HUD action, acquisition feels satisfying, Altars are recognizable at a glance, and 1–3-room branches feel worth exploring without making the map crowded. Check emoji/hand rendering, gesture feel and installed-PWA updates on real Android/iOS devices.
+
+## V2.16.1 foundation — Exploration & Feedback
+
 
 This delta preserves V2.16 economy, danger, items, Fortune Budget, diminishing gains, Gate generation/rewards/requirements and Altar costs.
 
@@ -151,4 +200,3 @@ Manual phone playtesting remains needed for rune readability in dense/dim maps, 
 Serve this folder over HTTPS (or localhost for development), open the game, then use your browser's Install app or Add to Home Screen option. Launch the installed icon for fullscreen play where supported; other browsers fall back to their supported app display mode.
 
 After the first successful online load and service worker installation, the game can launch offline. This caches the game files, not an in-progress run. New service worker versions activate after existing game windows close. Bump the cache version in `sw.js` when changing cached files.
-
