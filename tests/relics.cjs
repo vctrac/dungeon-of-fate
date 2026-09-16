@@ -34,7 +34,7 @@ let browser;
    __dofTest.enter(id);
   });
   const during=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent,disabled:el.disabled}));
-  assert.equal(during.opacity,before.opacity);assert.equal(during.text,before.text);assert(during.disabled);
+  assert.equal(during.opacity,before.opacity);assert.equal(during.text,before.text);assert.equal(during.disabled,false); // Empty-room commit is now synchronous.
   assert.equal(await page.evaluate(()=>__dofTest.useConsumable(false)),false);
   await page.waitForFunction(()=>__dofTest.state().pendingAction===null);
   const after=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent,disabled:el.disabled}));

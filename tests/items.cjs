@@ -31,8 +31,8 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  // Actual movement pipeline: Coin does not affect its activation room, includes fifth room and Scavenge, and excludes revisits.
  await reset();await page.evaluate(()=>{__dofTest.setConsumable('coin');__dofTest.setCombo(1);__dofTest.useConsumable(true);__dofTest.resolveSimple('treasure')});assert.equal((await state()).gold,30);
  for(let i=1;i<=5;i++){
-  await page.evaluate(()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);__dofTest.setCombo(1);__dofTest.setRoomFixture(id,{event:'treasure',visited:false,searched:false,eventResolved:false});__dofTest.enter(id)});
-  const before=(await state()).gold;await page.waitForFunction(()=>__dofTest.state().pendingAction===null);const s=await state();assert.equal(s.gold-before,60);assert.equal(s.relics.coinCharges,5-i);assert.equal(s.relics.coinRoom,s.currentId);
+  const before=(await state()).gold;await page.evaluate(()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);__dofTest.setCombo(1);__dofTest.setRoomFixture(id,{event:'treasure',visited:false,searched:false,eventResolved:false});__dofTest.enter(id)});
+  await page.waitForFunction(()=>__dofTest.state().pendingAction===null);const s=await state();assert.equal(s.gold-before,60);assert.equal(s.relics.coinCharges,5-i);assert.equal(s.relics.coinRoom,s.currentId);
  }
  await page.evaluate(()=>{localStorage.setItem('dof.learnedScavenge','1');__dofTest.setCombo(1);__dofTest.scavenge(__dofTest.state().currentId,.55)});let s=await state();assert.equal(s.relics.coinCharges,0);assert.equal(await page.locator('#coinState').innerText(),'🪙×2 ◉');
  await page.evaluate(()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links[0];__dofTest.setRoomFixture(id,{visited:true,searched:true,eventResolved:true});__dofTest.enter(id)});assert.equal((await state()).relics.coinRoom,null);assert.equal((await state()).relics.coinCharges,0);
