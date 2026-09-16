@@ -8,6 +8,87 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.16.3 — Run Persistence
+
+Local active-run persistence, with no gameplay balance changes. A valid save opens a primary **Continue** action and a **New Run** action requiring confirmation. No save starts immediately. Canceling New Run preserves the existing run and learned UX flags.
+
+### Storage and authoritative schema
+
+`dof.activeRun` contains readable JSON with `saveVersion: 1`; `gameVersion: "2.16.3"` is metadata, not a compatibility gate. Typical generated saves measured approximately **20–21 KB UTF-8** (roughly 40 KB as UTF-16 text). `__dofTest.serializeRun()` exposes the snapshot for diagnostics.
+
+```js
+{
+  saveVersion: 1, gameVersion: "2.16.3", savedAt: /* epoch milliseconds */,
+  status: "active",
+  run: {
+    hp, shield, gold, score, combo, fateGainRemainder, floorNo,
+    totalMoves, perfectFloors, searched
+  },
+  floor: {
+    rooms, startId, exitId, currentId, history, floorDamage,
+    floorPerfectAwarded, floorFortune, fortuneBudget, fortuneUpgrades,
+    floorEconomy, altarRoom
+  },
+  relicState: {
+    trinkets, capacity, consumable, starterItem, starterInspected, floorUsed,
+    bargainCharges, bargainRoom, coinCharges, coinRoom, wardArmed
+  },
+  fateGate: /* null or complete generated Gate object */,
+  pending: {
+    encounter: /* null or {type, roomId, monsterKind, roll, phase,
+                            result?, detail?} */,
+    cards: {active: /* discovery/decision item card or null */, queue: []}
+  }
+}
+```
+
+`rooms` retains the actual 81-cell floor, all generated coordinates/links/events/archetypes, reveal/visit/search/resolution flags, hints/Clues/Evil Eye flags, finite Scavenge opportunities and attention state, and Altar discovery/cardSeen/used state. Gate data retains `parentId`, `roomId`, `requirement`, `branchIds`, `reward`, `rewardRoomId`, `discovered`, `entered`, and `resolved`. No floor or branch regeneration occurs during Continue. `floorEconomy` and Fortune diagnostics are retained to preserve telemetry continuity. FATE and its fractional gain remainder retain their original numeric precision.
+
+Ended runs use a small `{saveVersion, gameVersion, savedAt, status: "ended"}` tombstone. Existing learned `dof.*` flags remain separate. No profile, Codex, account, cloud, or meta-progression storage is added.
+
+### Commit and randomness policy
+
+A small persistence API (`serializeRun`, `saveRun`, `loadRun`, `restoreRun`, `clearRun`, `validateSave`, `migrateSave`) owns storage. Nested synchronous transactions publish one detached safe snapshot only after the outer action completes.
+
+Autosave checkpoints cover:
+
+- New Run and fully initialized new floors/descent.
+- Manual room entry/search and each committed auto-walk hop.
+- Simple events, Treasure/key rewards, Scavenge and consumed opportunities.
+- Clue target/reveal commitment, before its delayed presentation.
+- Encounter creation/result reservation, resolved consequences, and continuation.
+- Trap Ward disarming, Consumable activation, and Altar opening/sacrifice.
+- Item acquisition/card queue activation, replacement/rejection, inspection learning, and card dismissal.
+- Perfect Floor award and finalized death.
+
+Room-entry effects now commit synchronously instead of waiting for the former arrival timeout. Arrival/reward visuals remain presentation. Clue information likewise commits before its visual delay. These changes close restart windows without changing reward formulas or probabilities.
+
+Each Monster/Thief/Ghost/Trap/Shrine reserves one fair die result when the encounter opens, before swipe/roll animation. Reload before resolution reconstructs the encounter with **that same reserved result**; visual dice frames are never saved. Once consequences finish, the safe save contains their final resources and a semantic resolved-result card. Continue displays that result without applying it again. Scavenge retains its generated opportunity roll, commits secondary outcome/item choice and consequences in one synchronous transaction, and cannot reroll a committed result. Before an encounter is entered/reserved, there is no die outcome to preserve.
+
+Pending item replacement decisions and queued discovery descriptors are saved. An already acquired item restores directly to its information card without repeating acquisition hooks or its reveal animation. Fourth-Trinket and occupied-Consumable decisions reopen unchanged. `pendingItem` is derived from the active decision; capacity and duplicate rules stay intact. Altar inspection UI is omitted, while its discovered/cardSeen/used state is exact.
+
+An interrupted auto-walk resumes at the latest committed room, with no destination jump or continuing animation. Real death writes the ended marker after protection resolution, before the visual lethal beat finishes. Voodoo Doll rescue instead saves the surviving run at one Heart, FATE ×1, with the Doll removed.
+
+### Restore, validation, failures and lifecycle
+
+Restore validates first, resets runtime input/animation state, assigns the saved run/floor/items/Gate directly, renders derived HUD/map/context, and reconstructs a pending encounter or item decision. It does not generate a floor, award resources, run acquisition/floor-start hooks, or consume room charges.
+
+Not persisted: DOM, timers, gestures/pointer IDs, partial Hold rings, auto-walk paths, dice animation frames, particles, focus, CSS state, score animation, item acquisition animation, inspection-only cards, Altar card presentation, or `clueRevealUntil` (a performance-clock visual deadline). These are intentionally reset/rebuilt. No authoritative V2.16.2 gameplay state is intentionally discarded.
+
+Validation checks schema/header, finite run values and valid ranges, floor number, 81 room identities, active positions, unique reciprocal adjacent links, graph connectivity and optional Gate reachability, registered events/archetypes/items, inventory capacity/uniqueness, effect charges/current-room references, opportunity/attention consistency, Gate boundary and 1–3 branch IDs, floor metadata, and semantic encounter/card fields. JSON is size-bounded before parsing. Compatibility flows through `migrateSave` then validation; only schema 1 currently exists, independent of compatible future game-version strings.
+
+Invalid data is quarantined at `dof.activeRun.invalid` with raw bytes, time and reason before the active key is removed; startup remains usable. If quarantine cannot be written, persistence is blocked for that session to avoid overwriting the unbacked data. Storage exceptions produce at most one console warning and do not stop gameplay. Failed ended-marker writes attempt active-key removal. Device storage denial/clearing can still prevent recovery; this is local saving.
+
+`visibilitychange` (hidden) and `pagehide` flush the **cached safe snapshot**, never an arbitrary live mutation. Autosaving does not depend on lifecycle delivery. Cache `dungeon-of-fate-v2.16.3-1` updates assets independently; service-worker updates never clear localStorage.
+
+### Verification
+
+Added `tests/persistence.cjs`: exact reload comparison, startup confirmation/cancel, reserved and resolved outcomes for all encounter types, finite Clues/Scavenge, pending replacements, inside-Gate restore/directional exit, unused/spent Altars, interrupted auto-walk, detached lifecycle flush, Doll/death, current-room effects/per-floor usage, duplicate Perfect Floor prevention, compatible build metadata, malformed/unsupported saves, invalid IDs, quota failure, and browser runtime errors. The phone Continue layout is screenshot-inspected.
+
+Existing suites: `fortune-logic.cjs`, `fortune.cjs`, `active-fate.cjs`, `discovery.cjs`, `exploration.cjs`, `items.cjs`, `relics.cjs`, `regression.cjs`. Timing-dependent assertions now reflect synchronous committed entry and early die reservation; offline reloads choose Continue. Run browser suites with `PWA_BROWSER=/path/to/chromium node tests/<suite>.cjs`; the logic suite only needs Node.
+
+Real Android installed-PWA testing remains required: Home/background, removal from recents, process termination/reopen, later restart, compatible deployment while a run exists, and offline launch. Repeat inside a Gate, during a roll/auto-walk, and during item replacement. Confirm the saved location/effects and no reroll/duplicate award; verify actual touch/focus behavior. Automated Chromium checks do not substitute for Android process-lifecycle testing.
+
 ## V2.16.2 — Discovery & Visual Language
 
 Built as a delta on current HEAD. The normal economy, danger rates, Fortune Budget, FATE gains, items, starter cue/effects, Gate frequency/threshold/reward weights, Altar exchange and EXIT rules are preserved.
