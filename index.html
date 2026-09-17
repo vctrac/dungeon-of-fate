@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.16.3 — Run Persistence</title>
+<title>Dungeon of Fate V2.16.3.1 — Auto-Walk Persistence Hotfix</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -1012,7 +1012,7 @@ function previewCurrentAction(id){
  return true
 }
 function startFastTravel(id){
- if(gameOver||pendingAction||fastTraveling||id===currentId)return;
+ if(document.visibilityState==="hidden"||gameOver||pendingAction||fastTraveling||id===currentId)return;
  var path=shortestVisitedPath(currentId,id);
  if(!path||path.length<2){clearFastPreview();return}
  clearFastPreview();fastTraveling=true;var serial=++travelSerial,step=1;
@@ -1020,15 +1020,17 @@ function startFastTravel(id){
  rooms.forEach(function(r){if(r.attentionActive)r.attentionEmphasized=true});
  function hop(){
   if(serial!==travelSerial||!fastTraveling||gameOver)return;
+  if(document.visibilityState==="hidden"){flushLifecycleRun();return}
   if(step>=path.length){fastTraveling=false;update();learn("learnedFastTravel");updateContext();return}
   var next=path[step],r=room(next);
   if(!r.visited||room(currentId).links.indexOf(next)<0||!gateAccess(currentId,next,true)){fastTraveling=false;gateDenied();update();return}
-  currentId=next;noticeScavenge(r);beginRoomEffects(next,false);finishRoomEffects();markArrival(next);history.push(next);totalMoves++;
+  currentId=next;noticeScavenge(r);beginRoomEffects(next,false);finishRoomEffects();history.push(next);totalMoves++;
   var fresh=r.attentionActive&&!r.attentionEmphasized;
   if(fresh)r.attentionEmphasized=true;
-  update();var el=document.querySelector('.cell[data-id="'+next+'"]');
+  // Publish the complete synchronous hop before presentation or scheduling another hop.
+  saveRun();markArrival(next);update();var el=document.querySelector('.cell[data-id="'+next+'"]');
   if(el)el.classList.add(fresh?"attentionArrival":"travel-step");
-  saveRun();step++;travelHopTimer=setTimeout(hop,fresh?ATTENTION_WALK_MS:AUTO_WALK_MS)
+  step++;travelHopTimer=setTimeout(hop,fresh?ATTENTION_WALK_MS:AUTO_WALK_MS)
  }
  travelHopTimer=setTimeout(hop,AUTO_WALK_MS)
 }
@@ -1285,7 +1287,7 @@ function render(){
 function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.16.3";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.16.3.1";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
@@ -1402,8 +1404,16 @@ $("continueRun").addEventListener("click",function(){if(startupSave)restoreRun(s
 $("newSavedRun").addEventListener("click",function(){$("resumeChoices").hidden=true;$("replaceRunChoices").hidden=false;$("cancelNewRun").focus()});
 $("cancelNewRun").addEventListener("click",function(){$("replaceRunChoices").hidden=true;$("resumeChoices").hidden=false;$("continueRun").focus()});
 $("confirmNewRun").addEventListener("click",function(){clearRun();startupSave=null;$("resumeOverlay").hidden=true;beginRun()});
-document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")flushRun()});
-window.addEventListener("pagehide",flushRun);
+function flushLifecycleRun(){
+ // Background timers may continue to run. Discard this route and invalidate queued callbacks
+ // before flushing the existing safe snapshot; never snapshot transient traversal here.
+ var traveling=fastTraveling;
+ if(traveling){clearTimeout(travelHopTimer);travelHopTimer=null;travelSerial++;fastTraveling=false}
+ flushRun();
+ if(traveling){update();updateContext()}
+}
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")flushLifecycleRun()});
+window.addEventListener("pagehide",flushLifecycleRun);
 // Nested gameplay helpers form one transaction; rendering/animation callbacks do not save.
 beginRun=committed(beginRun);newFloor=committed(newFloor);enterRoom=committed(enterRoom);searchCurrentRoom=committed(searchCurrentRoom);resolveSimpleEvent=committed(resolveSimpleEvent);showDice=committed(showDice);resolveDice=committed(resolveDice);scavenge=committed(scavenge);descend=committed(descend);sacrificeAltar=committed(sacrificeAltar);useConsumable=committed(useConsumable);inspectItem=committed(inspectItem);closeItemCard=committed(closeItemCard);replaceTrinket=committed(replaceTrinket);chooseConsumable=committed(chooseConsumable);acquireTrinket=committed(acquireTrinket);offerConsumable=committed(offerConsumable);pumpCards=committed(pumpCards);revealClue=committed(revealClue);awardPerfectFloor=committed(awardPerfectFloor);disarmTrap=committed(disarmTrap);openAltar=committed(openAltar);continueEncounter=committed(continueEncounter);finish=committed(finish);
 

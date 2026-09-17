@@ -8,6 +8,20 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.16.3.1 — Auto-Walk Persistence Hotfix
+
+Inspected current HEAD `a8b6982` (V2.16.3). Its hop callback already saved each visited room. The lifecycle handlers only flushed that snapshot: they left the route timer alive. If the browser kept running after background/pagehide, further hops could silently advance and overwrite the save. The eventual resume room depended on when the process actually stopped. A deterministic background test fails on V2.16.3 because auto-walk remains active.
+
+The hotfix cancels the hop timer and increments its serial on hidden `visibilitychange` or `pagehide`, invalidating even callbacks already queued. It clears only transient auto-walk state, flushes the existing safe snapshot, and refreshes controls/context. Returning to the same live page also leaves travel stopped. The hop callback checks visibility before any movement in case notification delivery is delayed; travel cannot start while hidden.
+
+Each hop remains a synchronous transition: verify visited connectivity/Gate access → assign `currentId` → notice finite room information → apply existing revisit effects → update history/move count and attention state → `saveRun()` refreshes the detached snapshot and writes it → arrival/map feedback → schedule the next hop. The checkpoint is now before arrival/render presentation. JavaScript lifecycle events cannot interleave this synchronous mutation; an event during the interval between hops flushes the previous completed hop. No visual position, target or remaining route is saved. Ordinary visited rooms and EXIT use exactly the same checkpoint boundary. EXIT arrival never descends.
+
+No manual-movement, dice-result, balance, pathfinding, or save-schema changes. `saveVersion` remains **1**; existing V2.16.3 saves remain compatible. The active key remains `dof.activeRun`. Cache `dungeon-of-fate-v2.16.3.1-1` updates assets without clearing run storage. Timing remains **150 ms per room**, **400 ms for newly noticed ❗**. Auto-walk is visited-only, so Fortune Coin/Bargain new-entry charges do not decrement during it; per-room effect references and position still checkpoint together.
+
+Tests: new `tests/auto-walk-persistence.cjs` controls only hop callbacks while exercising real gameplay/storage/rendering. It checks every boundary on a generated route, both lifecycle hooks, stale callbacks, exact save/restore including move/effect counters, normal completion, before/after EXIT, hidden timers, finite new/known ❗, Gate entry/low-FATE exit, and old-build compatibility. `tests/regression.cjs` updates its cache assertion. Existing persistence, exploration and general gameplay/PWA suites are rerun alongside script/manifest checks.
+
+Android verification (still required on the real installed PWA): choose a visited route with several rooms ending at EXIT; activate Coin or Bargain if available. At different visible hops, press Home or remove the PWA from recents, wait, reopen and Continue. Verify the last committed room, matching move/effect state, no automatic continuation and no descent. Repeat before the first hop, immediately before/after EXIT, inside an entered Gate branch, and during a new ❗ emphasis. Also background and return without killing the process: the route must stay stopped and controls must work. Confirm a completed route resumes at its destination. A process killed without lifecycle delivery still relies on the existing per-hop synchronous autosaves; storage denial remains the existing platform limitation.
+
 ## V2.16.3 — Run Persistence
 
 Local active-run persistence, with no gameplay balance changes. A valid save opens a primary **Continue** action and a **New Run** action requiring confirmation. No save starts immediately. Canceling New Run preserves the existing run and learned UX flags.
