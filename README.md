@@ -8,6 +8,16 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.17.1 — Reroll UX Refinement
+
+Small UX-only delta from current HEAD `2060c16`. Reroll now requires a **650 ms hold**, matching the existing Altar's deliberate hold convention and sharing its `--charge` conic progress-ring CSS. Pointer capture keeps the whole gesture on the button. Early release, cancellation, blur, leaving its bounds or moving more than 14 px cancels; secondary contact cancels the active hold. Clicks are swallowed rather than activating or accepting. Enter/Space also requires holding. Tap outside still accepts through the existing continuation surface.
+
+Reroll sits in a reserved **62 px slot below the consequence preview**, outside the die renderer. Appearing/hiding does not move the die or cover its face/result. FATE minimum/cost, 350 ms reveal delay, outcome tables, one-reroll/final rule and animation are unchanged.
+
+Partial progress is runtime-only: hiding the control, restore/new run, window blur, hidden visibility or pagehide cancels it. Completion invokes the unchanged atomic reroll transaction; only then are FATE and the final reserved face committed. Save schema remains **1**, existing saves remain compatible, and no active-run storage is cleared. Build/footer is **V2.17.1**, asset cache `dungeon-of-fate-v2.17.1-1`.
+
+Updated `tests/rerolls.cjs` exercises hold activation across all encounter paths, quick taps, early release, mouse/touch drag, multitouch, keyboard hold/cancel, interrupted-hold reload, layout separation/stability and existing protection/persistence cases. `tests/regression.cjs` expects the new cache. Persistence, auto-walk persistence, general gameplay/PWA regression and logic/syntax checks are rerun. On a real Android PWA, still check accidental taps, comfortable hold timing/ring readability, drag-out cancellation, portrait/landscape result visibility, and close/reopen both before and after hold completion. Verify V2.17.1 after updating without reinstalling.
+
 ## V2.17 — FATE Rerolls
 
 Delta from current HEAD `6587ebb` (merged V2.16.3.1). Existing dice architecture reserves one d6 result in `pendingEncounter` before animation, waits for a screen-wide Monster swipe (Trap/Shrine animate automatically), then previously committed consequences on landing through `resolveDiceCore` plus the existing archetype/protection/reward wrapper. V2.17 changes the animation's completion to a **saved read-only preview**. The original resolution tables, Gold/FATE formulas, hooks, generation and auto-walk are unchanged.

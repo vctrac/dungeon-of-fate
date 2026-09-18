@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.17 — FATE Rerolls</title>
+<title>Dungeon of Fate V2.17.1 — Reroll UX Refinement</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -254,7 +254,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @keyframes gateDenied{20%,60%{filter:brightness(1.8);transform:translateX(-2px)}40%{transform:translateX(2px)}}
 @keyframes gateCross{35%{box-shadow:0 0 24px #fff0b5;filter:brightness(1.7)}}
 #altarOffer{position:relative;align-self:stretch;min-height:110px;font-size:25px;white-space:pre-line;line-height:1.6;border:2px solid #b99dd0;background:radial-gradient(ellipse,#55405f,#231b2b);touch-action:none}
-#altarOffer::before{content:"HOLD";display:block;font-size:10px;letter-spacing:2px;color:#d5bddf}#altarOffer:disabled{opacity:.35}#altarOffer.holding::after{content:"";position:absolute;inset:-4px;border-radius:12px;padding:3px;pointer-events:none;background:conic-gradient(#ffe1ac var(--charge,0deg),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+#altarOffer::before{content:"HOLD";display:block;font-size:10px;letter-spacing:2px;color:#d5bddf}#altarOffer:disabled{opacity:.35}#altarOffer.holding::after,#rerollButton.holding::after{content:"";position:absolute;inset:-4px;border-radius:12px;padding:3px;pointer-events:none;background:conic-gradient(#ffe1ac var(--charge,0deg),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 #altarOffer[hidden],#closeItem[hidden],#cardContinue[hidden]{display:none}#cardContinue{font-size:10px;letter-spacing:1px;color:#bda887;padding:8px 0}
 @media(max-height:540px){#altarOffer{min-height:88px;font-size:21px}}
 @media(prefers-reduced-motion:reduce){.gateDenied,.cell.gateEntered.current-arrival .floor{animation:none}}
@@ -287,8 +287,9 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @media(max-height:540px){:root{--card-art-size:44px}}
 @media(prefers-reduced-motion:reduce){#itemArt.holdDemo,#itemArt.holdDemo::after,#itemArt.holdDemo::before,.discoveryArt,.item-source .floor,.cell.altarUseful .icon{animation:none}#itemArt.holdDemo::after{--demo-charge:270deg}#itemArt.holdDemo::before{opacity:.7}}
 #resumeOverlay{position:fixed;inset:0;z-index:50;background:#100f0ef5;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}#resumeOverlay[hidden],#resumeChoices[hidden],#replaceRunChoices[hidden]{display:none}#continueRun{flex:2;min-height:56px;border-color:#e5c17e}#resumeSummary{margin:16px 0}
+.rerollSlot{height:62px;flex-shrink:0;display:grid;place-items:center;width:100%}
 .dieStage{position:relative;display:grid;place-items:center;width:100%}
-#rerollButton{color:#ffe9b5;font:inherit;font-size:14px;border-radius:12px;cursor:pointer;touch-action:manipulation;position:absolute;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);min-height:54px;min-width:180px;max-width:95%;padding:7px 14px;background:#30251ded;border:1px solid #e5c17e;box-shadow:0 0 18px #dfaf5540;animation:rerollAppear .2s ease-out}
+#rerollButton{color:#ffe9b5;font:inherit;font-size:14px;border-radius:12px;cursor:pointer;touch-action:none;position:relative;min-height:54px;min-width:180px;max-width:95%;padding:7px 14px;background:#30251ded;border:1px solid #e5c17e;box-shadow:0 0 18px #dfaf5540;animation:rerollAppear .2s ease-out}
 #rerollButton:focus-visible{outline:2px solid #fff4d4;outline-offset:3px}#rerollButton[hidden]{display:none}#rerollButton b,#rerollCost{display:block}#rerollCost{font-size:12px;margin-top:3px;white-space:nowrap}#buildVersion{display:block;color:#aa9983;font-size:11px;margin:10px 0}
 @keyframes rerollAppear{from{opacity:0;scale:.94}to{opacity:1;scale:1}}
 </style>
@@ -297,7 +298,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 <div id="game">
 <div id="hud"><div class="stat"><div class="label">Health</div><div class="value" id="hp"></div></div><div class="stat"><div class="label">Gold</div><div class="value" id="gold">0</div></div><div class="stat"><div class="label">Floor</div><div class="value" id="floorNo">1</div></div><div class="stat"><div class="label">Fate</div><div class="value" id="combo">x1.0</div></div></div>
 <div id="board"><div id="feedbackLayer"></div></div><div id="footer"><div id="message"></div><div id="relicBar"><div id="trinkets" aria-label="Owned trinkets"></div><span id="activeItems"><span id="bargainState"></span><span id="coinState"></span><span id="wardState"></span></span><button id="consumableSlot" type="button" aria-label="Empty consumable slot">◇</button></div></div></div>
-<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div id="monsterThreat" aria-hidden="true"></div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="dieStage"><div class="die" id="die">⚄</div><button id="rerollButton" hidden disabled><b>REROLL</b><span id="rerollCost"></span></button></div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><div id="deathCause" role="status"></div><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
+<div id="diceOverlay"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div id="monsterThreat" aria-hidden="true"></div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div class="dieStage"><div class="die" id="die">⚄</div></div><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div class="rerollSlot"><button id="rerollButton" type="button" aria-label="Hold to reroll" hidden disabled><b>REROLL</b><span id="rerollCost"></span></button></div><div id="tapContinue">TAP TO CONTINUE</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><div id="deathCause" role="status"></div><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
 
 <div id="resumeOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="resumeTitle"><div class="panel"><h1 id="resumeTitle">DUNGEON OF FATE</h1><p id="resumeSummary"></p><div id="resumeChoices" class="actions"><button id="continueRun">CONTINUE</button><button id="newSavedRun" class="secondary">NEW RUN</button></div><div id="replaceRunChoices" hidden><p>Replace this run?</p><div class="actions"><button id="cancelNewRun">KEEP RUN</button><button id="confirmNewRun" class="secondary">START NEW RUN</button></div></div><small id="buildVersion"></small></div></div>
 <div id="effectLayer" aria-live="polite"><div id="effectNotices"></div></div>
@@ -1063,7 +1064,7 @@ function resolveDice(type,roll){var result="",detail="";if(type==="monster"){if(
 function finishDiceResult(result,detail){$("diceResult").textContent=result;$("diceDetail").textContent=detail;$("message").textContent=detail;encounterResolved=true;$("diceOverlay").classList.add("resolved");encounterCloseAction=function(){pendingEncounter=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved");encounterResolved=false;encounterCloseAction=null;pendingAction=null;update();if(hp<=0)finish("YOU DIED");else pumpCards()}}
 // Read-only consequence projection. Acceptance still uses the existing encounter resolver.
 // Tests compare every projected resource delta against that resolver, including item hooks.
-var REROLL_MIN_FATE=2,REROLL_FATE_BURN=.25,REROLL_REVEAL_DELAY=350,rerollTimer=null;
+var REROLL_MIN_FATE=2,REROLL_FATE_BURN=.25,REROLL_REVEAL_DELAY=350,rerollTimer=null,rerollGesture=null,REROLL_HOLD_MS=650;
 function rerollFateAfterCost(fate){return Math.max(1,Math.round((1+(fate-1)*(1-REROLL_FATE_BURN))*100)/100)}
 function previewOutcome(type,roll,kind){
  var p={hp:hp,shield:shield,gold:gold,score:score,combo:combo,fateGainRemainder:fateGainRemainder},notes=[];
@@ -1103,7 +1104,7 @@ function previewOutcome(type,roll,kind){
  if(!parts.length&&!notes.length)notes.push(type==='heal'?'✚ —':'✓');
  return{after:p,text:parts.concat(notes).join(' · ')}
 }
-function hideReroll(){clearTimeout(rerollTimer);rerollTimer=null;$("rerollButton").hidden=true;$("rerollButton").disabled=true}
+function hideReroll(){cancelRerollHold();clearTimeout(rerollTimer);rerollTimer=null;$("rerollButton").hidden=true;$("rerollButton").disabled=true}
 function canReroll(){var e=pendingEncounter;return!!(e&&e.phase==='preview'&&!e.rerollUsed&&e.offer&&combo>=REROLL_MIN_FATE&&combo===e.offer.before&&!deathPending&&!gameOver)}
 function renderOutcomePreview(){
  hideReroll();var e=pendingEncounter;if(!e||e.phase!=='preview')return;
@@ -1133,10 +1134,25 @@ function rerollOutcome(){
  if(window.__DOF_DEBUG__)console.debug("[DOF reroll]",{type:e.type,kind:e.monsterKind,before:offer.before,after:offer.after,original:e.roll,final:pendingEncounter.roll});
  update();showDice(e.type,true);return true
 }
-$("rerollButton").addEventListener('pointerdown',function(e){e.stopPropagation();continuePointer=null});
-$("rerollButton").addEventListener('pointerup',function(e){e.stopPropagation()});
-$("rerollButton").addEventListener('click',function(e){e.preventDefault();e.stopPropagation();rerollOutcome()});
-$("rerollButton").addEventListener('keydown',function(e){e.stopPropagation()});
+// Same deliberate 650ms hold and --charge ring vocabulary as the Altar.
+function cancelRerollHold(){if(rerollGesture){clearTimeout(rerollGesture.timer);rerollGesture=null}$("rerollButton").classList.remove("holding");$("rerollButton").style.removeProperty("--charge")}
+function startRerollHold(gesture){
+ if(rerollGesture||!canReroll()||$("rerollButton").hidden||document.visibilityState==="hidden")return;
+ rerollGesture=gesture;$("rerollButton").classList.add("holding");
+ function tick(now){if(rerollGesture!==gesture)return;$("rerollButton").style.setProperty("--charge",Math.min(360,(now-gesture.start)/REROLL_HOLD_MS*360)+"deg");requestAnimationFrame(tick)}
+ requestAnimationFrame(tick);gesture.timer=setTimeout(function(){if(rerollGesture!==gesture)return;cancelRerollHold();if(document.visibilityState!=="hidden"&&pendingEncounter===gesture.decision)rerollOutcome()},REROLL_HOLD_MS)
+}
+$("rerollButton").addEventListener('pointerdown',function(e){
+ e.preventDefault();e.stopPropagation();continuePointer=null;
+ if(e.isPrimary===false||rerollGesture){cancelRerollHold();return}if(e.pointerType==='mouse'&&e.button!==0)return;
+ this.setPointerCapture(e.pointerId);startRerollHold({id:e.pointerId,x:e.clientX,y:e.clientY,start:performance.now(),decision:pendingEncounter})
+});
+$("rerollButton").addEventListener('pointermove',function(e){e.stopPropagation();if(!rerollGesture||rerollGesture.id!==e.pointerId)return;var b=this.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom||Math.hypot(e.clientX-rerollGesture.x,e.clientY-rerollGesture.y)>14)cancelRerollHold()});
+['pointerup','pointercancel','lostpointercapture','blur'].forEach(function(name){$("rerollButton").addEventListener(name,function(e){e.stopPropagation();continuePointer=null;cancelRerollHold()})});
+$("rerollButton").addEventListener('click',function(e){e.preventDefault();e.stopPropagation()});
+$("rerollButton").addEventListener('keydown',function(e){e.stopPropagation();if(e.key!==' '&&e.key!=='Enter')return;e.preventDefault();if(!e.repeat)startRerollHold({key:e.key,start:performance.now(),decision:pendingEncounter})});
+$("rerollButton").addEventListener('keyup',function(e){e.stopPropagation();if(e.key===' '||e.key==='Enter'){e.preventDefault();cancelRerollHold()}});
+window.addEventListener('blur',cancelRerollHold);
 
 function disarmTrap(){
  if(!relicState.wardArmed)return false;
@@ -1369,7 +1385,7 @@ function render(){
 function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.17";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.17.1";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
@@ -1488,6 +1504,7 @@ $("newSavedRun").addEventListener("click",function(){$("resumeChoices").hidden=t
 $("cancelNewRun").addEventListener("click",function(){$("replaceRunChoices").hidden=true;$("resumeChoices").hidden=false;$("continueRun").focus()});
 $("confirmNewRun").addEventListener("click",function(){clearRun();startupSave=null;$("resumeOverlay").hidden=true;beginRun()});
 function flushLifecycleRun(){
+ cancelRerollHold();
  // Background timers may continue to run. Discard this route and invalidate queued callbacks
  // before flushing the existing safe snapshot; never snapshot transient traversal here.
  var traveling=fastTraveling;
@@ -1501,7 +1518,7 @@ window.addEventListener("pagehide",flushLifecycleRun);
 revealOutcome=committed(revealOutcome);acceptOutcome=committed(acceptOutcome);rerollOutcome=committed(rerollOutcome);
 beginRun=committed(beginRun);newFloor=committed(newFloor);enterRoom=committed(enterRoom);searchCurrentRoom=committed(searchCurrentRoom);resolveSimpleEvent=committed(resolveSimpleEvent);showDice=committed(showDice);resolveDice=committed(resolveDice);scavenge=committed(scavenge);descend=committed(descend);sacrificeAltar=committed(sacrificeAltar);useConsumable=committed(useConsumable);inspectItem=committed(inspectItem);closeItemCard=committed(closeItemCard);replaceTrinket=committed(replaceTrinket);chooseConsumable=committed(chooseConsumable);acquireTrinket=committed(acquireTrinket);offerConsumable=committed(offerConsumable);pumpCards=committed(pumpCards);revealClue=committed(revealClue);awardPerfectFloor=committed(awardPerfectFloor);disarmTrap=committed(disarmTrap);openAltar=committed(openAltar);continueEncounter=committed(continueEncounter);finish=committed(finish);
 
-$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — FATE Rerolls";
+$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — Reroll UX Refinement";
 window.__dofTest={
  previewOutcome:previewOutcome,revealOutcome:revealOutcome,rerollOutcome:rerollOutcome,canReroll:canReroll,rerollFateAfterCost:rerollFateAfterCost,
  serializeRun:serializeRun,saveRun:saveRun,loadRun:loadRun,restoreRun:restoreRun,validateSave:validateSave,flushRun:flushRun,
