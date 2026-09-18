@@ -8,6 +8,68 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.17 — FATE Rerolls
+
+Delta from current HEAD `6587ebb` (merged V2.16.3.1). Existing dice architecture reserves one d6 result in `pendingEncounter` before animation, waits for a screen-wide Monster swipe (Trap/Shrine animate automatically), then previously committed consequences on landing through `resolveDiceCore` plus the existing archetype/protection/reward wrapper. V2.17 changes the animation's completion to a **saved read-only preview**. The original resolution tables, Gold/FATE formulas, hooks, generation and auto-walk are unchanged.
+
+### Rules and input
+
+- Eligible: Guardian/basic Monster, Thief, Spirit, Trap and Shrine. Scavenge's hidden opportunity/random selection is **not** rerollable. A visible Trap die caused by Scavenge **is** eligible through the normal Trap encounter. Trap Ward disarms before a die/choice exists.
+- `REROLL_MIN_FATE = 2`; no disabled control below the threshold.
+- `REROLL_FATE_BURN = 0.25`: `after = max(1, round((1 + (before - 1) * 0.75) * 100) / 100)`. This is the existing two-decimal FATE rounding convention. `setFate(after, "sacrifice")` clears the hidden gain remainder according to the existing non-gain rule and uses reduction feedback, not FATE BREAK. Examples: 2 → 1.75; 3 → 2.50; 5 → 4.00; 10 → 7.75; 20 → 15.25.
+- `REROLL_REVEAL_DELAY = 350` ms after consequence preview. The real button is absolutely centered over the existing die in a relative wrapper, so it does not reflow the card. It shows `REROLL` and `🎲 ✦×before → ×after` with two decimals matching the actual payment. The separate `ROLLED N` line and consequence remain readable.
+- Tap anywhere outside Reroll accepts using the existing continuation surface; no Accept button. Acceptance calls the existing resolver once and returns through its normal continuation, or preserves the existing lethal-feedback beat.
+- The button stops pointer/click propagation and keyboard bubbling. It hides/disables immediately, and semantic phase/used checks reject repeated activation. Keyboard Enter/Space works through native button activation. No gesture or animation progress is saved.
+- Pressing Reroll reserves a new fair d6 in the same synchronous transaction as payment and rejecting the first outcome. The existing die animation plays again, without another combat swipe. The second preview is labeled FINAL and never offers another reroll, even for an identical or worse face. FATE never biases either roll.
+
+### Preview and commit safety
+
+`previewOutcome(type, roll, kind)` is a read-only projection of the existing tables and protections. It records projected HP, Shield, Gold, Score, FATE/remainder and a compact symbolic consequence. It does not run effect hooks or mutate gameplay. `revealOutcome`, `canReroll`, `rerollFateAfterCost`, `rerollOutcome` and `acceptOutcome` keep semantic decisions separate from the die renderer. Regression tests compare projected resources against the untouched resolver across every face, archetype and protection configuration; future table changes must keep this projection test passing.
+
+Original results first become persistent at the existing encounter reservation checkpoint, before any dice animation/swipe. On reveal, `phase: "preview"`, the consequence and frozen cost offer are checkpointed. Tap acceptance commits through the existing synchronous transaction: consequence, Gold/FATE, protection, victory/perfect hooks, room resolution and continuation are saved together. No apply-and-undo rollback exists.
+
+Golden Horseshoe and Vampire's Blood trigger only for an accepted result. Shield, Death's Bargain and Voodoo Doll are not consumed or invoked in preview. Rejected perfect results grant nothing. Accepted lethal results use normal protection/death handling; Doll rescue remains resumable. The final Spirit preview is calculated after the reroll cost, and acceptance uses that same post-payment current state.
+
+### Persistence and compatibility
+
+Storage stays `dof.activeRun`, **saveVersion 1**. This is a backward-compatible extension to `pending.encounter`, not a persistence rewrite:
+
+```js
+{
+  type, roomId, monsterKind, roll,
+  phase: "ready" | "preview" | "resolved",
+  rerollUsed: false | true,                  // absent in old saves = unused
+  preview: {after: {hp, shield, gold, score, combo, fateGainRemainder}, text},
+  offer: null | {before, after},             // original preview only
+  originalRoll, paid: {before, after}        // reserved/revealed second roll only
+}
+```
+
+Preview/offer fields apply only to a preview. Already committed legacy `resolved` records retain their existing `result`/`detail` fields and do not gain a new decision. New fields are structurally/range validated; old `ready` and `resolved` records remain accepted. The offer's `before` must equal saved current FATE; payment also checks this at activation to avoid a stale displayed cost.
+
+- Close during first animation: retain its reserved face.
+- Close at original preview: restore the same face, consequence, resources and frozen offer; the visual 350ms entrance delay restarts.
+- Close during second animation: payment and second face already exist together in the safe snapshot; Continue cannot refund payment, return to the original choice or reroll again.
+- Close after acceptance: no consequence or item hook is replayed.
+
+Continue reconstructs semantic UI, not timers. Existing V2.16.3/V2.16.3.1 schema-1 runs continue, including already committed encounter results. As before, storage-unavailable sessions cannot promise durable writes. No cache operation deletes localStorage or learned UX flags.
+
+`GAME_VERSION = "2.17"` drives save build metadata, document title and the subtle `V2.17` Continue/New Run footer. Asset cache is `dungeon-of-fate-v2.17-1`. With existing `window.__DOF_DEBUG__` enabled, one console record at reroll payment reports encounter/archetype, original/final face and FATE before/after; no player analytics system is added.
+
+### Verification and Android checklist
+
+New `tests/rerolls.cjs` checks 180 table/protection projections, unchanged state during preview, original acceptance, exact minimum/cost examples, reveal delay, repeated activation prevention, each encounter's preview reload and second-animation reload, final acceptance once, rejected perfect effects, lethal Doll behavior, Ward bypass, old ready/resolved saves, keyboard activation, and phone/landscape button bounds/layout stability. Existing `tests/regression.cjs` updates version/cache assertions and checks that FATE gain waits for acceptance; `tests/exploration.cjs` accepts the Trap preview before asserting death. Existing persistence/auto-walk, item/relic and gameplay/PWA suites are rerun. No die art or animation assets are replaced.
+
+Real installed Android PWA tests remain required; they have **not** been performed by this automated browser run:
+
+1. Before deployment, leave an active V2.16.3.1 run saved. Deploy V2.17, reopen **without reinstalling**, verify footer V2.17 and exact run state. Find a new eligible encounter naturally.
+2. Close/background during the original animation. Continue must retain that face.
+3. At an original preview with Reroll visible, record face/consequence/FATE/cost, close/remove from recents, then Continue. All must match with no consequence applied.
+4. Press Reroll, close during the second animation, reopen. FATE must stay spent, the second face must match, and no Reroll may return. Repeat after a worse/identical final result.
+5. Rapid/double/multi-touch the control; confirm one payment and one roll, with no original acceptance or map input leak. Check native keyboard if used, portrait/landscape readability, and the 350ms beat without verbal instructions.
+6. Accept original/final outcomes for all five paths, including Shield/Doll protection, rejected/accepted perfect rolls and Blood healing. Check Trap Ward bypass and a Scavenge-triggered Trap.
+7. Recheck auto-walk/background checkpoints, Gate/Altar/❗, active Coin/Ward/Bargain state, death invalidation and offline restart. In-place deployment and OS process termination cannot be established by desktop Chromium alone.
+
 ## V2.16.3.1 — Auto-Walk Persistence Hotfix
 
 Inspected current HEAD `a8b6982` (V2.16.3). Its hop callback already saved each visited room. The lifecycle handlers only flushed that snapshot: they left the route timer alive. If the browser kept running after background/pagehide, further hops could silently advance and overwrite the save. The eventual resume room depended on when the process actually stopped. A deterministic background test fails on V2.16.3 because auto-walk remains active.
