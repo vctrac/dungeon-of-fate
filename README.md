@@ -8,6 +8,20 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.18.1 — Chest Placement Refinement
+
+V2.18 already used one 30% spawn roll per eligible floor, not repeated rolls per terminal. Its uniform candidate selection included START-adjacent dead ends, making Chests feel like nearby free loot.
+
+- One centralized **20%** roll after candidate filtering; maximum one Chest. No suitable terminal means no attempt.
+- Candidates remain empty degree-one rooms, excluding START, EXIT, Gate branch rooms and the Gate parent. START-adjacent terminals are now excluded too. A non-endpoint leaf cannot lie on the required START-to-EXIT path.
+- Existing BFS distance from START ranks candidates. Choose uniformly among terminals at the greatest distance or one edge closer. No corridors, room count, map bounds, or minimum three-room branch requirement changes.
+- Loot remains 45% Consumable / 35% Trinket / 20% Mimic. Acquisition, combat and persistence are unchanged.
+- Placement applies only to new floors. Schema remains 1; existing V2.18 floors, including nearby Chests, restore unchanged. Cache is `dungeon-of-fate-v2.18.1-1`; active-run storage is untouched.
+
+Focused checks: `node tests/chest-placement.cjs` verifies single-roll semantics, filters, randomized top-distance selection, no-candidate fallback and unchanged topology on 300 floors. `tests/chests.cjs` exercises 1,500 seeded floors (268 Chests / 1,455 eligible floors = 18.4%), unchanged loot weights, interactions, Mimic Rerolls, replacement, and legacy nearby-Chest restore. Persistence, general/PWA, Reroll and Fortune logic suites are also run for this patch.
+
+Manual phone checks: update the installed PWA without reinstalling, verify V2.18.1 and Continue preserves the old floor, then explore newly generated floors. Observe whether farther terminal placement feels worth the detour and assess frequency over many floors.
+
 ## V2.18 — Treasure Chests
 
 Delta from current HEAD `b53939c` (V2.17.1). One optional Chest may be placed **after Fortune/Gate/Altar generation**, before finite Scavenge opportunities. `chestCandidates()` selects active **empty, degree-one rooms** excluding START, EXIT, Gate branch members and Gate attachment parents. A non-endpoint leaf cannot lie on a simple START → EXIT route. No topology is added or altered, and no Monster, Trap, reward, Altar or Gate room is overwritten. No eligible room means no Chest. `CHEST_SPAWN_CHANCE = 0.30` is applied once on eligible floors, including Floor 1; there is a hard one-Chest guard.

@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.18 — Treasure Chests</title>
+<title>Dungeon of Fate V2.18.1 — Chest Placement Refinement</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -528,8 +528,13 @@ function closeItemCard(acquired){
  if(card.type==="chest"&&!room(card.roomId).chest.opened)finishRoomEffects();
  resolveGateOpportunity();update();pumpCards();if(!pendingAction){if(!awardPerfectFloor())updateContext();if(itemFocusReturn&&itemFocusReturn.isConnected)itemFocusReturn.focus({preventScroll:true});else $("consumableSlot").focus({preventScroll:true})}return true
 }
-var CHEST_SPAWN_CHANCE=.30,CHEST_LOOT_WEIGHTS={consumable:.45,trinket:.35,mimic:.20};
-function chestCandidates(){return rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId&&r.event==='empty'&&r.links.length===1&&!inGateBranch(r.id)&&(!fateGate||r.id!==fateGate.parentId)})}
+var CHEST_SPAWN_CHANCE=.20,CHEST_LOOT_WEIGHTS={consumable:.45,trinket:.35,mimic:.20};
+function chestCandidates(){return rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId&&r.event==='empty'&&r.links.length===1&&r.links[0]!==startId&&!inGateBranch(r.id)&&(!fateGate||r.id!==fateGate.parentId)})}
+function preferredChestCandidates(eligible){
+ var distance=distancesFrom(startId),farthest=Math.max.apply(null,eligible.map(function(r){return distance[r.id]}));
+ // Use the existing graph: randomize within the farthest one-step distance band.
+ return eligible.filter(function(r){return distance[r.id]>=farthest-1})
+}
 function chooseChestContent(roll){var type=roll<CHEST_LOOT_WEIGHTS.consumable?'consumable':roll<CHEST_LOOT_WEIGHTS.consumable+CHEST_LOOT_WEIGHTS.trinket?'trinket':'mimic';
  var ids=Object.keys(type==='trinket'?TRINKETS:CONSUMABLES),consumables=Object.keys(CONSUMABLES);
  return{kind:type,itemId:type==='mimic'?null:ids[Math.floor(Math.random()*ids.length)],fallbackItemId:type==='trinket'?consumables[Math.floor(Math.random()*consumables.length)]:null,opened:false,cardSeen:false}
@@ -537,6 +542,7 @@ function chooseChestContent(roll){var type=roll<CHEST_LOOT_WEIGHTS.consumable?'c
 function generateChest(){
  if(rooms.some(function(r){return r.chest}))return;
  var eligible=chestCandidates();if(!eligible.length||Math.random()>=CHEST_SPAWN_CHANCE)return;
+ eligible=preferredChestCandidates(eligible);
  var r=eligible[Math.floor(Math.random()*eligible.length)];r.event='chest';r.hint='neutral';r.exactHint=null;r.chest=chooseChestContent(Math.random())
 }
 function openChestCard(id,automatic){
@@ -1432,7 +1438,7 @@ function render(){
 function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.18";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.18.1";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
@@ -1568,7 +1574,7 @@ openChest=committed(openChest);openChestCard=committed(openChestCard);
 revealOutcome=committed(revealOutcome);acceptOutcome=committed(acceptOutcome);rerollOutcome=committed(rerollOutcome);
 beginRun=committed(beginRun);newFloor=committed(newFloor);enterRoom=committed(enterRoom);searchCurrentRoom=committed(searchCurrentRoom);resolveSimpleEvent=committed(resolveSimpleEvent);showDice=committed(showDice);resolveDice=committed(resolveDice);scavenge=committed(scavenge);descend=committed(descend);sacrificeAltar=committed(sacrificeAltar);useConsumable=committed(useConsumable);inspectItem=committed(inspectItem);closeItemCard=committed(closeItemCard);replaceTrinket=committed(replaceTrinket);chooseConsumable=committed(chooseConsumable);acquireTrinket=committed(acquireTrinket);offerConsumable=committed(offerConsumable);pumpCards=committed(pumpCards);revealClue=committed(revealClue);awardPerfectFloor=committed(awardPerfectFloor);disarmTrap=committed(disarmTrap);openAltar=committed(openAltar);continueEncounter=committed(continueEncounter);finish=committed(finish);
 
-$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — Treasure Chests";
+$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — Chest Placement Refinement";
 window.__dofTest={
  chestCandidates:chestCandidates,chooseChestContent:chooseChestContent,generateChest:generateChest,openChestCard:openChestCard,openChest:openChest,
  previewOutcome:previewOutcome,revealOutcome:revealOutcome,rerollOutcome:rerollOutcome,canReroll:canReroll,rerollFateAfterCost:rerollFateAfterCost,
