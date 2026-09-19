@@ -8,6 +8,35 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.18 — Treasure Chests
+
+Delta from current HEAD `b53939c` (V2.17.1). One optional Chest may be placed **after Fortune/Gate/Altar generation**, before finite Scavenge opportunities. `chestCandidates()` selects active **empty, degree-one rooms** excluding START, EXIT, Gate branch members and Gate attachment parents. A non-endpoint leaf cannot lie on a simple START → EXIT route. No topology is added or altered, and no Monster, Trap, reward, Altar or Gate room is overwritten. No eligible room means no Chest. `CHEST_SPAWN_CHANCE = 0.30` is applied once on eligible floors, including Floor 1; there is a hard one-Chest guard.
+
+`CHEST_LOOT_WEIGHTS = {consumable: .45, trinket: .35, mimic: .20}`. Contents are selected during generation, never on OPEN. Items are uniform within the authoritative current registry: five Consumables/four Trinkets. For a Trinket Chest, a Consumable fallback is also preselected then; if the player already owns that Trinket when opening, the stored fallback is offered instead. No duplicate stacking, silent lost reward, new opening RNG, or ordinary Chest Gold. Mimic combat can still grant its existing normal Monster rewards.
+
+Each Chest room stores:
+
+```js
+room.event = "chest";
+room.chest = {
+  kind: "consumable" | "trinket" | "mimic",
+  itemId: /* registered item ID, null for Mimic */,
+  fallbackItemId: /* registered Consumable for Trinket, otherwise null */,
+  opened: false,
+  cardSeen: false
+};
+```
+
+First physical entry marks `cardSeen` and presents a Chest decision using the existing Item Card shell. OPEN is a dedicated accessible button; tapping outside leaves. Dismissal/revisit/auto-walk does not reopen it automatically. Tap the current room to reopen; hold retains Scavenge. Unopened discovered Chests use a central 🧰 container marker; opened markers dim. Hidden/frontier Chest content stays unknown and its hint is neutral, not a promise of safety. Evil Eye does not identify hidden Mimics.
+
+OPEN sets `opened` once, closes the Chest card, and invokes the existing acquisition or Monster flow **within one persistence transaction**. Item rewards use the existing source-room sparkle/item reveal, Item Card and capacity/replacement choices. Mimics use `monsterKind: "basic"`, with a brief animated `🧰 → 👹` reveal and MIMIC title; they retain normal swipe, die, Heart damage, Shield/Doll/Blood/Horseshoe effects and hold-to-reroll. Room-entry protection stays active through the Chest decision and Mimic resolution (including the last Death's Bargain charge); dismissing an unopened Chest or taking its item ends that room-effect resolution normally. No new archetype, combat table or combat system is added. Mimic identity is derived from its opened Chest room when an encounter is restored.
+
+Persistence schema remains **saveVersion 1**. Whole-room serialization already captures Chest state/content; validation now recognizes the event and validates placement, maximum count, content IDs, fallback and boolean state. `opened` means the Chest is consumed even when a reward choice or Mimic is still pending. Existing semantic item decisions/encounter saves retain the rest: restart cannot duplicate the item or select different content. An unopened Chest card itself is transient like Altar inspection: reopening the app restores the seen/unopened room, where tapping deliberately reopens it. Old active runs without Chest fields remain compatible and are not regenerated or given retroactive Chests. Normal completion/Perfect Floor semantics remain based on existing exploration rules, not opening optional content. Asset cache is `dungeon-of-fate-v2.18-1`; localStorage is untouched; Continue footer shows V2.18.
+
+Added `tests/chests.cjs`: 1,500 generated floors validated (1,460 eligible; 405 Chests, 27.74% of eligible in this seeded sample), no required-path obstruction, fixed 45/35/20 selector boundaries, no-eligible fallback, first-show/dismiss/reopen, item source reveal and single-use rewards, both replacement flows, duplicate fallback, predetermined content reload, invalid IDs, and Mimic original/second-roll persistence plus hold reroll. Existing persistence, auto-walk, reroll and gameplay/PWA checks are rerun. Phone/landscape bounds are checked automatically.
+
+Manual Android checks: update without reinstalling and Continue an older run; find a Chest naturally and assess terminal-branch temptation/frequency; dismiss, leave, return and reopen; confirm the container marker reads as a Chest and opened state is quiet; OPEN with a full inventory, close during the reveal/choice and resume; OPEN a Mimic, verify the chest-to-creature reveal, swipe and hold reroll, then close during either die animation. Check Shield/Doll protection and that neither reward nor Chest can repeat. Real-device icon appearance, touch comfort and OS termination remain manual checks.
+
 ## V2.17.1 — Reroll UX Refinement
 
 Small UX-only delta from current HEAD `2060c16`. Reroll now requires a **650 ms hold**, matching the existing Altar's deliberate hold convention and sharing its `--charge` conic progress-ring CSS. Pointer capture keeps the whole gesture on the button. Early release, cancellation, blur, leaving its bounds or moving more than 14 px cancels; secondary contact cancels the active hold. Clicks are swallowed rather than activating or accepting. Enter/Space also requires holding. Tap outside still accepts through the existing continuation surface.
