@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.18.1 — Chest Placement Refinement</title>
+<title>Dungeon of Fate V2.19 — Dungeon Layers & Stairs</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -296,6 +296,20 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 #chestOpen{min-width:160px;min-height:54px;color:#ffe9b5;background:#493820;border:1px solid #c2a168;border-radius:12px;font-weight:800;touch-action:manipulation}#chestOpen[hidden]{display:none}
 .eventCard.mimic #eventArt{font-size:30px;white-space:nowrap;animation:mimicReveal .6s ease-out}
 @keyframes mimicReveal{from{opacity:.2;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+
+.layerMap{position:absolute;inset:0;pointer-events:none}.layerMap .cell{pointer-events:auto}.layerMap[inert],.layerMap[inert] *{pointer-events:none!important}
+.inactiveLayer{transform:scale(.86);filter:blur(3px);opacity:.14;pointer-events:none}
+.layerRoom{position:absolute;width:7.2%;height:7.2%;border:1px solid #887c69;border-radius:5px;background:#4d4539;text-align:center;color:#ccbfa9}
+.cell.stairRoom .floor{background:repeating-linear-gradient(0deg,#766b57 0 13%,#302e29 14% 22%);border:2px solid #cbb993}
+.cell.stairRoom .icon{font-size:clamp(18px,4vw,27px);color:#fff2d2;text-shadow:0 2px 4px #000}.cell.stairRoom.current .icon{animation:stairPulse 1.8s ease-in-out infinite}
+.stairLabel{position:absolute;top:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:800;color:#ffe7ae;z-index:10;background:#201c16e8;border-radius:4px;padding:3px}
+.layerGhost{pointer-events:none!important}.layerEnterUp{animation:layerEnterUp var(--layer-duration,420ms) ease-out}.layerEnterDown{animation:layerEnterDown var(--layer-duration,420ms) ease-out}.layerLeaveUp{animation:layerLeaveUp var(--layer-duration,420ms) ease-out forwards}.layerLeaveDown{animation:layerLeaveDown var(--layer-duration,420ms) ease-out forwards}
+@keyframes layerEnterUp{from{transform:scale(1.16);opacity:0;filter:blur(2px)}to{transform:scale(1);opacity:1;filter:blur(0)}}
+@keyframes layerEnterDown{from{transform:scale(.86);opacity:.14;filter:blur(3px)}to{transform:scale(1);opacity:1;filter:blur(0)}}
+@keyframes layerLeaveUp{to{transform:scale(.86);opacity:0;filter:blur(3px)}}
+@keyframes layerLeaveDown{to{transform:scale(1.16);opacity:0;filter:blur(2px)}}
+@keyframes stairPulse{50%{transform:translateY(-2px);opacity:.65}}
+@media(prefers-reduced-motion:reduce){.layerMap,.cell.stairRoom.current .icon{animation:none!important}}
 </style>
 </head>
 <body>
@@ -317,7 +331,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 <script>
 (function(){
 "use strict";
-var W=9,H=9,N=W*H,rooms=[],startId=0,exitId=0,currentId=0,history=[],searched={},hp=3,shield=false,gold=0,score=0,combo=1,floorNo=1,gameOver=false,totalMoves=0,floorDamage=0,perfectFloors=0,pendingAction=null,fastTravelTimer=null,fastTravelTarget=null,fastTraveling=false,encounterResolved=false,encounterCloseAction=null,holdAction=null,arrivalId=null,arrivalTimer=null,floorPerfectAwarded=false,scoreAnimation=null;
+var W=9,H=9,LAYER_CELLS=W*H,N=LAYER_CELLS,layers=[{id:0,type:"base",height:0}],activeLayer=0,layerTransition=false,layerTimer=null,rooms=[],startId=0,exitId=0,currentId=0,history=[],searched={},hp=3,shield=false,gold=0,score=0,combo=1,floorNo=1,gameOver=false,totalMoves=0,floorDamage=0,perfectFloors=0,pendingAction=null,fastTravelTimer=null,fastTravelTarget=null,fastTraveling=false,encounterResolved=false,encounterCloseAction=null,holdAction=null,arrivalId=null,arrivalTimer=null,floorPerfectAwarded=false,scoreAnimation=null;
 // V2.15: serializable floor snapshot; never consulted by dice RNG.
 var fateGate=null,altarRoom=null;
 var travelHopTimer=null,travelSerial=0,deathTimer=null,deathPending=false,causeOfDeath=null;
@@ -353,7 +367,7 @@ function rewardMultiplier(fate){return Math.round((1+.35*Math.sqrt(Math.max(0,(f
 function roomGoldMultiplier(){return relicState.coinRoom===currentId?2:1}
 function goldReward(base){return Math.floor(base*rewardMultiplier())*roomGoldMultiplier()}
 function trackGold(amount){if(floorEconomy){floorEconomy[amount<0?"lost":"gained"]+=Math.abs(amount);floorEconomy.leaving=gold}}
-function debugFloor(){if(floorEconomy){floorEconomy.fateLeaving=combo;floorEconomy.activeFate=activeFateDebug();}if(window.__DOF_DEBUG__&&floorEconomy)console.debug("[DOF economy]",JSON.parse(JSON.stringify(floorEconomy)))}
+function debugFloor(){if(floorEconomy){floorEconomy.fateLeaving=combo;floorEconomy.activeFate=activeFateDebug();floorEconomy.layers=layers.map(function(l){return{type:l.type,rooms:rooms.filter(function(r){return r.active&&layerOf(r.id)===l.id}).length}});}if(window.__DOF_DEBUG__&&floorEconomy)console.debug("[DOF economy]",JSON.parse(JSON.stringify(floorEconomy)))}
 function theftFeedback(before,after){
  var fraction=before?(before-after)/before:0,count=Math.min(9,Math.max(1,Math.ceil(fraction*32))),a=$("gold").getBoundingClientRect(),b=$("eventArt").getBoundingClientRect();
  for(var i=0;i<count;i++){var coin=document.createElement("span");coin.className="resourceFlight";coin.textContent="🪙";coin.style.left=(a.left+a.width/2+i*2)+"px";coin.style.top=a.top+"px";coin.style.setProperty("--flight-x",(b.left+b.width/2-a.left-a.width/2)+"px");coin.style.setProperty("--flight-y",(b.top+b.height/2-a.top)+"px");$("effectLayer").appendChild(coin);setTimeout(function(c){c.remove()},1000,coin)}
@@ -392,7 +406,7 @@ function monsterWeights(depth){
  return{basic:.8-.4*t,thief:.2+.1*t,spirit:.3*t}
 }
 function scaleMonsters(){
- var eligible=rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId}),existing=eligible.filter(function(r){return r.event==="monster"}).length;
+ var eligible=rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId&&r.event!=="stairs"}),existing=eligible.filter(function(r){return r.event==="monster"}).length;
  var desired=Math.round(eligible.length*monsterRate(floorNo));
  var candidates=shuffle(eligible.filter(function(r){return r.event==="empty"&&!(floorNo===1&&room(startId).links.indexOf(r.id)>=0)}));
  for(var i=0;i<Math.max(0,desired-existing)&&i<candidates.length;i++)candidates[i].event="monster"
@@ -562,7 +576,7 @@ function openChest(){
  if(loot.kind!=='mimic')finishRoomEffects();
  update();return true
 }
-function openRoomFeature(id,automatic){return room(id).event==='chest'?openChestCard(id,automatic):openAltar(id,automatic)}
+function openRoomFeature(id,automatic){if(room(id).event==="stairs")return !automatic&&id===currentId&&traverseStairs();return room(id).event==='chest'?openChestCard(id,automatic):openAltar(id,automatic)}
 function presentMimic(){
  var r=room(currentId),mimic=!!(r.chest&&r.chest.opened&&r.chest.kind==='mimic');$("eventCard").classList.toggle('mimic',mimic);
  if(mimic){$("eventArt").textContent='🧰 → 👹';$("diceTitle").textContent='MIMIC';$("eventCard").setAttribute('aria-label','The chest was a Mimic. Swipe to confront it.')}
@@ -710,16 +724,51 @@ function learn(name){runtimeLearned[name]=true;try{localStorage.setItem("dof."+n
 function resetLearning(){runtimeLearned={};try{["learnedScavenge","learnedDescend","learnedFastTravel"].forEach(function(k){localStorage.removeItem("dof."+k)})}catch(e){}update()}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
 function adjacent(r){var a=[];if(r.x>0)a.push(rooms[r.id-1]);if(r.x<W-1)a.push(rooms[r.id+1]);if(r.y>0)a.push(rooms[r.id-W]);if(r.y<H-1)a.push(rooms[r.id+W]);return a}
-function generateDungeon(){
- floorFortune=combo;
- rooms=[];for(var i=0;i<N;i++)rooms.push({id:i,x:i%W,y:Math.floor(i/W),active:false,links:[],known:false,visited:false,searched:false,scavenged:false,clued:false,event:"empty",hint:"neutral",exactHint:null});
- var target=(floorNo===1?20+Math.floor(Math.random()*5):27+Math.floor(Math.random()*9)),root=Math.floor(Math.random()*N),active=[root];room(root).active=true;
+var LAYER_CONFIG={maxLayers:2,early:.20,middle:.30,deep:.40,upper:.50,secondaryExit:.35,minRooms:12,maxRooms:18,transitionMs:420};
+function layerChance(depth){return depth<3?0:depth<=5?LAYER_CONFIG.early:depth<=10?LAYER_CONFIG.middle:LAYER_CONFIG.deep}
+function layerOf(id){return Math.floor(id/LAYER_CELLS)}
+function floorNeighbors(id){var r=room(id);return r.stairTo===undefined?r.links:r.links.concat([r.stairTo])}
+function appendLayer(type,height){
+ var id=layers.length,offset=id*LAYER_CELLS;layers.push({id:id,type:type,height:height});
+ for(var i=0;i<LAYER_CELLS;i++)rooms.push({id:offset+i,layerId:id,x:i%W,y:Math.floor(i/W),active:false,links:[],known:false,visited:false,searched:false,scavenged:false,clued:false,event:"empty",hint:"neutral",exactHint:null});
+ N=rooms.length;return offset
+}
+function growLayer(offset,root,target){
+ var active=[root],i;room(root).active=true;
  while(active.length<target){var candidates=[];for(i=0;i<active.length;i++)adjacent(room(active[i])).forEach(function(n){if(!n.active&&candidates.indexOf(n.id)<0)candidates.push(n.id)});if(!candidates.length)break;var pick=candidates[Math.floor(Math.random()*candidates.length)];room(pick).active=true;active.push(pick)}
  var connected={},frontier=[root];connected[root]=true;
  while(frontier.length){var fi=Math.floor(Math.random()*frontier.length),from=room(frontier[fi]),opts=adjacent(from).filter(function(n){return n.active&&!connected[n.id]});if(!opts.length){frontier.splice(fi,1);continue}var to=opts[Math.floor(Math.random()*opts.length)];from.links.push(to.id);to.links.push(from.id);connected[to.id]=true;frontier.push(to.id)}
- var possible=[];for(i=0;i<N;i++){var rr=room(i);if(!rr.active)continue;adjacent(rr).forEach(function(n){if(n.active&&n.id>rr.id&&rr.links.indexOf(n.id)<0)possible.push([rr,n])})}shuffle(possible);for(i=0;i<Math.floor(target*.14)&&i<possible.length;i++){possible[i][0].links.push(possible[i][1].id);possible[i][1].links.push(possible[i][0].id)}
- chooseEndpoints();placeEvents();scaleMonsters();rooms.forEach(function(r){if(r.event==="monster")r.monsterKind=pickMonster(floorNo,Math.random())});applyFortune();assignRoomHints();
+ var possible=[];for(i=offset;i<offset+LAYER_CELLS;i++){var rr=room(i);if(!rr.active)continue;adjacent(rr).forEach(function(n){if(n.active&&n.id>rr.id&&rr.links.indexOf(n.id)<0)possible.push([rr,n])})}shuffle(possible);for(i=0;i<Math.floor(target*.14)&&i<possible.length;i++){possible[i][0].links.push(possible[i][1].id);possible[i][1].links.push(possible[i][0].id)}
+
+}
+function generateDungeon(){
+ floorFortune=combo;rooms=[];layers=[];activeLayer=0;appendLayer("base",0);
+ var target=floorNo===1?20+Math.floor(Math.random()*5):27+Math.floor(Math.random()*9);
+ growLayer(0,Math.floor(Math.random()*LAYER_CELLS),target);chooseEndpoints();
+ if(layers.length<LAYER_CONFIG.maxLayers&&Math.random()<layerChance(floorNo)){
+  var candidates=rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId}),stair=candidates[Math.floor(Math.random()*candidates.length)];
+  var upper=Math.random()<LAYER_CONFIG.upper,offset=appendLayer(upper?"upper":"lower",upper?1:-1),other=offset+stair.id;
+  growLayer(offset,other,LAYER_CONFIG.minRooms+Math.floor(Math.random()*(LAYER_CONFIG.maxRooms-LAYER_CONFIG.minRooms+1)));
+  stair.event="stairs";stair.stairTo=other;room(other).event="stairs";room(other).stairTo=stair.id;
+  if(Math.random()<LAYER_CONFIG.secondaryExit){
+   var d=distancesFrom(other),far=rooms.filter(function(r){return r.active&&r.layerId===1&&r.id!==other}).sort(function(a,b){return d[b.id]-d[a.id]});
+   exitId=far[Math.floor(Math.random()*Math.min(5,far.length))].id
+  }
+ }
+ placeEvents();scaleMonsters();rooms.forEach(function(r){if(r.event==="monster")r.monsterKind=pickMonster(floorNo,Math.random())});applyFortune();assignRoomHints();
  floorEconomy.monsters={basic:0,thief:0,spirit:0};rooms.forEach(function(r){if(r.active&&r.event==="monster")floorEconomy.monsters[r.monsterKind]++});floorEconomy.monsterCount=Object.values(floorEconomy.monsters).reduce(function(a,b){return a+b},0);generateActiveFate();generateChest();generateScavengeOpportunities();debugFloor();
+}
+function traverseStairs(){
+ var from=room(currentId);if(gameOver||pendingAction||fastTraveling||layerTransition||from.event!=="stairs"||from.stairTo===undefined)return false;
+ clearFastPreview();cancelSlotGesture();clearFeedback();
+ var oldMap=$("activeMap"),ghost=oldMap?oldMap.cloneNode(true):null,ascending=layers[layerOf(from.stairTo)].height>layers[activeLayer].height;
+ currentId=from.stairTo;activeLayer=layerOf(currentId);var r=room(currentId);
+ beginRoomEffects(currentId,!r.visited);r.known=r.visited=r.searched=r.eventResolved=true;searched[currentId]=true;noticeScavenge(r);revealNeighbors(currentId);history.push(currentId);totalMoves++;finishRoomEffects();
+ var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;layerTransition=!reduced;$("board").style.setProperty("--layer-duration",LAYER_CONFIG.transitionMs+"ms");update();updateContext();if(reduced)return true;
+ var origin=(r.x/W*100+5.3)+"% "+(r.y/H*100+5.3)+"%",map=$("activeMap");map.style.transformOrigin=origin;map.classList.add(ascending?"layerEnterUp":"layerEnterDown");
+ if(ghost){ghost.removeAttribute("id");ghost.className="layerMap layerGhost "+(ascending?"layerLeaveUp":"layerLeaveDown");ghost.inert=true;ghost.setAttribute("aria-hidden","true");ghost.style.transformOrigin=origin;$("board").appendChild(ghost)}
+ clearTimeout(layerTimer);layerTimer=setTimeout(function(){layerTransition=false;update();updateContext()},LAYER_CONFIG.transitionMs);
+ return true
 }
 // Pre-roll the existing Scavenge table, without changing its probabilities or rewards.
 function generateScavengeOpportunities(){
@@ -733,7 +782,7 @@ function revealAttention(r,source){
  r.attentionActive=true;r.lootClued=true;r.attentionResolved=false;r.attentionSource=source;r.attentionEmphasized=!fastTraveling;r.clueRevealUntil=performance.now()+1800;return true
 }
 function noticeScavenge(r){if(r.scavengeOpportunity&&r.scavengeOpportunity.passiveLead)revealAttention(r,"room-sign")}
-function clueEligible(r){return r.active&&(!inGateBranch(r.id)||r.known)}
+function clueEligible(r){return layerOf(r.id)===activeLayer&&r.active&&(!inGateBranch(r.id)||r.known)}
 // Optional additions run after ordinary topology, encounters, Fortune and hints.
 function gateRequirement(fate,roll){
  var stretch=roll<.5?.5:roll<.85?.75:1,step=fate<20?.1:.01;
@@ -744,7 +793,7 @@ function inGateBranch(id){return!!(fateGate&&(fateGate.branchIds||[fateGate.room
 function gateBranchSize(roll){return roll<.2?1:roll<.8?2:3}
 function normalReachableWithoutGate(){
  var seen={},q=[startId];seen[startId]=true;
- for(var i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(!seen[id]&&!inGateBranch(id)){seen[id]=true;q.push(id)}});
+ for(var i=0;i<q.length;i++)floorNeighbors(q[i]).forEach(function(id){if(!seen[id]&&!inGateBranch(id)){seen[id]=true;q.push(id)}});
  return rooms.every(function(r){return!r.active||inGateBranch(r.id)||seen[r.id]})
 }
 function generateActiveFate(){
@@ -752,7 +801,7 @@ function generateActiveFate(){
  if(floorNo<3)return;
  if(Math.random()<.3){
   var candidates=[];
-  rooms.forEach(function(r){if(!r.active||r.id===startId||r.id===exitId||r.links.length>=4)return;adjacent(r).forEach(function(n){if(!n.active)candidates.push({parent:r.id,id:n.id})})});
+  rooms.forEach(function(r){if(!r.active||r.id===startId||r.id===exitId||r.links.length>=4||r.event==="stairs")return;adjacent(r).forEach(function(n){if(!n.active)candidates.push({parent:r.id,id:n.id})})});
   if(candidates.length){
    var pick=candidates[Math.floor(Math.random()*candidates.length)],r=room(pick.id);
    fateGate={roomId:r.id,branchIds:[r.id],parentId:pick.parent,requirement:gateRequirement(floorFortune,Math.random()),entered:false,discovered:false,resolved:false,reward:gateReward(Math.random(),rooms.filter(function(x){return x.active&&x.event==="heal"}).length<2)};
@@ -799,10 +848,10 @@ function discoverGate(){
 }
 function activeFateDebug(){return{gate:fateGate?Object.assign({},fateGate):null,altar:altarRoom===null?null:{roomId:altarRoom,discovered:room(altarRoom).known,cardSeen:!!room(altarRoom).altarCardSeen,used:!!room(altarRoom).altarUsed,before:room(altarRoom).altarFateBefore===undefined?null:room(altarRoom).altarFateBefore,after:room(altarRoom).altarFateAfter===undefined?null:room(altarRoom).altarFateAfter}}}
 function chooseEndpoints(){var d=[],q=[],i;do{startId=Math.floor(Math.random()*N)}while(!room(startId).active);for(i=0;i<N;i++)d[i]=-1;d[startId]=0;q.push(startId);for(i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(d[id]<0){d[id]=d[q[i]]+1;q.push(id)}});var far=[];for(i=0;i<N;i++)if(room(i).active&&i!==startId)far.push(i);far.sort(function(a,b){return d[b]-d[a]});exitId=far[Math.floor(Math.random()*Math.min(5,far.length))]}
-function distancesFrom(id){var d={},q=[id];d[id]=0;for(var i=0;i<q.length;i++)room(q[i]).links.forEach(function(n){if(d[n]===undefined){d[n]=d[q[i]]+1;q.push(n)}});return d}
+function distancesFrom(id){var d={},q=[id];d[id]=0;for(var i=0;i<q.length;i++)floorNeighbors(q[i]).forEach(function(n){if(d[n]===undefined){d[n]=d[q[i]]+1;q.push(n)}});return d}
 function placeEvents(){
  var ids=[],events=["treasure","treasure","treasure","treasure","rich","monster","monster","trap","trap","heal","key"],used={};
- for(var i=0;i<N;i++)if(room(i).active&&i!==startId&&i!==exitId)ids.push(i);
+ for(var i=0;i<N;i++)if(room(i).active&&i!==startId&&i!==exitId&&room(i).event!=="stairs")ids.push(i);
  if(floorNo===1){
   var d=distancesFrom(startId),near=ids.filter(function(id){return d[id]===1}),early=ids.filter(function(id){return d[id]>=1&&d[id]<=2});shuffle(near);shuffle(early);
   if(near[0]!==undefined){room(near[0]).event="empty";used[near[0]]=true}
@@ -883,7 +932,7 @@ $("eventCard").addEventListener("keydown",function(e){
 });
 
 function beginRun(){hideReroll();pendingEncounter=null;startupSave=null;cancelItemReveal();clearTimeout(deathTimer);clearTimeout(travelHopTimer);clearTimeout(fastTravelTimer);travelSerial++;deathPending=false;causeOfDeath=null;cancelAltarHold();cardPointer=null;cancelSlotGesture();cardState={queue:[],active:null};slotSuppressClick=false;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();relicState.consumable=Math.random()<.5?"coin":"ward";relicState.starterItem=relicState.consumable;relicState.starterInspected=false;encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;setFate(1,"reset",true);floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
-function newFloor(first,announcement){cancelSlotGesture();clearFeedback();relicState.floorUsed={};relicState.bargainRoom=null;relicState.coinRoom=null;generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;emitEffect("onFloorStart",{floor:floorNo});updateContext(announcement||"");update();markArrival(startId)}
+function newFloor(first,announcement){clearTimeout(layerTimer);layerTransition=false;cancelSlotGesture();clearFeedback();relicState.floorUsed={};relicState.bargainRoom=null;relicState.coinRoom=null;generateDungeon();currentId=startId;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;emitEffect("onFloorStart",{floor:floorNo});updateContext(announcement||"");update();markArrival(startId)}
 function markArrival(id){arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340)}
 
 function usefulFastTravelExists(){return rooms.some(function(r){return r.visited&&r.id!==currentId&&room(currentId).links.indexOf(r.id)<0&&shortestVisitedPath(currentId,r.id)})}
@@ -891,6 +940,7 @@ function updateContext(temporary){
  if(temporary){$("message").textContent=temporary;return}
  if(gameOver)return;
  var r=room(currentId);
+ if(r.event==="stairs"){$("message").textContent="";return}
  if(currentId===exitId&&r.searched){$("message").textContent="▼ EXIT — Hold ◆ to descend"+(unexploredCount()?" • "+unexploredCount()+" unexplored":" • Floor complete");return}
  if(pendingAction){$("message").textContent="";return}
  if(!learned("learnedFastTravel")&&usefulFastTravelExists()){$("message").textContent="◆ Hold a visited room to auto-walk";return}
@@ -940,6 +990,7 @@ function layoutFeedback(){
  })
 }
 function showLocalFeedback(id,reward,kind,calc,duration){
+ if(layerOf(id)!==activeLayer)return null;
  var board=$("board"),layer=$("feedbackLayer"),r=room(id);if(!board||!layer||!r||!r.active)return null;
  var el=document.createElement("div");el.className="roomFeedback "+(kind||"");el.dataset.roomId=id;el.style.visibility="hidden";el.style.setProperty("--life",(duration||1000)+"ms");
  var body=document.createElement("div");body.className="feedbackBody";el.appendChild(body);
@@ -999,6 +1050,7 @@ function unexploredCount(){return activeRoomCount()-searchedRoomCount()}
 function exitMessage(){var left=unexploredCount();return "EXIT REACHED — Hold to descend"+(left?" • "+left+" room"+(left===1?"":"s")+" unexplored":" • PERFECT FLOOR")}
 
 function shortestVisitedPath(from,to){
+ if(layerOf(from)!==activeLayer||layerOf(to)!==activeLayer)return null;
  var prev={},q=[from],seen={};seen[from]=true;
  for(var k=0;k<q.length;k++){
   var at=q[k];if(at===to)break;
@@ -1024,7 +1076,7 @@ function clearFastPreview(){
  if(mapRenderPending)requestAnimationFrame(function(){if(mapRenderPending&&fastTravelTarget===null)render()})
 }
 function previewFastTravel(id){
- if(fastTraveling||pendingAction||gameOver||id===currentId||!room(id).visited)return false;
+ if(layerTransition||layerOf(id)!==activeLayer||fastTraveling||pendingAction||gameOver||id===currentId||!room(id).visited)return false;
  var path=shortestVisitedPath(currentId,id);
  if(!path||path.length<2)return false;
 
@@ -1068,7 +1120,7 @@ function previewCurrentAction(id){
  return true
 }
 function startFastTravel(id){
- if(document.visibilityState==="hidden"||gameOver||pendingAction||fastTraveling||id===currentId)return;
+ if(layerTransition||layerOf(id)!==activeLayer||document.visibilityState==="hidden"||gameOver||pendingAction||fastTraveling||id===currentId)return;
  var path=shortestVisitedPath(currentId,id);
  if(!path||path.length<2){clearFastPreview();return}
  clearFastPreview();fastTraveling=true;var serial=++travelSerial,step=1;
@@ -1091,8 +1143,8 @@ function startFastTravel(id){
  travelHopTimer=setTimeout(hop,AUTO_WALK_MS)
 }
 
-function enterRoom(id){if(gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;noticeScavenge(room(id));searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openRoomFeature(id,true);return}pendingAction="room-entry";update();searchCurrentRoom(id)}
-function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="chest"){openChestCard(id,true);return}if(r.event==="altar"){finishRoomEffects();openAltar(id,true);return}if(r.event==="trinket"||r.event==="consumable"){resolveGateItem(r.event);finishRoomEffects();return}if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
+function enterRoom(id){if(layerTransition||layerOf(id)!==activeLayer||gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;noticeScavenge(room(id));searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openRoomFeature(id,true);return}pendingAction="room-entry";update();searchCurrentRoom(id)}
+function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(r.event==="stairs"){finishRoomEffects();update();updateContext();return}if(r.event==="chest"){openChestCard(id,true);return}if(r.event==="altar"){finishRoomEffects();openAltar(id,true);return}if(r.event==="trinket"||r.event==="consumable"){resolveGateItem(r.event);finishRoomEffects();return}if(r.event==="monster"||r.event==="trap"||r.event==="heal"){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
 function resolveGateItem(kind){
  if(kind==="trinket"){
   var available=Object.keys(TRINKETS).filter(function(id){return relicState.trinkets.indexOf(id)<0});
@@ -1274,7 +1326,7 @@ resolveDice=function(type,roll){
 };
 function scavenge(id,forcedRoll){
  if(gameOver||deathPending)return false;
- if(id!==currentId||id===exitId||!room(id).searched||room(id).scavenged||pendingAction||fastTraveling)return false;
+ if(layerTransition||id!==currentId||id===exitId||!room(id).searched||room(id).scavenged||pendingAction||fastTraveling)return false;
  var r=room(id),first=!learned("learnedScavenge"),goldBefore=gold,fateBefore=combo;r.scavenged=true;r.attentionResolved=true;r.attentionActive=false;
  emitEffect("onScavenge",{id:id});
  var opportunity=r.scavengeOpportunity;
@@ -1302,15 +1354,23 @@ function descend(){
  showLocalFeedback(currentId,"DEEPER","","DESCENDED",950);if(combo-oldFate>=.2)setTimeout(function(){showLocalFeedback(currentId,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},520);return true
 }
 function finish(title){if(gameOver)return;debugFloor();gameOver=true;$("endTitle").textContent=title;$("deathCause").textContent=causeOfDeath?causeOfDeath.icon+" "+causeOfDeath.label:"";$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";$("overlay").style.display="flex"}
-function addLink(a,b){var e=document.createElement("div");e.className="link";if(fateGate&&((a.id===fateGate.roomId&&b.id===fateGate.parentId)||(b.id===fateGate.roomId&&a.id===fateGate.parentId)))e.className+=" gateLink"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.resolved?" gateResolved":"");var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}$("board").appendChild(e)}
+function addLink(a,b,target){var e=document.createElement("div");e.className="link";if(fateGate&&((a.id===fateGate.roomId&&b.id===fateGate.parentId)||(b.id===fateGate.roomId&&a.id===fateGate.parentId)))e.className+=" gateLink"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.resolved?" gateResolved":"");var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}(target||$("activeMap")||$("board")).appendChild(e)}
 function render(){
  // Keep the pressed room node stable while a shared tap/hold gesture is tracked.
  if(fastTravelTarget!==null&&holdAction){mapRenderPending=true;return}
  mapRenderPending=false;
  var board=$("board"),feedbackLayer=$("feedbackLayer");Array.prototype.slice.call(board.children).forEach(function(el){if(el!==feedbackLayer)el.remove()});if(!feedbackLayer){feedbackLayer=document.createElement("div");feedbackLayer.id="feedbackLayer";board.appendChild(feedbackLayer)}
 
+ var activeMap=document.createElement("div");activeMap.id="activeMap";activeMap.className="layerMap";activeMap.inert=layerTransition;board.appendChild(activeMap);
+ layers.forEach(function(layer){if(layer.id===activeLayer)return;var back=document.createElement("div");back.className="layerMap inactiveLayer";back.inert=true;back.setAttribute("aria-hidden","true");var anchor=rooms.find(function(r){return layerOf(r.id)===layer.id&&r.event==="stairs"});if(anchor)back.style.transformOrigin=(anchor.x/W*100+5.3)+"% "+(anchor.y/H*100+5.3)+"%";board.insertBefore(back,activeMap);
+  rooms.forEach(function(r){if(layerOf(r.id)!==layer.id||!r.active||!r.known)return;
+   r.links.forEach(function(id){if(id>r.id&&room(id).known)addLink(r,room(id),back)});
+   var cell=document.createElement("div");cell.className="layerRoom";cell.style.left=(r.x/W*100+1.7)+"%";cell.style.top=(r.y/H*100+1.7)+"%";cell.textContent=r.event==="stairs"?(layers[layerOf(r.stairTo)].height>layer.height?"▲":"▼"):r.searched?"·":"?";back.appendChild(cell)
+  })
+ });
+
  for(var i=0;i<N;i++){
-  var r=room(i);if(!r.active||!r.known)continue;
+  var r=room(i);if(!r.active||!r.known||layerOf(r.id)!==activeLayer)continue;
   for(var j=0;j<r.links.length;j++){
    var n=room(r.links[j]);
    if(n.known&&n.id>r.id)addLink(r,n)
@@ -1318,7 +1378,7 @@ function render(){
  }
 
  for(i=0;i<N;i++){
-  r=room(i);if(!r.active||!r.known)continue;
+  r=room(i);if(!r.active||!r.known||layerOf(r.id)!==activeLayer)continue;
 
   var cell=document.createElement("div"),d=knownDistance(r.id),hintData=hintForRoom(r,d);
   cell.dataset.id=r.id;
@@ -1343,6 +1403,7 @@ function render(){
   if(fateGate&&r.id===fateGate.roomId){cell.className+=" fateRoom"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.entered?" gateEntered":"")+(fateGate.resolved?" gateResolved":"");var rune=document.createElement("span");rune.className="gateRune";rune.textContent="✦"+formatGateFate(fateGate.requirement);if(r.x===0){rune.style.left="0";rune.style.transform="none"}else if(r.x===W-1){rune.style.left="auto";rune.style.right="0";rune.style.transform="none"}cell.appendChild(rune);cell.setAttribute("aria-label","Fate Gate: requires "+formatGateFate(fateGate.requirement)+" Fate")}
   if(r.event==="altar"&&r.altarCardSeen){cell.className+=" altarLandmark"+(r.altarUsed?" altarSpent":" altarAvailable")+(!r.altarUsed&&hp<3&&hp>0&&combo>1?" altarUseful":"");cell.style.opacity=1;cell.style.filter="none";}
   if(r.chest&&r.chest.cardSeen&&r.chest.opened)cell.className+=" chestOpened";
+  if(r.event==="stairs"){cell.className+=" stairRoom";cell.setAttribute("aria-label",layers[layerOf(r.stairTo)].height>layers[activeLayer].height?"Stairs up":"Stairs down");if(r.id===currentId){var label=document.createElement("span");label.className="stairLabel";label.textContent=layers[layerOf(r.stairTo)].height>layers[activeLayer].height?"▲ GO UP":"▼ GO DOWN";if(r.y===H-1){label.style.top="auto";label.style.bottom="100%"}if(r.x===0){label.style.left="0";label.style.transform="none"}if(r.x===W-1){label.style.left="auto";label.style.right="0";label.style.transform="none"}cell.appendChild(label)}}
   if(r.searched&&r.event!=="empty")cell.className+=" "+r.event;
   if(r.id!==currentId&&room(currentId).links.indexOf(r.id)>=0)cell.className+=" available";
   if(hintData&&hintData.tendency!=="neutral"){
@@ -1368,7 +1429,7 @@ function render(){
   }
 
   var floor=document.createElement("div");floor.className="floor";cell.appendChild(floor);
-  var icon=document.createElement("div");icon.className="icon"+(r.id===currentId?" currentGlyph":"");icon.textContent=r.chest&&r.chest.cardSeen?"🧰":r.event==="altar"&&r.altarCardSeen?"✦":r.id===currentId?"◆":r.searched?"·":r.eyeMarked?"👹":"?";cell.appendChild(icon);
+  var icon=document.createElement("div");icon.className="icon"+(r.id===currentId?" currentGlyph":"");icon.textContent=r.event==="stairs"?(layers[layerOf(r.stairTo)].height>layers[activeLayer].height?"▲":"▼"):r.chest&&r.chest.cardSeen?"🧰":r.event==="altar"&&r.altarCardSeen?"✦":r.id===currentId?"◆":r.searched?"·":r.eyeMarked?"👹":"?";cell.appendChild(icon);
 
   if(r.id===startId&&r.searched){
    var sm=document.createElement("div");sm.className="startMark";sm.textContent="◇ START";cell.appendChild(sm)
@@ -1376,7 +1437,7 @@ function render(){
   if(r.id===exitId&&r.searched){
    var xm=document.createElement("div");xm.className="exitMark";xm.textContent="↧ EXIT";cell.appendChild(xm)
   }
-  if(r.id===currentId&&r.searched&&((r.id===exitId&&!learned("learnedDescend"))||(r.id!==exitId&&!r.scavenged&&!learned("learnedScavenge")))){
+  if(r.event!=="stairs"&&r.id===currentId&&r.searched&&((r.id===exitId&&!learned("learnedDescend"))||(r.id!==exitId&&!r.scavenged&&!learned("learnedScavenge")))){
    var tutor=document.createElement("div");tutor.className="tutorialGesture";tutor.innerHTML="HOLD<br>↓<b>"+(r.id===exitId?"▼":"◆")+"</b>";cell.appendChild(tutor)
   }
   if(r.searched&&r.event!=="empty"&&r.event!=="altar"){
@@ -1389,6 +1450,7 @@ function render(){
    var down=false,startX=0,startY=0,holdCandidate=false,downAt=0;
 
    node.addEventListener("pointerdown",function(e){
+    if(layerTransition||layerOf(id)!==activeLayer)return;
     if(e.pointerType==="mouse"&&e.button!==0)return;
     down=true;downAt=performance.now();startX=e.clientX;startY=e.clientY;
     holdCandidate=(id===currentId&&room(id).searched)||(room(id).visited&&id!==currentId);
@@ -1427,7 +1489,7 @@ function render(){
    },{passive:false})
   })(r.id,cell);
 
-  board.appendChild(cell)
+  activeMap.appendChild(cell)
  }
 
  var hint=document.createElement("div");
@@ -1438,7 +1500,7 @@ function render(){
 function update(){$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.18.1";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.19";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
@@ -1448,7 +1510,7 @@ function serializeRun(){
  var relics=Object.assign({},relicState);delete relics.pendingItem;
  return jsonCopy({saveVersion:SAVE_VERSION,gameVersion:GAME_VERSION,savedAt:Date.now(),status:"active",
   run:{hp:hp,shield:shield,gold:gold,score:score,combo:combo,fateGainRemainder:fateGainRemainder,floorNo:floorNo,totalMoves:totalMoves,perfectFloors:perfectFloors,searched:searched},
-  floor:{rooms:savedRooms,startId:startId,exitId:exitId,currentId:currentId,history:history,floorDamage:floorDamage,floorPerfectAwarded:floorPerfectAwarded,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:fortuneUpgrades,floorEconomy:floorEconomy,altarRoom:altarRoom},
+  floor:{layers:layers,activeLayer:activeLayer,rooms:savedRooms,startId:startId,exitId:exitId,currentId:currentId,history:history,floorDamage:floorDamage,floorPerfectAwarded:floorPerfectAwarded,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:fortuneUpgrades,floorEconomy:floorEconomy,altarRoom:altarRoom},
   relicState:relics,fateGate:fateGate,pending:{encounter:pendingEncounter,cards:{active:active,queue:cardState.queue}}})
 }
 function flushRun(){
@@ -1472,28 +1534,37 @@ function validateSave(s){
   need(obj(s)&&s.saveVersion===1&&typeof s.gameVersion==="string"&&num(s.savedAt,0),"header");
   if(s.status==="ended")return true;need(s.status==="active","status");
   var u=s.run,f=s.floor,t=s.relicState,g=s.fateGate,p=s.pending;
+  var count=f&&Array.isArray(f.layers)?f.layers.length:1,size=count*LAYER_CELLS;
   need(obj(u)&&obj(f)&&obj(t)&&obj(p)&&obj(p.cards),"structure");
   need(integer(u.hp,1,3)&&typeof u.shield==="boolean"&&integer(u.floorNo,1)&&num(u.combo,1)&&num(u.fateGainRemainder,0,.010001),"vitals");
   ["gold","score","totalMoves","perfectFloors"].forEach(function(k){need(num(u[k],0),k)});
-  need(obj(u.searched)&&Object.keys(u.searched).every(function(k){return /^(0|[1-9][0-9]*)$/.test(k)&&integer(+k,0,N-1)&&u.searched[k]===true}),"searched index");
-  need(Array.isArray(f.rooms)&&f.rooms.length===N,"rooms");
-  function id(v){return integer(v,0,N-1)&&f.rooms[v]&&f.rooms[v].active===true}
-  var events=["empty","treasure","rich","monster","trap","heal","key","altar","trinket","consumable","chest"];
+  need(obj(u.searched)&&Object.keys(u.searched).every(function(k){return /^(0|[1-9][0-9]*)$/.test(k)&&integer(+k,0,2*LAYER_CELLS-1)&&u.searched[k]===true}),"searched index");
+  need(Array.isArray(f.rooms)&&f.rooms.length===size,"rooms");
+  function id(v){return integer(v,0,size-1)&&f.rooms[v]&&f.rooms[v].active===true}
+  var events=["empty","treasure","rich","monster","trap","heal","key","altar","trinket","consumable","chest","stairs"];
   var flags=["active","known","visited","searched","scavenged","clued","eventResolved","primaryResolved","eyeMarked","lootClued","altarCardSeen","altarUsed","attentionActive","attentionResolved","attentionEmphasized"];
   f.rooms.forEach(function(r,i){
-   need(obj(r)&&r.id===i&&r.x===i%W&&r.y===Math.floor(i/W),"room identity");
+   need(obj(r)&&r.id===i&&r.x===i%W&&r.y===Math.floor((i%LAYER_CELLS)/W)&&(r.layerId===undefined?count===1:r.layerId===layerOf(i)),"room identity");
    flags.forEach(function(k){need(r[k]===undefined||typeof r[k]==="boolean","room flag "+k)});need(typeof r.active==="boolean","active");
    need(events.includes(r.event)&&["danger","fortune","safe","neutral"].includes(r.hint),"room content");
    need(r.exactHint===null||events.includes(r.exactHint),"exact hint");
    need(r.monsterKind===undefined||Object.prototype.hasOwnProperty.call(MONSTERS,r.monsterKind),"monster kind");
    need(Array.isArray(r.links)&&r.links.length<=4&&new Set(r.links).size===r.links.length,"links");
-   r.links.forEach(function(n){need(r.active&&id(n)&&n!==i&&Math.abs(i%W-n%W)+Math.abs(Math.floor(i/W)-Math.floor(n/W))===1&&Array.isArray(f.rooms[n].links)&&f.rooms[n].links.includes(i),"connection")});
+   r.links.forEach(function(n){need(r.active&&id(n)&&n!==i&&layerOf(i)===layerOf(n)&&Math.abs(i%W-n%W)+Math.abs(Math.floor((i%LAYER_CELLS)/W)-Math.floor((n%LAYER_CELLS)/W))===1&&Array.isArray(f.rooms[n].links)&&f.rooms[n].links.includes(i),"connection")});
    if(r.scavengeOpportunity!==undefined){var o=r.scavengeOpportunity;need(obj(o)&&num(o.roll,0)&&o.roll<1&&typeof o.resolved==="boolean"&&typeof o.passiveLead==="boolean"&&o.resolved===r.scavenged,"opportunity")}
    if(r.attentionActive)need(r.visited&&!r.scavenged&&r.scavengeOpportunity&&!r.scavengeOpportunity.resolved&&r.lootClued,"attention");
    if(r.event==='chest'){var ch=r.chest;need(obj(ch)&&['consumable','trinket','mimic'].includes(ch.kind)&&typeof ch.opened==='boolean'&&typeof ch.cardSeen==='boolean','chest state');need(r.id!==f.startId&&r.id!==f.exitId&&r.links.length===1&&(!g||!g.branchIds.includes(r.id)),'chest placement');need(ch.kind==='mimic'?ch.itemId===null:Object.prototype.hasOwnProperty.call(ch.kind==='trinket'?TRINKETS:CONSUMABLES,ch.itemId),'chest item');need(ch.kind==='trinket'?Object.prototype.hasOwnProperty.call(CONSUMABLES,ch.fallbackItemId):ch.fallbackItemId===null,'chest fallback');if(ch.opened)need(ch.cardSeen&&r.visited,'opened chest')}
    if(r.clueTendency!==undefined)need(["safe","danger","fortune","neutral","stairs"].includes(r.clueTendency),"clue tendency");
    ["altarFateBefore","altarFateAfter"].forEach(function(k){if(r[k]!==undefined)need(num(r[k],1),k)});
   });
+
+  need(count>=1&&count<=2&&(f.layers===undefined||Array.isArray(f.layers)),"layer count");
+  if(f.layers){need(f.layers.every(function(l,i){return obj(l)&&l.id===i&&(i===0?l.type==="base"&&l.height===0:(l.type==="upper"&&l.height===1)||(l.type==="lower"&&l.height===-1))}),"layers");need(integer(f.activeLayer,0,count-1)&&f.activeLayer===layerOf(f.currentId),"active layer")}else need(f.activeLayer===undefined||f.activeLayer===0,"legacy layer");
+  need(layerOf(f.startId)===0,"base START");
+  var stairs=f.rooms.filter(function(r){return r.event==="stairs"});
+  need(stairs.length===(count===1?0:2),"stair pair");
+  stairs.forEach(function(r){need(r.active&&id(r.stairTo)&&layerOf(r.id)!==layerOf(r.stairTo),"stair target");var other=f.rooms[r.stairTo];need(other.event==="stairs"&&other.stairTo===r.id&&r.x===other.x&&r.y===other.y&&r.id!==f.startId&&r.id!==f.exitId&&(!g||!g.branchIds.includes(r.id)),"vertical connection")});
+  need(f.rooms.every(function(r){return r.stairTo===undefined||r.event==="stairs"}),"stair ownership");
   need(f.rooms.filter(function(r){return r.active&&r.event==="chest"}).length<=1,"one chest");
   need(id(f.currentId)&&id(f.startId)&&id(f.exitId)&&f.startId!==f.exitId&&f.rooms[f.currentId].visited,"positions");
   need(Array.isArray(f.history)&&f.history.length&&f.history.every(id),"history");
@@ -1514,7 +1585,7 @@ function validateSave(s){
    var edges=[];g.branchIds.forEach(function(i){f.rooms[i].links.forEach(function(n){if(!g.branchIds.includes(n))edges.push([i,n])})});need(edges.length===1&&edges[0][0]===g.roomId&&edges[0][1]===g.parentId,"gate boundary");
    if(g.branchIds.includes(f.currentId))need(g.entered,"legitimate entry");
   }
-  function reachable(exclude){var seen=new Set([f.startId]),q=[f.startId];for(var a=0;a<q.length;a++)f.rooms[q[a]].links.forEach(function(n){if(!seen.has(n)&&!exclude.includes(n)){seen.add(n);q.push(n)}});return seen}
+  function reachable(exclude){var seen=new Set([f.startId]),q=[f.startId];for(var a=0;a<q.length;a++)(f.rooms[q[a]].stairTo===undefined?f.rooms[q[a]].links:f.rooms[q[a]].links.concat([f.rooms[q[a]].stairTo])).forEach(function(n){if(!seen.has(n)&&!exclude.includes(n)){seen.add(n);q.push(n)}});return seen}
   var all=reachable([]),normal=reachable(g?g.branchIds:[]);need(f.rooms.every(function(r){return !r.active||all.has(r.id)}),"connected floor");need(f.rooms.every(function(r){return !r.active||(g&&g.branchIds.includes(r.id))||normal.has(r.id)}),"optional gate");
   function card(c){need(obj(c)&&c.type==="item"&&["trinket","consumable"].includes(c.kind)&&Object.prototype.hasOwnProperty.call(c.kind==="trinket"?TRINKETS:CONSUMABLES,c.id)&&c.mode==="discovery"&&typeof c.decision==="boolean"&&id(c.sourceRoomId),"pending item");}
   need(Array.isArray(p.cards.queue)&&p.cards.queue.length<=20,"card queue");p.cards.queue.forEach(card);if(p.cards.active!==null){card(p.cards.active);var c=p.cards.active;if(!c.decision)need(c.kind==="trinket"?t.trinkets.includes(c.id):t.consumable===c.id,"committed item")}
@@ -1528,7 +1599,7 @@ function loadRun(){
  catch(e){persistenceWarning(e);try{localStorage.setItem(SAVE_KEY+".invalid",JSON.stringify({savedAt:Date.now(),reason:String(e),raw:raw}));localStorage.removeItem(SAVE_KEY)}catch(backupError){storageBlocked=true;persistenceWarning(backupError)}return null}
 }
 function resetRestoreRuntime(){
- hideReroll();
+ hideReroll();clearTimeout(layerTimer);layerTransition=false;
  cancelItemReveal();cancelAltarHold();cancelSlotGesture();clearFastPreview();clearFeedback();clearTimeout(arrivalTimer);clearTimeout(deathTimer);clearTimeout(travelHopTimer);if(scoreAnimation)cancelAnimationFrame(scoreAnimation);
  travelSerial++;encounterSerial++;fastTraveling=false;arrivalId=null;scoreAnimation=null;holdAction=null;fastTravelTarget=null;combatReady=null;combatPointer=null;continuePointer=null;cardPointer=null;encounterResolved=false;encounterCloseAction=null;deathPending=false;causeOfDeath=null;slotSuppressClick=false;mapRenderPending=false;pendingAction=null;
  $("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");$("itemChoice").hidden=true;$("overlay").style.display="none";$("resumeOverlay").hidden=true;$("effectNotices").textContent="";
@@ -1539,7 +1610,7 @@ function restoreRun(s){
   // No generation, acquisition hooks, floor hooks or new-room effects here.
   resetRestoreRuntime();s=jsonCopy(s);safeSnapshot=jsonCopy(s);var u=s.run,f=s.floor;
   hp=u.hp;shield=u.shield;gold=u.gold;score=u.score;combo=u.combo;fateGainRemainder=u.fateGainRemainder;floorNo=u.floorNo;totalMoves=u.totalMoves;perfectFloors=u.perfectFloors;searched=u.searched;
-  rooms=f.rooms;startId=f.startId;exitId=f.exitId;currentId=f.currentId;history=f.history;floorDamage=f.floorDamage;floorPerfectAwarded=f.floorPerfectAwarded;floorFortune=f.floorFortune;fortuneBudget=f.fortuneBudget;fortuneUpgrades=f.fortuneUpgrades;floorEconomy=f.floorEconomy;altarRoom=f.altarRoom;
+  rooms=f.rooms;N=rooms.length;layers=f.layers||[{id:0,type:"base",height:0}];activeLayer=f.activeLayer||0;rooms.forEach(function(r){if(r.layerId===undefined)r.layerId=layerOf(r.id)});startId=f.startId;exitId=f.exitId;currentId=f.currentId;history=f.history;floorDamage=f.floorDamage;floorPerfectAwarded=f.floorPerfectAwarded;floorFortune=f.floorFortune;fortuneBudget=f.fortuneBudget;fortuneUpgrades=f.fortuneUpgrades;floorEconomy=f.floorEconomy;altarRoom=f.altarRoom;
   relicState=s.relicState;fateGate=s.fateGate;cardState=s.pending.cards;pendingEncounter=s.pending.encounter;relicState.pendingItem=cardState.active&&cardState.active.decision?cardState.active.id:null;gameOver=false;startupSave=null;
   update();updateContext();
   if(pendingEncounter){
@@ -1570,12 +1641,14 @@ function flushLifecycleRun(){
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")flushLifecycleRun()});
 window.addEventListener("pagehide",flushLifecycleRun);
 // Nested gameplay helpers form one transaction; rendering/animation callbacks do not save.
+traverseStairs=committed(traverseStairs);
 openChest=committed(openChest);openChestCard=committed(openChestCard);
 revealOutcome=committed(revealOutcome);acceptOutcome=committed(acceptOutcome);rerollOutcome=committed(rerollOutcome);
 beginRun=committed(beginRun);newFloor=committed(newFloor);enterRoom=committed(enterRoom);searchCurrentRoom=committed(searchCurrentRoom);resolveSimpleEvent=committed(resolveSimpleEvent);showDice=committed(showDice);resolveDice=committed(resolveDice);scavenge=committed(scavenge);descend=committed(descend);sacrificeAltar=committed(sacrificeAltar);useConsumable=committed(useConsumable);inspectItem=committed(inspectItem);closeItemCard=committed(closeItemCard);replaceTrinket=committed(replaceTrinket);chooseConsumable=committed(chooseConsumable);acquireTrinket=committed(acquireTrinket);offerConsumable=committed(offerConsumable);pumpCards=committed(pumpCards);revealClue=committed(revealClue);awardPerfectFloor=committed(awardPerfectFloor);disarmTrap=committed(disarmTrap);openAltar=committed(openAltar);continueEncounter=committed(continueEncounter);finish=committed(finish);
 
-$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — Chest Placement Refinement";
+$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — Dungeon Layers & Stairs";
 window.__dofTest={
+ layerChance:layerChance,traverseStairs:traverseStairs,layerInfo:function(){return{layers:layers,activeLayer:activeLayer,transition:layerTransition}},
  chestCandidates:chestCandidates,chooseChestContent:chooseChestContent,generateChest:generateChest,openChestCard:openChestCard,openChest:openChest,
  previewOutcome:previewOutcome,revealOutcome:revealOutcome,rerollOutcome:rerollOutcome,canReroll:canReroll,rerollFateAfterCost:rerollFateAfterCost,
  serializeRun:serializeRun,saveRun:saveRun,loadRun:loadRun,restoreRun:restoreRun,validateSave:validateSave,flushRun:flushRun,
@@ -1583,12 +1656,12 @@ window.__dofTest={
  inspectItem:inspectItem,closeItemCard:function(acquired){finishItemReveal();return closeItemCard(acquired)},replaceTrinket:replaceTrinket,pumpCards:pumpCards,beginRoomEffects:beginRoomEffects,finishRoomEffects:finishRoomEffects,monsterRate:monsterRate,fateGainFactor:fateGainFactor,continueEncounter:continueEncounter,
  setConsumable:function(id){relicState.consumable=id;update()},
  damageFate:damageFate,scaleFate:scaleFate,breakFate:breakFate,gainFate:gainFate,rewardMultiplier:rewardMultiplier,generateDungeon:generateDungeon,
- state:function(){return{rooms:rooms.map(function(r){return{id:r.id,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event,monsterKind:r.monsterKind,altarCardSeen:!!r.altarCardSeen,attentionActive:!!r.attentionActive,attentionEmphasized:!!r.attentionEmphasized,attentionResolved:!!r.attentionResolved,altarUsed:!!r.altarUsed,altarFateBefore:r.altarFateBefore,altarFateAfter:r.altarFateAfter,eyeMarked:!!r.eyeMarked,lootClued:!!r.lootClued,scavengeOpportunity:r.scavengeOpportunity?Object.assign({},r.scavengeOpportunity):null,primaryResolved:!!r.primaryResolved,eventResolved:!!r.eventResolved}}),startId:startId,exitId:exitId,currentId:currentId,fateGate:fateGate?Object.assign({},fateGate):null,altarRoom:altarRoom,floorNo:floorNo,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:JSON.parse(JSON.stringify(fortuneUpgrades)),floorEconomy:JSON.parse(JSON.stringify(floorEconomy)),causeOfDeath:causeOfDeath,deathPending:deathPending,gameOver:gameOver,hp:hp,shield:shield,gold:gold,score:score,combo:combo,relics:JSON.parse(JSON.stringify(relicState)),cards:JSON.parse(JSON.stringify(cardState)),fateGainRemainder:fateGainRemainder,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
+ state:function(){return{rooms:rooms.map(function(r){return{id:r.id,layerId:layerOf(r.id),stairTo:r.stairTo,active:r.active,links:r.links.slice(),known:r.known,visited:r.visited,searched:r.searched,scavenged:r.scavenged,clued:r.clued,clueTendency:r.clueTendency,hint:r.hint,event:r.event,monsterKind:r.monsterKind,altarCardSeen:!!r.altarCardSeen,attentionActive:!!r.attentionActive,attentionEmphasized:!!r.attentionEmphasized,attentionResolved:!!r.attentionResolved,altarUsed:!!r.altarUsed,altarFateBefore:r.altarFateBefore,altarFateAfter:r.altarFateAfter,eyeMarked:!!r.eyeMarked,lootClued:!!r.lootClued,scavengeOpportunity:r.scavengeOpportunity?Object.assign({},r.scavengeOpportunity):null,primaryResolved:!!r.primaryResolved,eventResolved:!!r.eventResolved}}),startId:startId,exitId:exitId,currentId:currentId,fateGate:fateGate?Object.assign({},fateGate):null,altarRoom:altarRoom,floorNo:floorNo,floorFortune:floorFortune,fortuneBudget:fortuneBudget,fortuneUpgrades:JSON.parse(JSON.stringify(fortuneUpgrades)),floorEconomy:JSON.parse(JSON.stringify(floorEconomy)),causeOfDeath:causeOfDeath,deathPending:deathPending,gameOver:gameOver,hp:hp,shield:shield,gold:gold,score:score,combo:combo,relics:JSON.parse(JSON.stringify(relicState)),cards:JSON.parse(JSON.stringify(cardState)),fateGainRemainder:fateGainRemainder,pendingAction:pendingAction,fastTraveling:fastTraveling,floorPerfectAwarded:floorPerfectAwarded,learned:{scavenge:learned("learnedScavenge"),descend:learned("learnedDescend"),fastTravel:learned("learnedFastTravel")},message:$("message").textContent,overlay:$("overlay").style.display,diceOverlay:$("diceOverlay").style.display}},
  revealClue:function(source,id,type){revealClue(source,room(id),type)},showDice:function(type,kind){if(type==="monster")room(currentId).monsterKind=kind||"basic";pendingAction=type;showDice(type)},acquireTrinket:acquireTrinket,offerConsumable:offerConsumable,chooseConsumable:chooseConsumable,useConsumable:useConsumable,emitEffect:emitEffect,monsterWeights:monsterWeights,pickMonster:pickMonster,newRun:beginRun,
  setRoomFixture:function(id,patch){Object.assign(room(id),patch);update()},setMonster:function(kind){encounterMonster=kind;room(currentId).monsterKind=kind},
  setGold:function(value){gold=value;update()},setFloor:function(value){floorNo=value;newFloor(false,"")},
  clearFeedback:clearFeedback,enter:enterRoom,search:searchCurrentRoom,scavenge:scavenge,descend:descend,travel:startFastTravel,update:update,awardPerfectFloor:awardPerfectFloor,resolveSimple:resolveSimpleEvent,resolveDice:resolveDice,showFeedback:showLocalFeedback,celebrateTreasure:celebrateTreasure,resetLearning:resetLearning,newFloor:function(){newFloor(true,"")},
- setCurrent:function(id){if(!gateAccess(currentId,id,true))return false;currentId=id;room(id).known=true;room(id).visited=true;update()},
+ setCurrent:function(id){if(!gateAccess(currentId,id,true))return false;currentId=id;activeLayer=layerOf(id);room(id).known=true;room(id).visited=true;update()},
  markVisited:function(ids){ids.forEach(function(id){room(id).known=true;room(id).visited=true;room(id).searched=true;searched[id]=true;revealNeighbors(id)});update()},
  setCombo:function(value){setFate(value,"debug",true);update()},setVitals:function(health,hasShield){hp=health;shield=hasShield;update()},setRoomEvent:function(id,event){room(id).event=event;room(id).searched=true;room(id).eventResolved=true;searched[id]=true;update()},
  hintProfile:function(){return{range:hintProfile.range,strength:hintProfile.strength,accuracy:hintProfile.accuracy,exactRevealChance:hintProfile.exactRevealChance,frontierMinStrength:hintProfile.frontierMinStrength}},

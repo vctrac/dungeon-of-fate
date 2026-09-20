@@ -41,7 +41,7 @@ module.exports=()=>{
     monsters+=count;eligible+=active.length;maxShrines=Math.max(maxShrines,active.filter(r=>r.event==='heal').length);
     check(count<=Math.round(active.length*.30),'monster ceiling');check(s.floorEconomy.bonusShrines<=1&&s.floorEconomy.naturalShrines===1,'shrine telemetry');
     check(Object.values(s.floorEconomy.monsters).reduce((a,b)=>a+b,0)===count,'archetype telemetry');
-    const reached=new Set([s.startId]),q=[s.startId];for(let j=0;j<q.length;j++)for(const n of s.rooms[q[j]].links)if(!reached.has(n)){reached.add(n);q.push(n)}check(reached.size===active.length+2+(s.fateGate?s.fateGate.branchIds.length:0),'reachable rooms');
+    const reached=new Set([s.startId]),q=[s.startId];for(let j=0;j<q.length;j++)for(const n of s.rooms[q[j]].links.concat(s.rooms[q[j]].stairTo===undefined?[]:[s.rooms[q[j]].stairTo]))if(!reached.has(n)){reached.add(n);q.push(n)}check(reached.size===active.length+2+(s.fateGate?s.fateGate.branchIds.length:0),'reachable rooms');
    }
    depthStats.push({depth,rate:monsters/eligible,maxShrines});check(maxShrines<=2,'total shrines');
   }

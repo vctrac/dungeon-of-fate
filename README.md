@@ -8,6 +8,56 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.19 — Dungeon Layers & Stairs
+
+Delta from current HEAD `c8c6736`. A floor now owns one or two 9×9 layer grids. A layer change is ordinary traversal within the floor, never `newFloor()`.
+
+### Model and generation
+
+The existing flat room registry stays authoritative, with unique IDs `layerIndex * 81 + y * 9 + x`. Each room stores `layerId`; each layer stores `{id,type,height}`. BASE has height 0, UPPER +1, LOWER −1. `activeLayer` determines which map receives input. START/current/EXIT, history, room effects, cards and Gate references retain unique numeric room IDs. Horizontal `links` never cross layers; paired `stairTo` references represent the vertical edges. Generation/reachability uses both, while auto-walk uses horizontal links only.
+
+Central configuration:
+
+| Setting | Value |
+| --- | --- |
+| Maximum layers | 2 |
+| Floors 1–2 | 0% multilayer |
+| Floors 3–5 | 20% |
+| Floors 6–10 | 30% |
+| Floors 11+ | 40% |
+| Secondary direction | 50% UPPER / 50% LOWER |
+| Secondary size | Uniform 12–18 ordinary rooms |
+| Multilayer EXIT | 65% BASE / 35% secondary |
+| Transition duration | 420 ms; skipped with reduced motion |
+
+`growLayer()` is the extracted existing room-growth/spanning-tree/extra-corridor algorithm, reused for both maps. BASE keeps its existing room count. Choose an active BASE coordinate excluding START and its initially selected EXIT; grow the secondary from that exact coordinate, then reserve both cells as stairs. If EXIT moves to secondary, select among its five farthest rooms from the stairs, following the existing endpoint convention. The former BASE EXIT becomes an ordinary eligible room. No special reward is guaranteed on secondary. Optional Gate expansion may add its existing 1–3 rooms on either layer.
+
+Ordinary event placement, Monster scaling, Fortune, Gate, Altar, Chest and finite Scavenge generation each run **once over the complete floor**. Stairs are excluded from encounter/upgrade placement and Gate attachment. START stays BASE. Validation walks horizontal plus vertical connections and separately checks reachability without Gate branch rooms. A Chest remains a non-endpoint empty horizontal leaf (not a stair), outside Gate ownership, with the existing 20% single floor roll and farthest-distance ranking; it cannot become a required progression room.
+
+### Traversal, presentation and scope
+
+Entering stairs stays on that layer. Tap the current stair room to traverse; holding retains Scavenge. The destination stair becomes current/visited/searched, normal neighbor reveal runs, and room-entry effects run once. A fresh destination consumes a Coin/Bargain room charge normally; revisits do not. Hearts, Gold, FATE, Score, Shield, Ward, inventory, Vampire's Blood usage, Gate state, floor damage and Fortune remain shared. Only EXIT advances the floor and runs floor-start/end behavior.
+
+Stair rooms have a stone-step fill, prominent ▲/▼, a quiet current-room pulse and attached GO UP/GO DOWN hint. Active map dimensions stay unchanged. Previously revealed inactive rooms/corridors are dimmed to 14%, blurred 3 px and scaled to 86%, aligned around the stair coordinate. Backgrounds are inert, aria-hidden, pointer-disabled and have no room listeners. Upward travel shrinks/fades the old map into the background; downward travel enlarges/fades it toward the viewer while the destination sharpens. Reduced motion skips transition animation and input delay.
+
+Clues only target their active layer; Evil Eye remains derived from legitimate frontier reveal. Scavenge opportunities, markers and all room-owned state persist in either map. Perfect Floor still means all eligible generated rooms explored, now across both layers; locked/unentered Gate branches remain excluded. EXIT never requires Perfect Floor or optional interactions.
+
+### Persistence and compatibility
+
+Schema remains `saveVersion: 1`, key `dof.activeRun`. New fields are `floor.layers`, `floor.activeLayer`, room `layerId` and optional `stairTo`. Whole-floor serialization contains both grids, including inactive cells, generated content, fog and special states. EXIT layer is derived from `exitId`; stair direction is derived from destination height. Legacy 81-cell saves without layer metadata restore as one BASE without regeneration, rewards or room-entry hooks. Validation is independent of the currently loaded room count and checks layer identity, unique room identity, local links, paired coordinate-aligned stairs, active position and combined reachability.
+
+Stair traversal uses the existing synchronous commit wrapper: destination identity and matching entry consequences commit together; then its safe snapshot is published. Closing during the CSS animation restores that destination, with no transition/gesture/route resumed. Auto-walk retains its per-hop checkpoints. Cache `dungeon-of-fate-v2.19-1` only updates assets; saves/learned flags are untouched.
+
+### Tests and playtest risks
+
+New `tests/layers-logic.cjs`: 4,000 seeded floors, generation probabilities, both directions/EXIT placements, 12–18-room secondary size, max two layers, aligned stairs, unique IDs, fog, caps, Gate-free reachability, horizontal-only paths and malformed-save rejection. Sample multilayer rates were 21.2–21.8% / 31.0–32.2% / 40.8–42.4%; 52.0% UPPER and 35.6% secondary EXIT.
+
+New `tests/layers.cjs`: real pointer taps, both travel directions, no automatic traversal, transition interruption/reload, exact maps/effects, local Clues/Evil Eye, marker resolution, legacy save migration, secondary EXIT, inactive input, reduced motion and phone/landscape bounds. Existing Chest, persistence, auto-walk, Reroll, discovery, Fortune and gameplay/PWA suites are rerun. Existing graph tests now include vertical edges where testing whole-floor reachability.
+
+**Balance observation:** normal floor event generation uses two Traps once per floor after the early-floor special case, not a per-room Trap chance. It is not doubled. Existing Gate branch risk still uses its normal Trap rule. Extra rooms do increase total Monster count under the unchanged density formula, and add 12–18 finite Scavenge rolls: at the unchanged 5% Trap band, approximately 0.6–0.9 additional potential Scavenge Traps if every added room is searched. Ordinary Treasure/Shrine budgets are shared, so rewards are spread across a larger area. No encounter/reward table was rebalanced.
+
+Manual Android checks: update without reinstalling and Continue an old run; discover stairs without instructions; verify both vertical animations, legible hints, quiet background, reliable taps/holds and smooth device performance; close during either direction and Continue; revisit an Altar/Chest/Gate/marker across layers; verify item charges and once-per-floor effects; descend from secondary; repeat offline. Browser automation cannot establish real-device blur performance or whether uninstructed players understand the vertical imagery.
+
 ## V2.18.1 — Chest Placement Refinement
 
 V2.18 already used one 30% spawn roll per eligible floor, not repeated rolls per terminal. Its uniform candidate selection included START-adjacent dead ends, making Chests feel like nearby free loot.

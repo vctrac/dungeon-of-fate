@@ -26,11 +26,11 @@ try{
   const distribution={};for(let i=0;i<10000;i++){const kind=t.gateReward((i+.5)/10000,true);distribution[kind]=(distribution[kind]||0)+1}
   return{floors:1000,gates,altars,rewards,distribution};
  });assert.deepEqual(stats.distribution,{treasure:5500,rich:3500,heal:800,consumable:150,trinket:50});console.log('PASS generation',JSON.stringify(stats));
- const findGate=()=>page.evaluate(()=>{const t=__dofTest;t.newRun();for(let i=0;i<300;i++){t.setCombo(3.4);t.setFloor(3);if(t.state().fateGate?.branchIds.length===1){const g=t.state().fateGate;t.setRoomFixture(g.roomId,{event:'treasure'});t.setRoomFixture(g.parentId,{event:'empty',eventResolved:true,visited:true,searched:true});return g}}throw Error('no gate')});
+ const findGate=()=>page.evaluate(()=>{const t=__dofTest;t.newRun();for(let i=0;i<300;i++){t.setCombo(3.4);t.setFloor(3);if(t.layerInfo().layers.length===1&&t.state().fateGate?.branchIds.length===1){const g=t.state().fateGate;t.setRoomFixture(g.roomId,{event:'treasure'});t.setRoomFixture(g.parentId,{event:'empty',eventResolved:true,visited:true,searched:true});return g}}throw Error('no gate')});
  let g=await findGate();assert.equal(await page.locator('.gateRune').count(),0);
  await page.evaluate(g=>{__dofTest.markVisited([g.parentId]);__dofTest.setCurrent(g.parentId);__dofTest.setCombo(g.requirement-.01)},g);
  assert.equal(await page.locator('.gateRune').count(),1);assert((await state()).fateGate.discovered);
- const before=await state();await page.evaluate(g=>__dofTest.enter(g.roomId),g);assert.equal((await state()).currentId,g.parentId);assert.equal((await state()).relics.coinCharges,before.relics.coinCharges);assert.equal((await state()).gold,before.gold);assert.equal(await page.locator('.fateRoom.gateDenied').count(),1);
+ const before=await state();assert(await page.evaluate(g=>{__dofTest.enter(g.roomId);return !!document.querySelector('.fateRoom.gateDenied')},g));assert.equal((await state()).currentId,g.parentId);assert.equal((await state()).relics.coinCharges,before.relics.coinCharges);assert.equal((await state()).gold,before.gold);
  await page.evaluate(g=>{__dofTest.setCombo(g.requirement+1);__dofTest.setCombo(g.requirement-.01);__dofTest.enter(g.roomId)},g);assert.equal((await state()).currentId,g.parentId);assert(!(await state()).fateGate.entered);
  // Neither Clues nor existing debug teleport helper bypass the gate.
  await page.evaluate(g=>{__dofTest.revealClue(g.parentId,g.roomId);__dofTest.setCurrent(g.roomId);__dofTest.travel(g.roomId)},g);await page.waitForTimeout(230);assert.equal((await state()).currentId,g.parentId);
