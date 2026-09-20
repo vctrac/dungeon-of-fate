@@ -8,6 +8,22 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.19.1 — Layer Transition Performance & Polish
+
+Delta from HEAD `0c1f387`. No generation, encounter, movement-cost or save-schema changes.
+
+**Diagnosis:** V2.19 cloned the complete active map, rebuilt destination plus static background synchronously, and animated scale, opacity and full-container blur for 420 ms. It had no JS animation-frame loop or repeated geometry measurements in the transition itself. However, the stair-entry **340 ms arrival timer** called `update()` during that animation. `render()` removed/recreated all map children, replacing the animated nodes mid-flight. Other delayed UI updates could do the same. Its completion timer also unconditionally rebuilt the maps. Animated blur and independently animated room decorations added paint/compositing work on top of these rebuilds.
+
+**Changes:** retain/detach the actual source map rather than deep-cloning it; clear the obsolete arrival timer; build destination once during PREPARE; establish both surfaces over two requestAnimationFrame callbacks; animate only transform and opacity for the existing 420 ms/ease-out. There are no per-frame JS style updates or geometry reads. Temporary `will-change: transform, opacity` is scoped to the two map containers and removed at cleanup. Their descendant animations are paused during motion. The duplicate inactive background is hidden during travel; its existing static 3 px blur / 14% opacity / 86% scale returns afterward. Animated blur is removed.
+
+Flow: IDLE → gameplay destination/entry-effects commit + PREPARE → READY → ANIMATING → CLEANUP → IDLE. `update()/render()` requests during READY/ANIMATING coalesce into one deferred refresh after motion. Normal completion keeps the prepared destination DOM and removes the source; a deferred refresh is performed only if needed. Animation-end drives completion, backed by a 540 ms running timeout and 1,200 ms preparation watchdog. Callback identity checks, cancellation and cleanup prevent overlap/stale work. Map and item input are locked during travel. Lifecycle backgrounding cleans up visuals before flushing the existing safe snapshot. Restore/new floor cancel transient work. Reduced motion bypasses preparation/animation immediately.
+
+**Measured browser result:** `tests/layer-performance.cjs` compares all four directions with densely revealed maps, including immediate stair-entry traversal. In a headless Chromium run, baseline sampling observed 99–229 added/removed nodes and one layout pass during the transition. The optimized run observed **zero child-node mutations, zero layouts, stable source/destination identity and retained input locks** in the same interval. Main-thread task time samples were 23–52 ms baseline versus 17–32 ms optimized; these are development diagnostics, not physical-phone FPS claims. Instrumentation lives only in the test. Set `LAYER_BASELINE=/path/to/old/index.html` to run the comparison against another build.
+
+Focused tests also cover deferred redraws, rapid taps, repeated traversal, all four directions, item-input locking, lifecycle cleanup/reload and reduced motion. Existing layers, persistence, auto-walk, gameplay/offline and Reroll suites are rerun. Build/footer is V2.19.1 and asset cache is `dungeon-of-fate-v2.19.1-1`; `dof.activeRun` is untouched.
+
+Physical Android/PWA follow-up remains necessary: test both directions on UPPER and LOWER, immediately tap stairs on arrival, repeatedly switch between densely explored maps, check small/large map transitions, alignment/z-order/cleanup, rapid tapping, background/reopen and reduced motion. Confirm actual smoothness on the two devices that reproduced the issue; desktop/headless measurements cannot establish mobile GPU performance.
+
 ## V2.19 — Dungeon Layers & Stairs
 
 Delta from current HEAD `c8c6736`. A floor now owns one or two 9×9 layer grids. A layer change is ordinary traversal within the floor, never `newFloor()`.
