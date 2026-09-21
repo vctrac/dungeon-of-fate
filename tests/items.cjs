@@ -7,7 +7,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  browser=await chromium.launch({headless:true,...(process.env.PWA_BROWSER?{executablePath:process.env.PWA_BROWSER}:{})});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:'+server.address().port);const state=()=>page.evaluate(()=>__dofTest.state()),reset=()=>page.evaluate(()=>__dofTest.newRun());
- const close=()=>page.locator('#closeItem:visible, .itemChoicePanel:has(#closeItem[hidden]) #itemName').click();
+ const close=()=>page.locator('#itemChoice').click({position:{x:5,y:5}});
  const hold=async()=>{const b=await page.locator('#consumableSlot').boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.waitForTimeout(250);assert.equal(await page.locator('#consumableSlot.holding').count(),1);await page.waitForTimeout(370);await page.mouse.up()};
  const starters=await page.evaluate(()=>{const found={coin:0,ward:0};for(let i=0;i<60;i++){__dofTest.newRun();const s=__dofTest.state();if(s.cards.active||s.relics.coinCharges||s.relics.wardArmed||s.relics.trinkets.length)throw Error('starter effects');found[s.relics.consumable]++}return found});assert(starters.coin>0&&starters.ward>0);
  const held=(await state()).relics.consumable;assert.equal(await page.locator('#consumableSlot.itemAttention').count(),1);
@@ -20,13 +20,13 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  for(const id of ['doll','eye','blood']){await page.evaluate(id=>__dofTest.acquireTrinket(id),id);assert.equal((await state()).cards.active.id,id);await page.waitForSelector('#itemChoice:not([hidden])');assert(await page.locator('#itemVisual').innerText());await close()}
  assert.equal((await state()).relics.trinkets.length,3);assert.equal(await page.locator('#trinkets button').count(),3);
  const before=(await state()).currentId;await page.locator('.trinket[data-item="eye"]').tap();assert.equal((await state()).cards.active.mode,'inspect');await close();assert.equal((await state()).currentId,before);
- await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));assert((await state()).cards.active.decision);await page.waitForSelector('#itemChoice:not([hidden])');assert.equal(await page.locator('#replaceTrinkets button').count(),3);await page.waitForTimeout(1800);assert((await state()).cards.active.decision);await close();assert.deepEqual((await state()).relics.trinkets,['doll','eye','blood']);
- await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));await page.locator('.replaceTrinket[data-item="eye"]').click();assert.deepEqual((await state()).relics.trinkets,['doll','blood','horseshoe']);assert(!(await state()).rooms.some(r=>r.eyeMarked));
+ await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));assert((await state()).cards.active.decision);await page.waitForSelector('#itemChoice:not([hidden])');assert.equal(await page.locator('#replaceTrinkets input').count(),3);await page.waitForTimeout(1800);assert((await state()).cards.active.decision);await close();assert.deepEqual((await state()).relics.trinkets,['doll','eye','blood']);
+ await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));await page.locator('.replaceTrinket[data-item="eye"]').click();await page.locator('#replaceSelected').click();assert.deepEqual((await state()).relics.trinkets,['doll','blood','horseshoe']);assert(!(await state()).rooms.some(r=>r.eyeMarked));
  assert.equal(await page.evaluate(()=>__dofTest.acquireTrinket('blood')),false);
  await page.evaluate(()=>__dofTest.offerConsumable('flask'));assert((await state()).cards.active.decision);await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'flask');assert.equal((await state()).cards.active,null);
  // Queue important loot behind an unresolved battle, then behind another card.
  await reset();await page.evaluate(()=>{__dofTest.showDice('monster','basic');__dofTest.acquireTrinket('eye');__dofTest.offerConsumable('flask')});assert.equal((await state()).cards.queue.length,2);assert.equal((await state()).cards.active,null);
- await page.evaluate(()=>{__dofTest.resolveDice('monster',5);__dofTest.continueEncounter()});assert.equal((await state()).cards.active.id,'eye');const gold=(await state()).gold;await close();assert.equal((await state()).cards.active.id,'flask');await page.locator('#keepItem').click();assert.equal((await state()).pendingAction,null);assert.equal((await state()).gold,gold);
+ await page.evaluate(()=>{__dofTest.resolveDice('monster',5);__dofTest.continueEncounter()});assert.equal((await state()).cards.active.id,'eye');const gold=(await state()).gold;await close();assert.equal((await state()).cards.active.id,'flask');await page.locator('#itemChoice').click({position:{x:5,y:5}});assert.equal((await state()).pendingAction,null);assert.equal((await state()).gold,gold);
  console.log('PASS reusable cards, three-slot cap, reject/replace, duplicate prevention, and battle → loot → choice → map');
  // Actual movement pipeline: Coin does not affect its activation room, includes fifth room and Scavenge, and excludes revisits.
  await reset();await page.evaluate(()=>{__dofTest.setConsumable('coin');__dofTest.setCombo(1);__dofTest.useConsumable(true);__dofTest.resolveSimple('treasure')});assert.equal((await state()).gold,30);
@@ -71,7 +71,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
   for(const id of ['doll','blood','eye'])await page.evaluate(id=>{__dofTest.acquireTrinket(id);__dofTest.closeItemCard()},id);
   await page.evaluate(()=>__dofTest.acquireTrinket('horseshoe'));
   const layout=await page.evaluate(()=>{const p=document.querySelector('.itemChoicePanel'),r=p.getBoundingClientRect(),b=document.querySelector('#consumableSlot').getBoundingClientRect();return{inside:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,scroll:document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight,slot:b.width>=44&&b.right<=innerWidth,overflow:p.scrollHeight>p.clientHeight}});assert(layout.inside&&layout.scroll&&layout.slot);
-  await page.locator('#closeItem').scrollIntoViewIfNeeded();await close();
+  await close();
  }
  assert.deepEqual(errors,[]);console.log('PASS phone/landscape card bounds, replacement controls, no document overflow or runtime errors');
  }finally{if(browser)await browser.close();server.close()}
