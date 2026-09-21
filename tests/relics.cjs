@@ -115,10 +115,10 @@ let browser;
  s=await state();assert(s.shield);assert.equal(s.relics.consumable,null);
  // Full slot: either choice is explicit.
  await page.evaluate(()=>{giveConsumable('flask');giveConsumable('charm')});
- assert.equal((await state()).pendingAction,'item-card');await page.locator('#keepItem').click();assert.equal((await state()).relics.consumable,'flask');
+ assert.equal((await state()).pendingAction,'item-card');await page.locator('#itemChoice').click({position:{x:5,y:5}});assert.equal((await state()).relics.consumable,'flask');
  await page.evaluate(()=>giveConsumable('bargain'));await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'bargain');
  // Dangerous item requires a hold; movement/cancel and a tap do not spend it.
- await page.locator('#consumableSlot').tap();assert.equal((await state()).hp,3);await page.locator('#closeItem:visible, .itemChoicePanel:has(#closeItem[hidden]) #itemName').click();
+ await page.locator('#consumableSlot').tap();assert.equal((await state()).hp,3);await page.locator('#itemChoice').click({position:{x:5,y:5}});
  let slot=await page.locator('#consumableSlot').boundingBox();
  await page.mouse.move(slot.x+20,slot.y+20);await page.mouse.down();await page.mouse.move(slot.x+50,slot.y+20);await page.waitForTimeout(600);await page.mouse.up();
  assert.equal((await state()).relics.bargainCharges,0);

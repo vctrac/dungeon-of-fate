@@ -476,3 +476,100 @@ Manual phone playtesting remains needed for rune readability in dense/dim maps, 
 Serve this folder over HTTPS (or localhost for development), open the game, then use your browser's Install app or Add to Home Screen option. Launch the installed icon for fullscreen play where supported; other browsers fall back to their supported app display mode.
 
 After the first successful online load and service worker installation, the game can launch offline. This caches the game files, not an in-progress run. New service worker versions activate after existing game windows close. Bump the cache version in `sw.js` when changing cached files.
+
+## V2.20 — Card Framework & Codex
+
+Presentation-only migration from current V2.19.1 gameplay. No encounter tables,
+generation rules, inventory effects, movement checkpoints or reroll costs changed.
+
+### UI audit and migration
+
+| Existing presentation | V2.20 treatment |
+| --- | --- |
+| Trinket/Consumable discovery and inspection | Shared information card; existing source → item reveal retained |
+| Guardian, Thief, Spirit, Mimic | Shared persistent dice card; intro/swipe → rolling → preview → optional held Reroll |
+| Trap and Shrine | Same dice template, existing automatic roll and Ward handling |
+| Altar and Chest | Choice template; one hold exchange / OPEN action; backdrop leaves |
+| Fourth Trinket | Choice template; inventory radio selection + one REPLACE action; backdrop rejects |
+| Held Consumable replacement | Choice template; one replacement action; backdrop keeps current item |
+| Scavenge item discovery | Existing acquisition queue into shared item card |
+| Scavenge numeric results, Treasure, Clues, Gold/HP/FATE, protection procs | Existing lightweight feedback; no new cards |
+| Gate, stairs, attention markers, layers | Existing map interactions and transitions |
+| Startup/run-over | Existing utility panels; small Codex access added |
+
+`frameCard()` provides the shared outer frame, category crest, first-discovery badge
+and `data-template` (`info`, `dice`, `choice`). CSS centrally lays out regions;
+existing semantic card/encounter state and event handlers remain authoritative.
+The same encounter DOM remains throughout rolling, preview and reroll. The die
+renderer has its own region; the single Reroll control remains below the result.
+Card interiors do not dismiss. Backdrop gestures dismiss/decline or accept the
+pending result. Existing keyboard continuation and hold-to-Reroll remain.
+
+`card_frame.png` is the supplied **unchanged 880×1214 asset** (Git blob
+`3964fda67017706fbcc287183e2e5c130e5314b5`). It is a responsive portrait background,
+not baked text/art. The artwork safe window is **80% width × 48% height**, approximately
+**704×583 px (1.21:1)** at source resolution, starting at 10% x / 21% y.
+Current icons are centered inside it. Dice/action templates reclaim some artwork
+space for interaction; final artwork is not introduced. Cards use no backdrop blur.
+The frame is in the offline shell cache, now `dungeon-of-fate-v2.20-1`.
+
+### Registry and discovery
+
+`CARD_REGISTRY` records stable ID, category, display name, icon, description and
+symbolic effect. Item metadata references current item definitions rather than
+copying gameplay implementation. It contains **15 current playable entries**:
+
+- Creatures: Guardian, Thief, Spirit, Mimic.
+- Items: Voodoo Doll, Vampire's Blood, Evil Eye, Golden Horseshoe; Fortune Coin,
+  Trap Ward, Healing Flask, Divine Charm, Death's Bargain.
+- Hazards: Trap.
+- Discoveries: Shrine.
+
+Chest/Altar use shared presentation but do not inflate collection completion.
+Neither EXIT, stairs nor Gates are collectible entries.
+
+Discoveries occur at actual encounter presentation, item acquisition/presentation,
+or owned-item inspection. Starter Consumables count as acquired. Mimic unlocks
+only after opening its Chest. Generation never unlocks entries. Restoring an older
+save imports only its held/equipped items and the current pending encounter, not
+unexplored generated contents. NEW is a presentation badge, never another modal.
+
+Codex uses **`dof.codex`**, independent of `dof.activeRun` and learned UX flags:
+`{version:1, discovered:{"category:id": firstDiscoveryTimestamp}}`.
+Loading validates the container, known IDs and finite timestamps. Storage errors
+are caught with one console warning; the session collection remains usable.
+Death, New Run, save invalidation and service-worker updates never clear Codex.
+Active-run saveVersion remains **1**, without additional visual state.
+
+Access is in the existing footer and startup/result panels. Category filters and
+2–3-column miniatures keep full text out of the browser. Unknown tiles expose only
+`? / ???` and cannot open. Details are read-only, use the same frame and close via
+backdrop/Escape; no item activation or gameplay hook runs from Codex.
+
+### Verification and phone follow-up
+
+`tests/cards-codex.cjs` covers current-entry count, generation privacy, discovery,
+unknown/detail behavior, one action, card/backdrop isolation, replacement,
+meta survival across death/New Run/reload, frame asset and mobile bounds.
+Existing input assertions now use the specified backdrop acceptance/dismissal;
+Trinket replacement tests select a radio then confirm. Existing pending-result,
+held Reroll, item, Chest/Mimic, layer and movement persistence checks remain.
+
+Physical Android/PWA testing is still needed for real emoji rendering, the supplied
+frame's visual weight, outside-tap comfort, long descriptions, and repeated
+encounter → roll → result flow. Small landscape is the densest layout: descriptions
+and replacement slots merit particular review there. It keeps the die at least
+72px and action targets at least 44px, with no ordinary gameplay page scroll.
+Also test updating an installed older build without reinstalling, then force-close
+at original/final dice results and pending item replacement; verify the same run
+and independent Codex discoveries return. No device-performance claim is made
+from desktop Chromium alone.
+
+Automated verification for this patch passed: `cards-codex`, `rerolls`,
+`persistence`, `auto-walk-persistence`, `items`, `relics`, `chests`,
+`chest-placement`, `active-fate`, `discovery`, `exploration`, `layers`,
+`layers-logic`, `layer-performance`, `fortune-logic`, and `regression`.
+This includes 180 preview/commit table cases, 4,000 layer-generation cases,
+real service-worker offline reloads, and zero mid-transition DOM mutations/layout
+in the existing Chromium layer-performance probe. Browser suites use Playwright;
+set `PWA_BROWSER` to an installed Chromium executable when needed.
