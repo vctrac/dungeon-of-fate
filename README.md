@@ -573,3 +573,69 @@ This includes 180 preview/commit table cases, 4,000 layer-generation cases,
 real service-worker offline reloads, and zero mid-transition DOM mutations/layout
 in the existing Chromium layer-performance probe. Browser suites use Playwright;
 set `PWA_BROWSER` to an installed Chromium executable when needed.
+
+## V2.20.1 — Dynamic modular card frame
+
+Rendering-only follow-up to V2.20. Registry, Codex, discovery, one-action and
+backdrop rules, hold-to-Reroll, pending decisions, and save schemas are unchanged.
+
+### Supplied assets audited
+
+| Asset in `assets/` | Dimensions | Use |
+| --- | --- | --- |
+| `card_outer_frame.png` | 1038×1536 RGBA | Fixed outer overlay including its existing crest |
+| `card_artwork_frame_9slice.png` | 884×740 RGBA | Resizable aperture's CSS border-image |
+| `card_interior_texture.png` | 504×240 opaque | Textured card surface and artwork placeholder background |
+| `card_crest.png` | 264×220 RGBA | Inspected, not layered again: outer already includes crest |
+| `card_reference_transparent.png` | 1038×1536 RGBA | Reference only, not a second gameplay layer |
+| `README.txt` | — | Supplied assembly/transparency instructions |
+
+All supplied files are unchanged. Inspection found that the named outer asset
+still includes the old inner aperture border and surface. A fixed CSS polygon
+clips its center (7–93% x, 15–94% y), preserving the crest and perimeter while
+preventing a second, immovable aperture from appearing. Near-black transparency
+was derived in the supplied exports; desktop browser inspection showed no obvious
+exterior halo requiring repainting. Physical-device edge checks remain necessary.
+
+`frameCard()` creates one `.cardArtwork > .cardArtClip` pair per card and reparents
+its existing icon once. Reusing/transitioning the card never rebuilds this pair.
+The texture is behind it; a pointer-transparent outer overlay is above content.
+Cards match the new outer asset's native **1038:1536** silhouette without stretching.
+Codex miniatures retain the cheaper V2.20 flattened image; full details use modules.
+
+- Large aperture: **80% card width × 46% height**, x=10%, y=21%; used by information,
+  item, Codex detail and Monster introduction. At source scale: ~830×707 (~1.17:1).
+- Dice compact aperture: **80% × 13%**, same origin. Existing removal of
+  `awaiting-swipe` contracts it as the roll starts; Trap/Shrine start compact.
+- Choice aperture: **80% × 22%**. At viewport heights ≤480px it uses **14% height**,
+  y=19%, to prioritize replacement options.
+- Border-image: **80 source pixels per side**, no center fill, `stretch` edges;
+  displayed corner/border thickness `clamp(12px,5cqw,21px)` (12px in short layouts,
+  10px for short dice layouts). Thickness is independent of aperture height.
+- Only aperture height transitions, **180ms ease-out**, with contained local
+  layout. No JS animation loop, geometry reads, filters or full-card reflow.
+  Reduced motion disables this transition. Image/video art uses `object-fit:cover`
+  and clipping; current icons retain their proportions.
+- The existing die stays at least 72px. Reroll is anchored 7% above the card bottom;
+  no second action is introduced. Short-landscape choices get ≥60px selection
+  rows, a distinct selected border and a separate ≥44px confirmation target.
+
+New `tests/modular-cards.cjs` verifies stable outer bounds, large/compact sizes,
+unchanged slice/corner width and DOM nodes, die space, information/Codex art,
+landscape selection/confirmation separation and reduced motion at 320×568,
+390×844 and 844×390. V2.20 tests only change build/cache and frame assertions.
+The three runtime modules are precached in `dungeon-of-fate-v2.20.1-1`;
+`dof.activeRun` and `dof.codex` are never cleared.
+
+Phone follow-up: inspect large item/intro art, swipe contraction, result/Reroll,
+Codex detail and landscape replacements; watch for texture seams, transparency
+halos, corner distortion, cropping and frame clipping. Confirm installed-PWA
+update/offline behavior and retained run/Codex data. Desktop checks cannot certify
+physical-device animation smoothness.
+
+Verification: all 16 V2.20 targeted suites plus `modular-cards` passed (17 suites),
+including 180 preview/commit encounter cases, 4,000 generated multilayer floors,
+Codex discovery/storage, replacement decisions, pending dice and movement saves,
+real offline service-worker launch and the unchanged layer-performance probe.
+Screenshot review covered portrait and landscape; no ordinary card scrolling or
+runtime errors were observed in these checks.
