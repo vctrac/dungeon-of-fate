@@ -639,3 +639,63 @@ Codex discovery/storage, replacement decisions, pending dice and movement saves,
 real offline service-worker launch and the unchanged layer-performance probe.
 Screenshot review covered portrait and landscape; no ordinary card scrolling or
 runtime errors were observed in these checks.
+
+## V2.20.2 — Encounter resolution layout & hold-to-open
+
+The V2.20.1 aperture was being compressed to fit the die, preview and action
+inside the same physical card. Encounter resolution now occupies a separate
+sibling region, while the modular card remains intact.
+
+- `#encounterTransform` wraps the existing physical `.encounterPanel`;
+  `#encounterResolution` owns the existing die, result, consequence, Reroll and
+  continuation hint. These nodes are not reconstructed on phase changes.
+- Every new dice encounter reveals a full centered card with a **46%-height**
+  artwork aperture. Monsters retain swipe initiation. Trap/Shrine keep this
+  reveal for **600 ms** before their automatic roll; Ward still disarms before
+  a die decision. Reserved gameplay outcomes are generated/saved exactly as before.
+- Resolution translates/scales the entire wrapper upward over **220 ms ease-out**.
+  Only transform animates; resolution opacity takes **160 ms**. There is no blur
+  or frame-by-frame layout code. Reduced motion disables both transitions.
+- Layout samples viewport, safe-area padding, HUD bottom and resolution height on
+  showing/resizing the encounter and presenting a preview. Top clearance is the
+  greater of safe-area padding and HUD bottom +8px. Reduced card height is capped
+  at 62% of its full height and 280px, then limited by available resolution space.
+  It leaves 10px between card and resolution, reserving at least 300px in portrait
+  or 210px on short screens, or measured resolution height +16px if larger.
+- Die size is **104px**, **80px** at viewport heights ≤480px, and **72px** at
+  heights ≤360px. Actions stay ≥44px. At the shortest landscape size the card
+  becomes a small identity thumbnail so resolution remains readable and reachable.
+- Pending previews and final rerolls restore directly in resolution presentation.
+  Rerolls keep the reduced card in place. Card touches remain isolated; tapping
+  the surrounding resolution/backdrop accepts the shown pending result. The held
+  Reroll control consumes its own input and never accepts the rejected outcome.
+- Item, discovery, Codex and action templates keep their existing centered modular
+  composition and type-specific dynamic artwork sizes. No tilt is implemented;
+  the whole-card wrapper leaves a clean transform boundary for future rotation.
+
+Chest OPEN now requires **650 ms**, using the same `animateDecisionHold` progress
+helper, `--charge` ring styling and duration as Reroll. Tap, early release, movement
+outside the button or >14px, cancellation, focus loss, multi-touch, backgrounding
+and reset cancel progress. Enter/Space support the same held interaction. The
+existing `openChest()` committed transaction is called only on completion; content,
+loot, inventory and Mimic behavior are unchanged. Canceled input does not dismiss
+or reach the backdrop. No partial hold is saved. Existing reload semantics remain:
+an unopened discovered Chest stays available on the map for intentional reopening.
+
+Focused tests in `modular-cards` and `chests` cover full Trap/Shrine reveal,
+proportional upward transforms, stable artwork/frame nodes, separate resolution,
+320×568 / 390×844 / 844×390 / 568×320 layouts, hold cancellation, multi-touch,
+keyboard activation, lifecycle interruption, one-time rewards and Mimic rerolls.
+Existing Codex/Reroll tests use the relocated resolution surface and current build.
+Cache is `dungeon-of-fate-v2.20.2-1`; active-run schema 1 and `dof.codex` are unchanged.
+
+Physical phone follow-up: full reveal → upward movement, Trap/Shrine recognition,
+long consequence wrapping, Reroll reachability, short-landscape thumbnail clarity,
+rapid Chest touch/cancel/hold, installed-PWA update, and force-close before/after
+opening or rerolling. Desktop screenshots/tests cannot certify device smoothness.
+
+Automated result: all 17 targeted suites passed, including 180 encounter
+preview/commit cases, 4,000 generated multilayer floors, pending dice and Reroll
+reloads, inventory decisions, Codex storage, per-hop auto-walk persistence, Chest
+hold/reward safety, layer performance and actual service-worker offline launch.
+No runtime errors were observed in these runs.
