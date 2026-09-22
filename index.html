@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.20 — Card Framework & Codex</title>
+<title>Dungeon of Fate V2.20.1 — Card Framework & Codex</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -343,6 +343,27 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @media(max-height:480px){.worldCard #itemDescription,.worldCard #codexDescription{font-size:10px}.worldCard #itemState{display:none}.worldCard[data-template=choice] #itemDescription{display:none}.worldCard #replaceTrinkets{top:59%}.worldCard #replaceSelected,.worldCard #consumableChoices,.worldCard #chestOpen{top:82%}.worldCard #altarOffer{top:65%}.worldCard .rerollSlot{top:82%}.worldCard #diceResult{top:64%}.worldCard #diceDetail{top:71%}.worldCard #diceDetail .outcome{font-size:18px}.worldCard #rerollButton{height:44px;min-height:44px}.worldCard .diceTitle{font-size:10px}}
 
 .worldCard:focus,.worldCard .eventCard:focus{outline:none}.worldCard .eventCard:focus-visible{outline:1px solid #aa926344}
+/* V2.20.1: fixed silhouette, real independently sized artwork aperture. */
+.worldCard{aspect-ratio:1038/1536;width:min(88vw,420px,calc((100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*1038/1536))!important;background:none!important;isolation:isolate}
+.worldCard::before{content:"";position:absolute;inset:9% 4% 4%;border-radius:8%;background:url('./assets/card_interior_texture.png') center/cover;z-index:-1;pointer-events:none}
+.worldCard::after{content:"";position:absolute;inset:0;background:url('./assets/card_outer_frame.png') center/100% 100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 0,7% 15%,7% 94%,93% 94%,93% 15%,7% 15%,0 0);z-index:5;pointer-events:none}
+.worldCard .cardCrest{top:5.5%;z-index:6}.worldCard .cardNew{z-index:4}
+.cardArtwork{position:absolute;left:10%;top:21%;width:80%;height:46%;box-sizing:border-box;border:clamp(12px,5cqw,21px) solid transparent;border-image:url('./assets/card_artwork_frame_9slice.png') 80 / 1 / 0 stretch;transition:height 180ms ease-out;contain:layout;pointer-events:none}
+.cardArtClip{position:absolute;inset:0;overflow:hidden;display:grid;place-items:center;border-radius:3%;background:url('./assets/card_interior_texture.png') center/cover}
+.cardArtClip img,.cardArtClip video{display:block;width:100%;height:100%;object-fit:cover}
+.worldCard .cardArtwork #itemArt,.worldCard .cardArtwork #codexArt,.worldCard .cardArtwork #eventArt{position:relative;inset:auto;width:auto;height:auto;margin:0;font-size:24cqw;line-height:1;display:grid;place-items:center;filter:none}
+.worldCard[data-template=dice] .cardArtwork{height:13%}.worldCard[data-template=dice] .cardArtwork #eventArt{font-size:8cqw}.awaiting-swipe .worldCard[data-template=dice] .cardArtwork{height:46%}.awaiting-swipe .worldCard[data-template=dice] .cardArtwork #eventArt{font-size:28cqw}
+.worldCard[data-template=choice] .cardArtwork{height:22%}.worldCard[data-template=choice] .cardArtwork #itemArt{font-size:16cqw}
+.worldCard .eventCard{z-index:2;pointer-events:none}.worldCard .eventCard:focus-visible{outline:none}.worldCard .swipeCue{z-index:3}.worldCard .eventCard.mimic~.cardArtwork #eventArt{font-size:10cqw}
+@media(max-height:480px){.worldCard[data-template=choice] .cardArtwork{height:12%}.worldCard[data-template=choice] .cardArtwork #itemArt{font-size:10cqw}.worldCard[data-template=choice] #itemName{top:35%;font-size:15px}.worldCard[data-template=choice] #itemVisual{top:42%;font-size:12px!important}.worldCard #replaceTrinkets{top:53%}.worldCard #replaceTrinkets label{min-height:60px;padding:3px;box-sizing:border-box}.worldCard #replaceTrinkets span{font-size:10px}.worldCard #replaceSelected{top:82%}.worldCard #altarOffer{top:61%}.worldCard[data-template=dice] .cardArtwork{height:13%;border-width:10px}.worldCard .cardArtwork{border-width:12px}}
+@media(prefers-reduced-motion:reduce){.cardArtwork{transition:none}}
+@media(max-height:480px){.worldCard[data-template=choice] #itemReason{top:15%;width:62%;font-size:8px;letter-spacing:1px}.worldCard[data-template=choice] .cardNew{top:14%;font-size:8px}}
+
+/* Keep text/actions inside the fixed outer overlay's safe interior. */
+#diceOverlay:not(.awaiting-swipe) .worldCard .diceTitle{top:14%}
+.worldCard .rerollSlot{top:auto;bottom:7%;height:52px}
+.worldCard #itemState{top:91%}
+@media(max-height:480px){.worldCard .rerollSlot{height:44px}.worldCard[data-template=choice] .cardArtwork{top:19%;height:14%}.worldCard[data-template=choice] .cardArtwork #itemArt{font-size:8cqw}}
 </style>
 </head>
 <body>
@@ -509,6 +530,8 @@ function loadCodex(){try{var raw=localStorage.getItem(CODEX_KEY);if(!raw)return;
 function discoverCard(id){if(!CARD_REGISTRY[id]||Object.prototype.hasOwnProperty.call(codexState.discovered,id))return false;codexState.discovered[id]=Date.now();try{localStorage.setItem(CODEX_KEY,JSON.stringify(codexState))}catch(e){codexWarning()}return true}
 function frameCard(panel,template,category,fresh){
  panel.classList.add("worldCard");panel.dataset.template=template;
+ // Create once; subsequent state changes only resize this presentation container.
+ var artwork=panel.querySelector(".cardArtwork");if(!artwork){artwork=document.createElement("div");artwork.className="cardArtwork";var clip=document.createElement("div");clip.className="cardArtClip";var art=panel.querySelector("#itemArt,#codexArt,#eventArt");if(art)clip.appendChild(art);artwork.appendChild(clip);panel.appendChild(artwork)}
  var crest=panel.querySelector(".cardCrest");if(!crest){crest=document.createElement("div");crest.className="cardCrest";panel.appendChild(crest)}
  crest.textContent=CARD_CATEGORIES[category].icon;crest.setAttribute("aria-label",CARD_CATEGORIES[category].name);
  var badge=panel.querySelector(".cardNew");if(!badge){badge=document.createElement("span");badge.className="cardNew";badge.textContent="NEW";panel.appendChild(badge)}badge.hidden=!fresh;
@@ -1613,7 +1636,7 @@ function render(){
 function update(){if(layerVisual&&layerVisual.phase!=="prepare"){layerVisual.dirty=true;return}$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.20";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.20.1";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
