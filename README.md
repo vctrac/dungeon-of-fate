@@ -699,3 +699,34 @@ preview/commit cases, 4,000 generated multilayer floors, pending dice and Reroll
 reloads, inventory decisions, Codex storage, per-hop auto-walk persistence, Chest
 hold/reward safety, layer performance and actual service-worker offline launch.
 No runtime errors were observed in these runs.
+
+### V2.20.3 — Shrine distribution and Death screen
+
+- `shrineAllowed` enforces one Shrine per layer during ordinary assignment,
+  Fortune candidate selection, and Gate reward selection. Previously a natural
+  Shrine, a Fortune bonus, and a separate Gate floor limit could overlap on one
+  layer. Fortune still has its existing one-bonus-per-floor limit and budget;
+  blocked Gate Shrine rewards use the existing Treasure fallback.
+- Fortune candidates and Gate reward-room candidates prefer a different x/y
+  from the other layer's Shrine, with a fallback when no alternative exists.
+- This is a cap, with no new fill pass or spawn roll. Audit caveat: the existing
+  ordinary event list includes one Shrine whenever enough candidates exist.
+  Normal generated floors therefore still have that natural Shrine; making
+  zero-Shrine normal floors probabilistic would require a separate spawn-rule
+  change. Empty layers and undersized candidate sets receive no forced Shrine.
+- Removed only the Death-screen Codex entry. Footer/start access and meta storage
+  remain intact. V2.20.2 encounter layout and hold interactions are untouched.
+- Save schema remains 1. Previously generated floors (including multiple Shrines
+  on a layer) remain valid and are never normalized on restore. Cache updates
+  affect assets only, not active-run or Codex storage.
+- Focused coverage: 4,000 seeded floors across eight depths at low/high FATE,
+  layer caps, Fortune/Gate fallback, coordinate preference/fallback, no fill
+  quota, legacy save validation, Death → New Run and Codex survival.
+- Physical-device follow-up: update without reinstalling, Continue an old run,
+  explore new single/multilayer floors, then verify Death → New Run and normal
+  Codex access. Confirm encounter/Reroll and Chest hold presentation remains as
+  in V2.20.2.
+- Validation result: all 19 suites passed (the 17 existing targeted suites,
+  browser Fortune checks, and the new Shrine fixture suite). Discovery's
+  timing-sensitive 240 ms hold-ring assertion failed once under concurrent
+  browser load and passed unchanged on retry. `git diff --check` passed.

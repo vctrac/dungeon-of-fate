@@ -5,12 +5,15 @@ const el=()=>({style:{setProperty(){},removeProperty(){}},classList:{add(){},rem
 const nodes={},context=vm.createContext({console,document:{querySelectorAll(){return []},getElementById:id=>nodes[id]||(nodes[id]=el()),addEventListener(){}},window:{addEventListener(){}},localStorage:{getItem(){return null},setItem(){},removeItem(){}},setTimeout(){return 1},clearTimeout(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},performance:{now:()=>0}});
 const checks=String.raw`
 function check(v,m){if(!v)throw Error(m)}
-const random=Math.random,stats=[];let upper=0,secondaryExit=0,multi=0,secondaryContent=new Set();
+const random=Math.random,stats=[];let pairedShrines=0,emptyLayers=0,upper=0,secondaryExit=0,multi=0,secondaryContent=new Set();
 for(const depth of [1,2,3,5,6,10,11,25]){
  let count=0;for(let seed=1;seed<=500;seed++){
   let n=seed+depth*10000;Math.random=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296};
-  floorNo=depth;newFloor(false,"");const saved=serializeRun();
+  combo=seed%2?1:10;floorNo=depth;newFloor(false,"");const saved=serializeRun();
   check(validateSave(saved),'generated save depth '+depth+' seed '+seed);
+  const shrines=rooms.filter(r=>r.active&&r.event==='heal');
+  layers.forEach(l=>{const n=shrines.filter(r=>r.layerId===l.id).length;check(n<=1,'Shrine cap at depth '+depth+' seed '+seed);if(!n)emptyLayers++});
+  if(shrines.length===2)pairedShrines++;
   check(layers.length<=2&&activeLayer===0&&layerOf(startId)===0,'base/max layers');
   check(normalReachableWithoutGate(),'combined reachable without Gate');
   check(rooms.filter(r=>r.event==='chest').length<=1&&rooms.filter(r=>r.event==='altar').length<=1,'floor special caps');
@@ -36,6 +39,7 @@ for(const depth of [1,2,3,5,6,10,11,25]){
  }
  const rate=count/500;check(Math.abs(rate-layerChance(depth))<.065,'layer probability');stats.push({depth,rate});
 }
+check(pairedShrines>0&&emptyLayers>0,"two Shrines possible; empty layers allowed");
 Math.random=random;check(Math.abs(upper/multi-.5)<.065&&Math.abs(secondaryExit/multi-.35)<.065,'direction/EXIT odds');check(secondaryContent.has('monster')&&secondaryContent.has('trap')&&secondaryContent.has('chest')&&secondaryContent.has('altar'),'ordinary secondary content');
 console.log('PASS 4,000 floors, schema, topology, caps, size, stairs, fog, local paths; odds',stats,{multi,upper:upper/multi,secondaryExit:secondaryExit/multi});
 `;
