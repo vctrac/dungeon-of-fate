@@ -26,7 +26,7 @@ module.exports=()=>{
    seed(i);t.setCombo(7);t.generateDungeon();const b=state();check(b.fortuneUpgrades.filter(u=>u.to==='heal').length<=1,'one bonus shrine');check(b.floorFortune===7&&b.fortuneBudget<=5&&b.fortuneUpgrades.length<=3,'cap/snapshot');
    const normal=s=>s.rooms.filter(r=>!s.fateGate||!s.fateGate.branchIds.includes(r.id)).filter(r=>r.active).map(r=>[r.id,r.links.filter(id=>!s.fateGate||!s.fateGate.branchIds.includes(id))]);check(JSON.stringify(normal(a))===JSON.stringify(normal(b)),'topology');
    check(a.exitId===b.exitId&&a.startId===b.startId,'endpoints');
-   for(const r of a.rooms)if(['monster','trap'].includes(r.event)&&(!a.fateGate||!a.fateGate.branchIds.includes(r.id)))check(b.rooms[r.id].event===r.event,'danger');
+   for(const r of a.rooms)if(['monster','trap','spikes','mosquitoes','spores','stones'].includes(r.event)&&(!a.fateGate||!a.fateGate.branchIds.includes(r.id)))check(b.rooms[r.id].event===r.event,'danger');
    for(const u of b.fortuneUpgrades){check(b.rooms[u.id].active&&u.id!==b.exitId&&u.id!==b.startId,'placement');if(u.to==='rich')rich++}
    low+=a.rooms.filter(r=>r.active&&['heal','treasure','rich'].includes(r.event)).length;high+=b.rooms.filter(r=>r.active&&['heal','treasure','rich'].includes(r.event)).length;
    signatures.add(b.fortuneUpgrades.map(u=>u.to).join(','));const snapshot=JSON.stringify(b.rooms);t.setCombo(100);check(JSON.stringify(state().rooms)===snapshot,'immutable floor');
@@ -64,7 +64,7 @@ module.exports=()=>{
     t.setFloor(floor);let s=state();
     for(const r of s.rooms.filter(r=>r.active&&r.id!==s.startId&&r.id!==s.exitId&&(!s.fateGate||!s.fateGate.branchIds.includes(r.id)))){
      t.setCurrent(r.id);t.setVitals(3,true);
-     if(['monster','trap','heal'].includes(r.event)){t.setMonster(r.monsterKind||'basic');t.resolveDice(r.event,5);t.clearPending()}
+     if(['monster','trap','heal','spikes','mosquitoes','spores','stones'].includes(r.event)){t.setMonster(r.monsterKind||'basic');t.resolveDice(r.event,5);t.clearPending()}
      else t.resolveSimple(r.event);
      t.setRoomEvent(r.id,r.event);t.scavenge(r.id,.55);t.clearPending();
     }

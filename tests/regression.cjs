@@ -24,7 +24,7 @@ let browser;
  const state=()=>page.evaluate(()=>__dofTest.state());
  const clear=()=>page.evaluate(()=>{__dofTest.clearPending();__dofTest.clearFeedback()});
  await page.goto(url);await page.waitForTimeout(400);
- assert.match(await page.title(),/V2\.20/);assert.equal((await state()).hp,3);
+ assert.match(await page.title(),/V2\.21/);assert.equal((await state()).hp,3);
  assert(await page.locator('.cell').count()>1);assert.match(await page.locator('#hp').innerText(),/❤️/);
  assert(await page.locator('#gold').innerText());assert.equal(await page.locator('.current').count(),1);
  console.log('PASS startup and PWA metadata');
@@ -67,11 +67,11 @@ let browser;
  await page.waitForTimeout(250);
  s=await state();let clued=s.rooms.find(r=>r.clued);assert(clued&&clued.known&&!clued.searched);
  assert(await page.locator('.clue-reveal .clueRing').count());assert(await page.locator('.roomFeedback[data-room-id="'+clued.id+'"]').count());
- for(const [event,tendency] of [['monster','danger'],['trap','danger'],['treasure','fortune'],['rich','fortune'],['key','fortune'],['heal','safe'],['empty','safe']]){
+ for(const [event,tendency] of [['monster','danger'],['spikes','danger'],['mosquitoes','danger'],['spores','danger'],['stones','danger'],['trap','danger'],['treasure','fortune'],['rich','fortune'],['key','fortune'],['heal','safe'],['empty','safe']]){
   await page.evaluate(()=>__dofTest.newFloor());
-  // Generated rooms include each normal event; find the requested event instead of mutating production logic.
+  // Explicit fixtures: Hazard variety intentionally does not guarantee every event per floor.
   const ids=await page.evaluate(event=>{
-   const s=__dofTest.state(),r=s.rooms.find(r=>r.active&&!r.searched&&r.id!==s.exitId&&r.event===event);
+   const s=__dofTest.state(),r=s.rooms.find(r=>r.active&&!r.searched&&r.id!==s.exitId&&r.event===event)||s.rooms.find(r=>r.active&&!r.searched&&r.id!==s.exitId&&r.event==='empty');if(r)__dofTest.setRoomFixture(r.id,{event});
    if(!r)return null;__dofTest.revealClue(s.currentId,r.id);return{id:r.id,hint:r.hint};
   },event);
   assert(ids,'No '+event+' fixture');await page.waitForTimeout(260);
@@ -201,7 +201,7 @@ let browser;
  await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await context.setOffline(true);await page.goto(url+'index.html');if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();assert(await page.locator('.current').count());
- assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.20.3-1'))),true);
+ assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.21-1'))),true);
  await page.goto(url);if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();assert(await page.locator('.current').count());
  await context.setOffline(false);
  assert.deepEqual(errors,[]);

@@ -17,7 +17,7 @@ for(const depth of [1,2,3,5,6,10,11,25]){
   check(layers.length<=2&&activeLayer===0&&layerOf(startId)===0,'base/max layers');
   check(normalReachableWithoutGate(),'combined reachable without Gate');
   check(rooms.filter(r=>r.event==='chest').length<=1&&rooms.filter(r=>r.event==='altar').length<=1,'floor special caps');
-  if(depth>1)check(rooms.filter(r=>r.active&&r.event==='trap'&&!inGateBranch(r.id)).length===2,'fixed ordinary Trap budget');
+  if(depth>1)check(rooms.filter(r=>r.active&&HAZARD_POOL.includes(r.event)&&!inGateBranch(r.id)).length===2,'fixed ordinary Hazard budget');
   check(floorEconomy.bonusShrines<=1&&fortuneBudget<=5,'Fortune once per floor');
   const stairs=rooms.filter(r=>r.event==='stairs');check(stairs.length===(layers.length===2?2:0),'stairs');
   if(layers.length===2){
@@ -40,7 +40,7 @@ for(const depth of [1,2,3,5,6,10,11,25]){
  const rate=count/500;check(Math.abs(rate-layerChance(depth))<.065,'layer probability');stats.push({depth,rate});
 }
 check(pairedShrines>0&&emptyLayers>0,"two Shrines possible; empty layers allowed");
-Math.random=random;check(Math.abs(upper/multi-.5)<.065&&Math.abs(secondaryExit/multi-.35)<.065,'direction/EXIT odds');check(secondaryContent.has('monster')&&secondaryContent.has('trap')&&secondaryContent.has('chest')&&secondaryContent.has('altar'),'ordinary secondary content');
+Math.random=random;check(Math.abs(upper/multi-.5)<.065&&Math.abs(secondaryExit/multi-.35)<.065,'direction/EXIT odds');check(secondaryContent.has('monster')&&HAZARD_POOL.some(id=>secondaryContent.has(id))&&secondaryContent.has('chest')&&secondaryContent.has('altar'),'ordinary secondary content');
 console.log('PASS 4,000 floors, schema, topology, caps, size, stairs, fog, local paths; odds',stats,{multi,upper:upper/multi,secondaryExit:secondaryExit/multi});
 `;
 let script=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];

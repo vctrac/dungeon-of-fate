@@ -730,3 +730,158 @@ No runtime errors were observed in these runs.
   browser Fortune checks, and the new Shrine fixture suite). Discovery's
   timing-sensitive 240 ms hold-ring assertion failed once under concurrent
   browser load and passed unchanged on retry. `git diff --check` passed.
+
+### V2.21 — Hazards, Discoveries & Temporary Conditions
+
+**Architecture audit.** The existing single-page game uses a floor-wide event
+list (including two ordinary Traps), followed by monster scaling, Fortune,
+Gate/Altar additions, Chest placement and finite Scavenge facts. Layer rooms
+share one indexed room array and floor state. `beginRoomEffects` is called by
+manual entries, each committed auto-walk hop, and stairs. Explicit encounters
+reserve a die result, preview consequences, then commit through the existing
+protection/reward wrapper. Cards have a semantic queue; Archive metadata lives
+separately in `dof.codex`. V2.21 extends these paths rather than replacing them.
+
+**Ordinary Hazards.** The two ordinary Trap slots now select distinct entries
+from a shuffled pool: Spikes, Mosquito Swarm, Rotten Spores, Falling Stones.
+The floor-1 near-START danger special case is preserved: when it selects danger
+instead of a Monster it adds a third, different Hazard, just as it previously
+added an extra Trap. The budget remains per floor, not per layer. Gate branches
+retain their separate generic Trap risk (computed from the replaced ordinary
+danger budget); Scavenge retains its generic Trap result. Generic Trap has no
+playable Archive entry, but its resolver and protection plumbing remain.
+
+All four Hazards share d6 Fate changes: 1–2 = −1, 3–4 = −0.5, 5–6 = base +0.2
+through the normal diminishing-gain helper. No new roll-six Fate bonus.
+Spikes deals one incoming Heart on 1–2 and Slowed on 1–4; Mosquitoes never
+hurt Hearts; Spores applies Sickness on 1–4 and Slowed additionally on 1–2;
+Stones deals one incoming Heart on 1–2 and Amnesia on 1–4. All use the existing
+full encounter reveal and separate die/result/Reroll region.
+
+Content metadata (`CONTENT`) is independent of x/y, links, layers or future
+room silhouettes. Semantic tags distinguish traps from swarm/environmental
+hazards. Armed Trap Ward discovers and presents Spikes, then visibly disarms
+it and consumes the Ward without generating a die result. Other new Hazards
+leave Ward armed. Individual consequences remain separate fields in
+`contentOutcome`, allowing future consequence-specific prevention.
+
+**Discoveries.** One floor-wide count roll selects 0 / 1 / 2 with probabilities
+10% / 20% / 70%, capped by available ordinary empty rooms. Weighted sampling
+without replacement uses Corpse/Food = 4 each; Garden/Monolith/Flower = 2.5 each;
+Picture/Hole = 1 each. Generation occurs after existing special content and
+Scavenge opportunity generation; START, EXIT, stairs, Gate branch/entry parent,
+and all nonempty/special rooms are excluded. Nothing is guaranteed, no pity
+counter exists, and generation never unlocks Archive entries.
+
+The requested individual encounter intervals cannot all fit a two-per-floor
+cap while the common entries remain more frequent. Cap and relative rarity
+therefore take priority. Across 4,000 seeded floors, observed placements per
+floor were: Food .372, Corpse .341, Flower .230, Monolith .228, Garden .222,
+Hole .104, Picture .098. These are placements, not guaranteed player encounters.
+
+First entry presents a Discovery; subsequent traversal is quiet. Tapping the
+current room reopens a remaining landmark. Garden REST repeatedly clears all
+conditions without healing. Food cures Sickness first, otherwise heals one
+Heart, and stays uneaten at full healthy HP. Flower grants diminishing Fate
+and is consumed. Picture and Monolith are atmospheric, action-free cards.
+Corpse SEARCH and Hole REACH INSIDE use the existing one-Reroll pipeline and
+resolve permanently when any result is accepted. Corpse supplies use the
+existing Consumable acquisition/replacement flow. Hole's initial card does
+not reveal its table. Accepted Hole rolls 1–2 commit the small Fate loss and
+chain a Wasps informational card; Wasps unlocks when that card is presented,
+not when generated or previewed. It has no independent spawn or second roll.
+
+**Initial tuning (`CONTENT_TUNING`).**
+
+| Value | Initial setting |
+|---|---:|
+| Condition duration / refresh | 5 completed movements |
+| Slowed multiplier | ×1.8 |
+| Slowed arrival / normal arrival | 504 / 280 ms |
+| Slowed auto-walk / normal hop | 270 / 150 ms |
+| Corpse rolls 3–4 Gold | base 12 |
+| Hole rolls 1–2 Fate loss | 0.2 |
+| Hole roll 5 Gold | base 10 |
+| Hole roll 6 Gold / Fate gain | base 25 / base +0.2 |
+| Flower Fate gain | base +0.5 |
+
+Gold uses existing reward/Fortune Coin multipliers. Positive Fate uses existing
+precision, remainder and diminishing returns. Existing perfect-roll hooks
+apply to accepted new explicit encounter rolls; rejected previews grant none.
+
+**Conditions and damage ordering.** `conditions` holds remaining movement
+counts; same-condition application refreshes rather than adds, and different
+conditions coexist. Each completed manual movement, visited-room hop, auto-walk
+hop and stair traversal decrements once, before resolving the destination's
+new encounter. A newly inflicted condition therefore starts at five. Waiting,
+UI, dice and floor descent do not decrement; descent does not clear conditions.
+Slowed lengthens arrival animation and prevents another immediate manual entry
+until that animation completes. Its timing is transient and not saved.
+
+Sickness doubles the next incoming HP hit and is consumed when it amplifies
+that hit, even if Bargain or Shield subsequently prevents it. Ordering remains
+Bargain → Shield → lethal Doll rescue, preserving the unused protection below
+it. Preview mirrors this without mutating any resource, condition or item.
+Lethal HP is clamped to zero so a doubled hit at one Heart remains a valid
+pending save and cannot break HUD rendering. Sacrificial item costs are not
+incoming encounter damage.
+
+Amnesia keeps a separate `rememberedRooms` presentation mask. Actual known,
+visited, searched, resolved, connections, hints and pathfinding data are never
+erased. Current/revisited rooms remain visible; adjacent forgotten rooms are
+neutral `?` navigation targets without remembered contents. Remaining knowledge
+returns on expiry or cure. The mask resets to the new START on floor descent
+while the condition keeps its remaining count. A compact icon/count row displays
+all three conditions without movement-by-movement popup spam.
+
+**Archive and saves.** There are 26 playable entries: the existing items,
+creatures and Shrine, plus five new Hazards (including triggered Wasps) and
+seven Discoveries; generic Trap is retired and conditions are not collectibles.
+Player-facing wording is ARCHIVE; internal names/storage remain `dof.codex`.
+The larger collection uses non-overlapping scrollable grid rows. Discovery is
+on encounter/presentation and survives death/New Run/reload.
+
+Save schema stays 1 with small optional fields: `run.conditions`,
+`run.rememberedRooms`, room `contentState {seen,resolved,consumed}`, semantic
+content cards, expanded encounter types, and a reserved `rewardItem` for pending
+Corpse rolls. Corpse item selection is reserved alongside each generated die,
+including the paid final roll. No animation or hold progress is saved. Existing
+atomic hop/encounter commits include condition counts; restore never reapplies
+entry effects. Old absent fields default empty, with no migration framework or
+intentional Archive wipe. V2.21 cache refresh does not touch either storage key.
+
+**Validation and Android follow-up.** New `content-logic.cjs` and `content.cjs`
+cover generation, every Hazard face, protection ordering, condition countdown,
+Discovery actions, replacement/Wasps chains, per-hop/stair persistence, original
+and final Reroll saves, and small portrait/landscape layout. Existing generation,
+hint and Archive tests now recognize ordinary Hazard replacement and 26 entries;
+Reroll comparisons include the structured conditions field.
+
+Physical-device checklist:
+- Hazard full reveal → card moves upward → readable die and all pending conditions;
+  hold Reroll, reject original conditions, and inspect final result.
+- Condition icons/counts fit the HUD; compare Slowed manual movement and auto-walk;
+  count five completed movements including revisits and both stair directions.
+- Deliberately repeat stairs to burn duration: judge whether this feels exploitable.
+- Descend with conditions and force-close; confirm durations survive unchanged.
+- Amnesia hides old knowledge but permits navigation; revisit rooms and watch
+  knowledge return on the fifth movement or Garden REST.
+- Return to Garden repeatedly; test Food while Sick, injured, and healthy/full.
+- Decline Corpse/Hole and return; test supplies replacement and surprise Wasps chain.
+- First-ever Spikes with Ward must unlock Archive, show Spikes, then visibly disarm.
+- Persistent/consumed Discovery landmarks remain readable on both layers.
+- Force-close during original and rerolled Hazard/Corpse/Hole dice, and during
+  Wasps/supplies presentation: preserve results, rewards, costs and conditions.
+- Update installed Android PWA without reinstalling; verify V2.21, Archive survival,
+  Continue and offline launch. Check actual device emoji rendering and touch targets.
+
+Validation result: all 21 executable suites pass (the existing 19 plus the two
+V2.21 suites), including offline launch, layer performance, Shrine caps,
+legacy Trap/Scavenge, and 180 existing encounter preview/commit cases. Two
+4,000-floor suites cover layer safety and new content generation. Browser
+coverage includes rejected original conditions, accepted bad final rolls,
+first-ever Ward-protected Spikes discovery, a lethal amplified pending save,
+five-hop expiry and five reciprocal stair traversals. Viewports checked:
+320×568, 390×844 and 844×390. `git diff --check` passes. Headless screenshots
+verify frame/control geometry; physical Android emoji and motion remain manual
+checks. No physical-device test is claimed.
