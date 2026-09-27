@@ -2,7 +2,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 const el=()=>({style:{setProperty(){},removeProperty(){}},classList:{add(){},remove(){},toggle(){}},addEventListener(){},setAttribute(){},focus(){},remove(){},textContent:'',children:[]});
-const nodes={},context=vm.createContext({console,document:{querySelectorAll(){return []},getElementById:id=>nodes[id]||(nodes[id]=el()),addEventListener(){}},window:{addEventListener(){}},localStorage:{getItem(){return null},setItem(){},removeItem(){}},setTimeout(){return 1},clearTimeout(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},performance:{now:()=>0}});
+const nodes={},context=vm.createContext({console,document:{body:el(),querySelectorAll(){return []},getElementById:id=>nodes[id]||(nodes[id]=el()),addEventListener(){}},window:{addEventListener(){}},localStorage:{getItem(){return null},setItem(){},removeItem(){}},setTimeout(){return 1},clearTimeout(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},performance:{now:()=>0}});
 const checks=String.raw`
 function check(v,m){if(!v)throw Error(m)}
 function fixture(){startId=0;exitId=3;fateGate=null;rooms=Array.from({length:N},(_,id)=>({id,x:id%W,y:Math.floor(id/W),active:false,event:'empty',links:[]}));for(const [a,b] of [[0,1],[0,9],[1,2],[2,3],[1,10],[10,19],[2,11],[11,20],[20,29],[20,21],[21,30]]){rooms[a].active=rooms[b].active=true;rooms[a].links.push(b);rooms[b].links.push(a)}}
