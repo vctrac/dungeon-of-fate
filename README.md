@@ -8,6 +8,93 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.21.1 — Playtest Refinement & Death Conclusion
+
+Focused delta from completed V2.21 (`c1d1c5a`). No new content, generation changes,
+condition rules, dice balance, card framework or death résumé redesign.
+
+- **Slowed:** centralized multiplier is **2.0**. Normal arrival stays 280 ms;
+  Slowed arrival/manual movement guard is 560 ms. Ordinary auto-walk hops stay
+  150 ms, or 300 ms while Slowed (existing attention pauses are also multiplied).
+  Five completed movements, refresh, stairs and cross-floor behavior are unchanged.
+- **Amnesia:** the authoritative remembered-room mask commits with the accepted
+  encounter. After result dismissal, a transient snapshot of the previously
+  presented map fades farthest graph-distance rooms first, current room excluded.
+  Steps are **60 ms**, with a 50 ms opacity fade. More than 20 rooms use small
+  batches, keeping the whole effect at most **1,260 ms**. No per-step map rebuilds,
+  geometry reads or animated blur. Movement/item input is locked for the wipe.
+  Prior frontier concealment is preserved; no world `known`, `visited`, links,
+  event or condition duration is modified. Reduced motion skips the effect;
+  backgrounding/restore cancels it and renders the committed memory mask.
+- **Archive audit:** restore **Trap** in Hazards; add **Altar of Fate** and the
+  additionally missing **Treasure Chest** in Discoveries. Total: **29** entries.
+  Their actual encounter/card hooks discover them, never floor generation.
+  Mimic and triggered Wasps already had entries. All implemented items,
+  creatures, Hazards, Discoveries and Shrine are covered. Navigation, conditions,
+  dice results, routine loot feedback and replacement UI remain noncollectible.
+  Generic Trap remains absent from ordinary generation; Scavenge/Gate plumbing
+  remains intact. Metadata stays in `dof.codex`, separate from active runs.
+- **Shared card action shelf:** action/replacement controls now have 11% bottom
+  clearance, instead of extending below their old 86% top anchor. Altar already
+  had a higher shelf and retains it. Frame/art proportions, resolution layout,
+  backdrop behavior and all hold durations are unchanged.
+- **Fortune Coin:** `thiefTheft()` multiplies the existing rounded percentage
+  theft by the same `roomGoldMultiplier()` as rewards (currently ×2), capped at
+  carried Gold. Both preview and commit use it, and the consequence identifies
+  amplified theft. Charges/entry eligibility are unchanged. This is scoped to
+  Thieves; no generic negative-Gold multiplier was introduced. Coin description
+  now explains the downside.
+- **Dropped Consumables:** replacing a held Consumable writes its ID to the
+  current room's optional `droppedConsumable` field. The normal single-action
+  Item Card exchanges it with the held slot; an empty held slot simply picks it
+  up. A small marker appears on remembered visited rooms. Entry/auto-walk never
+  auto-opens it. Tap the current room/marker to inspect; when a landmark or
+  stairs shares the room, its central icon still operates that room feature.
+  There is no pile: if another ground item already occupies the room, a fresh
+  acquisition cannot replace the held item there. Its card explains the occupied
+  space and may be declined. Existing ground-item exchanges remain available;
+  nothing on the ground is silently overwritten.
+- **Death:** after the existing lethal-result beat and all protection/rescue
+  checks, the final map remains with **YOU DIED / Touch anywhere to continue**.
+  Functional HUD, help and effects hide; final actual Trinket/Consumable icons
+  retain their positions but are disabled/inert. A **300 ms** guard plus a fresh
+  primary pointer-down/up/click prevents the lethal input skipping this state.
+  Fresh Enter/Space also continues. No timeout advances it. Continue opens the
+  unchanged résumé; Voodoo Doll rescues never enter this state. Active-run
+  invalidation still occurs at lethal commit, before presentation, so closing
+  here cannot resurrect the run.
+
+**Persistence:** `saveVersion: 1` remains. Room snapshots include the optional
+`droppedConsumable` ID. Pending Item Cards accept semantic `mode: "pickup"` with
+`sourceRoomId`, validated against the exact room item and current position.
+Held/drop exchange commits atomically. New floors naturally discard old room
+items. Wipe timers and death-conclusion input are not saved. Existing V2.21
+active saves remain readable. Neither `dof.activeRun` nor `dof.codex` is cleared
+by the PWA cache update (`dungeon-of-fate-v2.21.1-1`).
+
+**Verification:** `tests/refinement.cjs` covers actual Scavenge discovery,
+Altar/Chest encounter-only discovery, exchange/reload/occupied-room safety,
+feature coexistence, auto-walk, Fortune preview/commit/Reroll, progressive memory
+and input safety, responsive action clearance, death input/restore and Doll.
+Existing Archive/version/count/timing assertions were updated intentionally;
+VM DOM mocks now include the body used by conclusion presentation. The existing
+death-layout test now acknowledges the conclusion before checking résumé bounds.
+All **22 executable suites pass**, including 4,000-floor content generation,
+Shrine caps, Chests, layers, cards, conditions, Rerolls, items, auto-walk, active-run
+persistence and actual service-worker offline launch. Browser runs used headless
+Chromium; emoji glyph coverage there is limited, so physical-device icon rendering
+is still a manual check. No production assets are repainted.
+
+**Android/PWA checks:** feel Slowed on manual travel and auto-walk; watch Amnesia
+far-to-near wipe, revisit/expiry and force-close during it; inspect the three
+Archive additions; check long action cards and Chest/Reroll holds in small
+portrait/landscape; compare Coin-active Thief preview and accepted/final theft;
+swap room items, revisit across layers, reload and descend; test ground items
+sharing stairs/landmarks; die with different final inventories, wait at the
+conclusion, then continue; confirm Doll rescue and dead-run restart. Update the
+installed PWA without reinstalling and verify offline launch. Real-device motion,
+emoji readability and touch comfort still require physical testing.
+
 ## V2.19.1 — Layer Transition Performance & Polish
 
 Delta from HEAD `0c1f387`. No generation, encounter, movement-cost or save-schema changes.

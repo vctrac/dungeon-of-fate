@@ -27,7 +27,7 @@ try{
  for(const type of ['trap','monster']){
   await page.evaluate(type=>{const t=__dofTest;t.newRun();t.setVitals(1,false);t.showDice(type);t.resolveDice(type,1);t.continueEncounter();t.resolveDice(type,1)},type);
   let s=await state();assert.equal(s.hp,0);assert(s.deathPending&&!s.gameOver);assert.equal(s.causeOfDeath.type,type);assert.equal(s.diceOverlay,'flex');assert.equal(s.overlay,'none');
-  await page.waitForTimeout(500);assert.equal((await state()).overlay,'none');await page.waitForFunction(()=>__dofTest.state().gameOver);assert.equal(await page.locator('#deathCause').innerText(),type==='trap'?'⚠ TRAP':'👹 MONSTER');assert.equal((await state()).hp,0);
+  await page.waitForTimeout(500);assert.equal((await state()).overlay,'none');await page.waitForFunction(()=>__dofTest.state().gameOver);assert.equal(await page.locator('#deathCause').innerText(),type==='trap'?'⚠ TRAP':'👹 MONSTER');assert.equal((await state()).hp,0);assert(await page.locator('#deathConclusion').isVisible());await page.waitForTimeout(350);await page.locator('#deathConclusion').tap();
   for(const size of [{width:320,height:568},{width:844,height:390}]){await page.setViewportSize(size);const box=await page.locator('#overlay .panel').boundingBox();assert(box.y>=0&&box.y+box.height<=size.height);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight))}await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:'/tmp/dof-death-'+type+'.png'});
  }
