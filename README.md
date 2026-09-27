@@ -10,13 +10,19 @@ https://vctrac.github.io/dungeon-of-fate/
 
 ## V2.21.1 — Playtest Refinement & Death Conclusion
 
-Focused delta from completed V2.21 (`c1d1c5a`). No new content, generation changes,
-condition rules, dice balance, card framework or death résumé redesign.
+Focused delta from completed V2.21 (`c1d1c5a`). Follow-up tuning and a Fruit Tree retheme; no new inventory slots, event pools,
+dice balance, card framework or death résumé redesign.
 
-- **Slowed:** centralized multiplier is **2.0**. Normal arrival stays 280 ms;
-  Slowed arrival/manual movement guard is 560 ms. Ordinary auto-walk hops stay
-  150 ms, or 300 ms while Slowed (existing attention pauses are also multiplied).
-  Five completed movements, refresh, stairs and cross-floor behavior are unchanged.
+- **Slowed:** centralized multiplier is **4.0**. Normal arrival stays 280 ms;
+  Slowed arrival/manual movement guard is 1,120 ms. Ordinary auto-walk hops stay
+  150 ms, or 600 ms while Slowed (existing attention pauses are also multiplied).
+  The auto-walk arrival pulse is 180 → 720 ms; its more-specific CSS previously
+  overrode the general arrival duration and kept this feedback at normal speed.
+  All three conditions now start/refresh at **10 completed movements** (⑩ → ①).
+  Countdown semantics, stairs and cross-floor behavior are unchanged. Cards, dice,
+  holds and the Amnesia wipe keep their normal timing. Sickness can still clear
+  early on damage; Garden clears all conditions. Preview, HUD and validation use
+  the centralized `CONTENT_TUNING.conditionMoves`.
 - **Amnesia:** the authoritative remembered-room mask commits with the accepted
   encounter. After result dismissal, a transient snapshot of the previously
   presented map fades farthest graph-distance rooms first, current room excluded.
@@ -44,16 +50,31 @@ condition rules, dice balance, card framework or death résumé redesign.
   amplified theft. Charges/entry eligibility are unchanged. This is scoped to
   Thieves; no generic negative-Gold multiplier was introduced. Coin description
   now explains the downside.
-- **Dropped Consumables:** replacing a held Consumable writes its ID to the
-  current room's optional `droppedConsumable` field. The normal single-action
-  Item Card exchanges it with the held slot; an empty held slot simply picks it
-  up. A small marker appears on remembered visited rooms. Entry/auto-walk never
-  auto-opens it. Tap the current room/marker to inspect; when a landmark or
-  stairs shares the room, its central icon still operates that room feature.
-  There is no pile: if another ground item already occupies the room, a fresh
-  acquisition cannot replace the held item there. Its card explains the occupied
-  space and may be declined. Existing ground-item exchanges remain available;
-  nothing on the ground is silently overwritten.
+- **Loose Consumables (corrected acquisition):** the previous replacement card
+  retained an occupied-slot reward only until dismissal, so declining lost it.
+  The centralized `offerConsumable()` now places the **new** item in the room's
+  optional `droppedConsumable` field before presenting its normal Item Card.
+  Empty held slots still acquire normally. Corpse SUPPLIES, Chest rewards and
+  duplicate-Trinket fallback, Scavenge discoveries, Gate rewards/fallback all
+  share this path. The starter is assigned only to a fresh, empty inventory.
+  Room event/content state is never replaced: searched Corpse + loose Flask is
+  durable. Dismissal leaves it there. A current-room tap prioritizes the loose
+  item, then actionable/persistent content, then normal behavior. The previous
+  special central-icon bypass was removed to honor this priority consistently.
+  Once the loose item is removed, normal room interaction becomes available.
+  A single explicit exchange action swaps held/ground IDs atomically; with an
+  empty held slot, it takes the ground item and clears the room field.
+  Markers follow visited/fog/Amnesia/active-layer presentation; traversal never
+  auto-opens them or interrupts auto-walk. Items remain floor-local.
+  **Capacity conflict:** one held + one loose item cannot accept a third.
+  Corpse SEARCH, Chest OPEN and Scavenge check space before rolling/opening or
+  consuming their source; occupied rooms show “Take or use the loose item first.”
+  This avoids reward loss, item piles and revealing hidden Chest contents via
+  action availability. Gate item resolution also retains its source if blocked.
+- **Fruit Tree:** the former Food Discovery is now **🌳 Fruit Tree**, with edible
+  fruit wording. Internal `food` / `discovery:food` IDs, rarity, state and Archive
+  discovery remain. Sickness cure has priority over +1 Heart; healthy/full Hearts
+  leave the fruit untouched. Successful benefit consumes/resolves the fruit.
 - **Death:** after the existing lethal-result beat and all protection/rescue
   checks, the final map remains with **YOU DIED / Touch anywhere to continue**.
   Functional HUD, help and effects hide; final actual Trinket/Consumable icons
@@ -70,7 +91,7 @@ condition rules, dice balance, card framework or death résumé redesign.
 Held/drop exchange commits atomically. New floors naturally discard old room
 items. Wipe timers and death-conclusion input are not saved. Existing V2.21
 active saves remain readable. Neither `dof.activeRun` nor `dof.codex` is cleared
-by the PWA cache update (`dungeon-of-fate-v2.21.1-1`).
+by the PWA cache update (`dungeon-of-fate-v2.21.1-2`).
 
 **Verification:** `tests/refinement.cjs` covers actual Scavenge discovery,
 Altar/Chest encounter-only discovery, exchange/reload/occupied-room safety,
@@ -79,7 +100,9 @@ and input safety, responsive action clearance, death input/restore and Doll.
 Existing Archive/version/count/timing assertions were updated intentionally;
 VM DOM mocks now include the body used by conclusion presentation. The existing
 death-layout test now acknowledges the conclusion before checking résumé bounds.
-All **22 executable suites pass**, including 4,000-floor content generation,
+The follow-up adds `tests/loose-consumables.cjs` for real reward paths, persistent
+Corpse/item coexistence, exchanges, capacity and marker privacy. Condition tests
+now cover ten hops/stair movements and 4× timing. All **23 executable suites pass**, including 4,000-floor content generation,
 Shrine caps, Chests, layers, cards, conditions, Rerolls, items, auto-walk, active-run
 persistence and actual service-worker offline launch. Browser runs used headless
 Chromium; emoji glyph coverage there is limited, so physical-device icon rendering
@@ -89,8 +112,9 @@ is still a manual check. No production assets are repainted.
 far-to-near wipe, revisit/expiry and force-close during it; inspect the three
 Archive additions; check long action cards and Chest/Reroll holds in small
 portrait/landscape; compare Coin-active Thief preview and accepted/final theft;
-swap room items, revisit across layers, reload and descend; test ground items
-sharing stairs/landmarks; die with different final inventories, wait at the
+dismiss Corpse SUPPLIES and return, exchange room items, revisit across layers,
+reload and descend; test loose-item priority over stairs/landmarks and blocked
+reward searches while both slots are occupied; check Fruit Tree cure/heal/no-waste; die with different final inventories, wait at the
 conclusion, then continue; confirm Doll rescue and dead-run restart. Update the
 installed PWA without reinstalling and verify offline launch. Real-device motion,
 emoji readability and touch comfort still require physical testing.
