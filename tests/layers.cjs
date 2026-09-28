@@ -51,7 +51,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  // Phone bounds and inactive-input layout, including a stair at the edge.
  await fixture('lower');await page.locator('#activeMap .current').tap();await page.waitForTimeout(450);
  for(const viewport of [{width:320,height:568},{width:390,height:844},{width:844,height:390}]){
-  await page.setViewportSize(viewport);const b=await page.locator('#activeMap .stairLabel').boundingBox(),board=await page.locator('#board').boundingBox();assert(b.x>=board.x&&b.x+b.width<=board.x+board.width);assert(b.y>=board.y&&b.y+b.height<=board.y+board.height);
+  await page.setViewportSize(viewport);await page.waitForFunction(()=>{const m=document.getElementById("activeMap"),b=document.getElementById("board");return m&&m.roomMetrics.width===b.clientWidth&&m.roomMetrics.height===b.clientHeight});const b=await page.locator('#activeMap .stairLabel').boundingBox(),board=await page.locator('#board').boundingBox();assert(b.x>=board.x&&b.x+b.width<=board.x+board.width);assert(b.y>=board.y&&b.y+b.height<=board.y+board.height);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/dof-layers.png'});await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#activeMap .current').tap();assert.equal(await page.locator('.layerGhost').count(),0);assert.equal(await page.evaluate(()=>__dofTest.layerInfo().transition),false);assert.equal(await page.locator('#activeMap').evaluate(el=>el.inert),false);assert.deepEqual(errors,[]);
  console.log('PASS legacy exact topology/resources, secondary EXIT, mobile bounds, no runtime errors');

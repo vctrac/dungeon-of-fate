@@ -8,6 +8,72 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.22 — Room Shapes
+
+Ordinary chambers now have four small abstract silhouettes, independent of their
+content: Square, Rectangle, Round and Chamfered. No textures, room-size classes,
+new content or topology changes. The existing Archive/Consumable footer overlap
+fix is already included and remains unchanged.
+
+### Geometry and generation
+
+`ROOM_SHAPES` centralizes topology-weighted selection (percentages):
+
+| Connections | Square | Rectangle | Round | Chamfered |
+|---|---:|---:|---:|---:|
+| Terminal | 45 | 10 | 10 | 35 |
+| Two opposite | 20 | 55 | 15 | 10 |
+| Two corner | 35 | 10 | 20 | 35 |
+| Three | 25 | 10 | 40 | 25 |
+| Four | 20 | 5 | 50 | 25 |
+
+`assignRoomShapes()` runs after floor content/branch generation. A stable hash of
+floor number and topology selects `{kind, orientation}` without consuming any
+gameplay RNG or consulting event identity. Horizontal/vertical connections choose
+the rectangle's dominant axis; ties use a stable hash. Room snapshots persist the
+shape directly. Older rooms without the optional field use a deterministic fallback;
+no save schema bump, run clearing or Archive changes are needed.
+
+`roomGeometry()` supplies shared centers, silhouette bounds and separate touch
+bounds for both layers. Square/Round/Chamfered span 7.2% of the smaller map dimension;
+Rectangle uses 1.15 × 0.85 of that span (1.35:1 ratio). Existing room centers and
+spacing stay fixed. Round uses a circular border; Chamfered clips 25% corners and
+uses a small SVG outline. Existing CSS fills, state colors and lighting remain
+separate from geometry, ready for a future clipped material without adding any now.
+
+Thin cardinal connections end at the displayed silhouette's axis boundary. The
+renderer measures the board once per render, never per animation frame. Touch
+regions are rectangular, aiming for 44 px but capped two pixels below grid spacing
+to avoid stealing neighboring input on narrow phones. Icons and loose-item markers
+are outside the silhouette clip. This deliberately favors clean small silhouettes
+over filling tall portrait grid cells with oversized chambers.
+
+Unsearched/frontier and Amnesia-hidden rooms use a neutral square, including their
+connection endpoints; actual shape is shown only for remembered searched rooms.
+Invisible rooms remain absent. Both layers use the same geometry, with the existing
+inactive-layer dimming and input isolation. Shapes never affect pathfinding,
+movement completion, room content, loose objects or visibility state.
+
+Visible light travel is unchanged: **220 ms normal, 2.5× / 550 ms Slowed**. No new
+movement delays or per-frame DOM reconstruction. Version is V2.22; service-worker
+cache is `dungeon-of-fate-v2.22-1`.
+
+### Verification and phone playtest
+
+`tests/room-shapes.cjs` covers topology weights, all four shapes, content-independent
+selection, a frozen comparison of 200 seeded pre-shape floors, all 16 moving-light
+shape pairs, unchanged countdown/timing, save/reload and reciprocal layers,
+frontier/Amnesia privacy, corridor joins and non-overlapping targets at 320×568,
+390×844 and 844×390. Existing gameplay, persistence, HUD, card, item, layer and PWA
+suites pass: **26 existing suites plus the new Room Shapes suite**. Run browser suites with `PWA_BROWSER` pointing to a
+Chromium executable when the default Playwright browser is unavailable.
+
+On an Android PWA, check silhouette readability on a narrow portrait screen,
+recognizable icons/loose objects and frontier `?`, thin corridors, comfortable
+room taps, moving light across each shape, Slowed/auto-walk, Amnesia restore,
+both layer directions, orientation changes, saved appearance, and update/offline
+launch. Physical-device smoothness and touch comfort still need playtesting.
+
 ## V2.21.1 — Playtest Refinement & Death Conclusion
 
 Focused delta from completed V2.21 (`c1d1c5a`). Follow-up tuning and a Fruit Tree retheme; no new inventory slots, event pools,
