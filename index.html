@@ -404,6 +404,10 @@ body.death-conclusion #hint,body.death-conclusion #effectLayer,body.death-conclu
 body.death-conclusion #relicBar{pointer-events:none}body.death-conclusion .trinket.empty,body.death-conclusion #consumableSlot.empty{visibility:hidden}body.death-conclusion .itemAttention{animation:none}
 body.death-conclusion #board .tutorialGesture,body.death-conclusion #board .stairLabel{display:none}
 @media(prefers-reduced-motion:reduce){.memoryForgotten{transition:none}}
+/* The current light travels as one pool; cells keep the existing falloff values. */
+.travelLight{position:absolute;left:0;top:0;z-index:20;border-radius:50%;pointer-events:none;background:radial-gradient(circle,#fff4c4 0,#f4d68baa 32%,#d9a94f44 65%,transparent 75%);box-shadow:0 0 18px #ffd579dd,0 0 42px #d9a94f88,0 0 72px #c58a3044;will-change:transform}
+.lightTravel .cell,.lightTravel .floor{transition:none!important;animation:none!important}
+.lightTravel .currentGlyph{visibility:hidden}
 </style>
 </head>
 <body>
@@ -431,7 +435,7 @@ var W=9,H=9,LAYER_CELLS=W*H,N=LAYER_CELLS,layers=[{id:0,type:"base",height:0}],a
 // V2.15: serializable floor snapshot; never consulted by dice RNG.
 var fateGate=null,altarRoom=null;
 var travelHopTimer=null,travelSerial=0,deathTimer=null,deathPending=false,causeOfDeath=null;
-var AUTO_WALK_MS=150,ATTENTION_WALK_MS=400,LETHAL_BEAT_MS=1000;
+var ATTENTION_WALK_MS=400,LETHAL_BEAT_MS=1000;
 var HOLD_VISUAL_DELAY_MS=200,ITEM_REVEAL_MS=650,itemRevealTimer=null,itemRevealCard=null,mapRenderPending=false;
 var floorFortune=1,fortuneBudget=0,fortuneUpgrades=[],floorEconomy=null,fateGainRemainder=0;
 function setFate(value,kind,silent){
@@ -566,7 +570,7 @@ var ITEM_VISUALS={eye:"? → 👁",blood:"👹 ✓ → ♥   1× / floor",horses
 
 var CARD_CATEGORIES={creatures:{name:"CREATURES",icon:"👁"},items:{name:"ITEMS",icon:"✧"},hazards:{name:"HAZARDS",icon:"⚠"},discoveries:{name:"DISCOVERIES",icon:"✦"}};
 // Content metadata is independent of physical room topology and future silhouettes.
-var CONTENT_TUNING={conditionMoves:10,slowMultiplier:4,corpseGold:12,holeLoss:.2,holeGold:10,holeLuckyGold:25,holeLuckyFate:.2,flowerFate:.5,discoveryCounts:[.10,.20,.70]};
+var CONTENT_TUNING={conditionMoves:10,slowMultiplier:2.5,corpseGold:12,holeLoss:.2,holeGold:10,holeLuckyGold:25,holeLuckyFate:.2,flowerFate:.5,discoveryCounts:[.10,.20,.70]};
 var CONTENT={
  spikes:{category:"hazards",name:"Spikes",icon:"🗡️",tags:["trap"],dice:true,description:"A treacherous bed of sharpened points."},
  mosquitoes:{category:"hazards",name:"Mosquito Swarm",icon:"🦟",tags:["swarm"],dice:true,description:"A hungry cloud with no respect for personal space."},
@@ -582,7 +586,8 @@ var CONTENT={
  hole:{category:"discoveries",name:"Hole in the Wall",icon:"🕳️",weight:1,action:"REACH INSIDE",dice:true,description:"You can't see what's inside."}
 };
 var HAZARD_POOL=["spikes","mosquitoes","spores","stones"],CONDITIONS={slowed:{icon:"🐌",name:"Slowed"},sickness:{icon:"🤢",name:"Sick"},amnesia:{icon:"🧠",name:"Amnesia"}};
-var conditions={},rememberedRooms={},movementUntil=0,lastMoveMultiplier=1;
+var conditions={},rememberedRooms={};
+var NORMAL_MOVE_DURATION=220,roomTravel=null;
 var MEMORY_WIPE_STEP_MS=60,MEMORY_WIPE_MAX_STEPS=20,memoryWipe=null;
 function contentCardId(id){return (CONTENT[id].category==="hazards"?"hazard:":"discovery:")+id}
 function isContentDice(type){return !!(CONTENT[type]&&CONTENT[type].dice)}
@@ -620,7 +625,7 @@ function startMemoryWipe(){
 function clearConditions(){cancelMemoryWipe();conditions={};rememberedRooms={}}
 function movementMultiplier(){return conditions.slowed?CONTENT_TUNING.slowMultiplier:1}
 function moveConditions(id){
- lastMoveMultiplier=movementMultiplier();
+
  Object.keys(conditions).forEach(function(k){if(--conditions[k]<=0)delete conditions[k]});
  if(conditions.amnesia)rememberedRooms[id]=true;else rememberedRooms={};
 }
@@ -1235,7 +1240,13 @@ function hintForRoom(r,distance){
  return{tendency:r.hint,strength:Math.max(0,Math.min(1,strength)),exactEvent:nearby?r.exactHint:null}
 }
 function revealNeighbors(id){room(id).links.forEach(function(n){room(n).known=true});discoverGate();if(relicState.trinkets.indexOf("eye")>=0)identifyMonsters()}
-function knownDistance(id){if(id===currentId)return 0;var dist={},q=[currentId];dist[currentId]=0;for(var k=0;k<q.length;k++)room(q[k]).links.forEach(function(n){if(!room(n).known||dist[n]!==undefined)return;dist[n]=dist[room(q[k]).id]+1;q.push(n)});return dist[id]===undefined?6:dist[id]}
+function knownDistances(from){var dist={},q=[from];dist[from]=0;for(var k=0;k<q.length;k++)room(q[k]).links.forEach(function(n){if(!room(n).known||dist[n]!==undefined)return;dist[n]=dist[q[k]]+1;q.push(n)});return dist}
+function knownDistance(id){var d=knownDistances(currentId);return d[id]===undefined?6:d[id]}
+function lightAtDistance(d){
+ var opacity=[1,.94,.66,.46,.40,.34,.28],saturation=[1.08,1,.72,.48],brightness=[1.25,1.13,.92,.66];
+ function blend(values){var i=Math.min(Math.floor(d),values.length-1),j=Math.min(i+1,values.length-1);return values[i]+(values[j]-values[i])*(d-i)}
+ return{opacity:d>=3?Math.max(.27,.46-(d-3)*.06):blend(opacity),saturation:blend(saturation),brightness:blend(brightness)}
+}
 function routeDistance(id){var best=999;for(var i=0;i<history.length;i++)if(history[i]===id)best=Math.min(best,history.length-1-i);return best<999?best:knownDistance(id)}
 
 var combatReady=null,combatPointer=null,continuePointer=null,encounterSerial=0;
@@ -1289,9 +1300,9 @@ $("eventCard").addEventListener("keydown",function(e){
  if((e.key==="Enter"||e.key===" ")&&!e.repeat){e.preventDefault();if(combatReady)commitCombat(1,0);else if(encounterResolved)continueEncounter()}
 });
 
-function beginRun(){resetDeathConclusion();clearConditions();movementUntil=0;cancelChestHold();closeCodex();codexFresh={};hideReroll();pendingEncounter=null;startupSave=null;cancelItemReveal();clearTimeout(deathTimer);clearTimeout(travelHopTimer);clearTimeout(fastTravelTimer);travelSerial++;deathPending=false;causeOfDeath=null;cancelAltarHold();cardPointer=null;cancelSlotGesture();cardState={queue:[],active:null};slotSuppressClick=false;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();relicState.consumable=Math.random()<.5?"coin":"ward";relicState.starterItem=relicState.consumable;relicState.starterInspected=false;discoverCard("consumable:"+relicState.consumable);encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;setFate(1,"reset",true);floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
-function newFloor(first,announcement){cancelMemoryWipe();lastMoveMultiplier=movementMultiplier();finishLayerVisual(false);cancelSlotGesture();clearFeedback();relicState.floorUsed={};relicState.bargainRoom=null;relicState.coinRoom=null;generateDungeon();currentId=startId;rememberedRooms={};if(conditions.amnesia)rememberedRooms[startId]=true;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;emitEffect("onFloorStart",{floor:floorNo});updateContext(announcement||"");update();markArrival(startId)}
-function markArrival(id){$("board").style.setProperty("--travel-arrival-ms",(180*lastMoveMultiplier)+"ms");$("board").style.setProperty("--arrival-ms",(280*lastMoveMultiplier)+"ms");arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340*lastMoveMultiplier)}
+function beginRun(){cancelRoomTravel();resetDeathConclusion();clearConditions();cancelChestHold();closeCodex();codexFresh={};hideReroll();pendingEncounter=null;startupSave=null;cancelItemReveal();clearTimeout(deathTimer);clearTimeout(travelHopTimer);clearTimeout(fastTravelTimer);travelSerial++;deathPending=false;causeOfDeath=null;cancelAltarHold();cardPointer=null;cancelSlotGesture();cardState={queue:[],active:null};slotSuppressClick=false;encounterSerial++;combatReady=null;combatPointer=null;continuePointer=null;encounterResolved=false;encounterCloseAction=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved","awaiting-swipe");relicState=freshRelicState();relicState.consumable=Math.random()<.5?"coin":"ward";relicState.starterItem=relicState.consumable;relicState.starterInspected=false;discoverCard("consumable:"+relicState.consumable);encounterMonster="basic";$("itemChoice").hidden=true;$("effectNotices").textContent="";hp=3;shield=false;gold=0;score=0;setFate(1,"reset",true);floorNo=1;gameOver=false;history=[];searched={};totalMoves=0;perfectFloors=0;pendingAction=null;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;$("overlay").style.display="none";newFloor(true,"")}
+function newFloor(first,announcement){cancelRoomTravel();cancelMemoryWipe();finishLayerVisual(false);cancelSlotGesture();clearFeedback();relicState.floorUsed={};relicState.bargainRoom=null;relicState.coinRoom=null;generateDungeon();currentId=startId;rememberedRooms={};if(conditions.amnesia)rememberedRooms[startId]=true;arrivalId=startId;history=[startId];room(startId).known=true;room(startId).visited=true;room(startId).searched=true;searched[startId]=true;revealNeighbors(startId);floorDamage=0;floorPerfectAwarded=false;fastTravelTimer=null;fastTravelTarget=null;fastTraveling=false;holdAction=null;emitEffect("onFloorStart",{floor:floorNo});updateContext(announcement||"");update();markArrival(startId)}
+function markArrival(id){$("board").style.setProperty("--travel-arrival-ms","180ms");$("board").style.setProperty("--arrival-ms","280ms");arrivalId=id;if(arrivalTimer)clearTimeout(arrivalTimer);arrivalTimer=setTimeout(function(){arrivalId=null;update()},340)}
 
 function usefulFastTravelExists(){return rooms.some(function(r){return r.visited&&r.id!==currentId&&room(currentId).links.indexOf(r.id)<0&&shortestVisitedPath(currentId,r.id)})}
 function updateContext(temporary){
@@ -1477,12 +1488,43 @@ function previewCurrentAction(id){
  fastTravelTimer=setTimeout(function(){fastTravelTimer=null;if(fastTravelTarget!==id||holdAction!==action)return;fastTravelTarget=null;holdAction=null;if(target){target.classList.remove("fast-target","fast-charge");target.style.removeProperty("--charge")}if(action==="descend")descend();else scavenge(id)},hold);
  return true
 }
+// A travel animation owns only presentation. Its callback is the atomic arrival boundary.
+function cancelRoomTravel(){
+ var t=roomTravel;if(!t)return;roomTravel=null;cancelAnimationFrame(t.frame);t.light.remove();t.map.classList.remove("lightTravel");$("board").inert=false;if(pendingAction==="room-travel")pendingAction=null
+}
+function startRoomTravel(id,onArrival){
+ if(roomTravel||pendingAction||gameOver||layerTransition||document.visibilityState==="hidden")return false;
+ if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){committed(onArrival)();return true}
+ var map=$("activeMap"),source=room(currentId),target=room(id),rect=map.getBoundingClientRect();
+ var from=knownDistances(source.id),to=knownDistances(id),light=document.createElement("div");light.className="travelLight";light.setAttribute("aria-hidden","true");
+ var x=(source.x/W*100+5.3)*rect.width/100,y=(source.y/H*100+5.3)*rect.height/100,dx=(target.x-source.x)/W*rect.width,dy=(target.y-source.y)/H*rect.height;
+ var t={from:source.id,to:id,duration:NORMAL_MOVE_DURATION*movementMultiplier(),started:performance.now(),progress:0,frame:null,map:map,light:light,world:rooms};
+ var cells=Array.from(map.querySelectorAll(".cell")).map(function(el){return{el:el,floor:el.querySelector(".floor"),room:presentedRoom(room(+el.dataset.id)),a:from[el.dataset.id]===undefined?6:from[el.dataset.id],b:to[el.dataset.id]===undefined?6:to[el.dataset.id]}});
+ roomTravel=t;pendingAction="room-travel";clearTimeout(arrivalTimer);arrivalId=null;cancelSlotGesture();clearFastPreview();$("board").inert=true;updateRelicHUD();
+ map.classList.add("lightTravel");var current=map.querySelector(".current");if(current)current.classList.remove("current");light.style.width=light.style.height=Math.max(18,rect.width*.045)+"px";map.appendChild(light);
+ function paint(p){
+  t.progress=p;light.style.transform="translate3d("+(x+dx*p)+"px,"+(y+dy*p)+"px,0) translate(-50%,-50%)";
+  cells.forEach(function(c){var l=lightAtDistance(Math.min(c.a+p,c.b+1-p));
+   c.el.style.setProperty("--room-opacity",l.opacity);c.el.style.setProperty("--room-saturation",l.saturation);
+   if(!c.room.searched){c.el.style.setProperty("--frontier-floor-opacity",l.opacity);c.el.style.setProperty("--frontier-brightness",l.brightness)}
+   else if(!c.el.classList.contains("landmark")){c.el.style.opacity=l.opacity;c.el.style.filter="saturate("+l.saturation+")"}
+   c.floor.style.filter="brightness("+l.brightness+")";
+  })
+ }
+ paint(0);
+ function frame(now){
+  if(roomTravel!==t)return;
+  if(document.visibilityState==="hidden"){flushLifecycleRun();return}
+  var p=Math.min(1,(now-t.started)/t.duration);paint(p);
+  if(p<1){t.frame=requestAnimationFrame(frame);return}
+  cancelRoomTravel();if(rooms===t.world&&currentId===t.from&&!gameOver)committed(onArrival)()
+ }
+ t.frame=requestAnimationFrame(frame);return true
+}
 function startFastTravel(id){
- if(codexOpen||layerTransition||layerOf(id)!==activeLayer||document.visibilityState==="hidden"||gameOver||pendingAction||fastTraveling||id===currentId)return;
- var path=shortestVisitedPath(currentId,id);
- if(!path||path.length<2){clearFastPreview();return}
+ if(roomTravel||codexOpen||layerTransition||layerOf(id)!==activeLayer||document.visibilityState==="hidden"||gameOver||pendingAction||fastTraveling||id===currentId)return;
+ var path=shortestVisitedPath(currentId,id);if(!path||path.length<2){clearFastPreview();return}
  clearFastPreview();fastTraveling=true;var serial=++travelSerial,step=1;
- // Information already visible at departure never adds a delay.
  rooms.forEach(function(r){if(r.attentionActive)r.attentionEmphasized=true});
  function hop(){
   if(serial!==travelSerial||!fastTraveling||gameOver)return;
@@ -1490,18 +1532,23 @@ function startFastTravel(id){
   if(step>=path.length){fastTraveling=false;update();learn("learnedFastTravel");updateContext();return}
   var next=path[step],r=room(next);
   if(!r.visited||room(currentId).links.indexOf(next)<0||!gateAccess(currentId,next,true)){fastTraveling=false;gateDenied();update();return}
-  currentId=next;noticeScavenge(r);beginRoomEffects(next,false);finishRoomEffects();history.push(next);totalMoves++;
-  var fresh=r.attentionActive&&!r.attentionEmphasized;
-  if(fresh)r.attentionEmphasized=true;
-  // Publish the complete synchronous hop before presentation or scheduling another hop.
-  saveRun();markArrival(next);update();var el=document.querySelector('.cell[data-id="'+next+'"]');
-  if(el)el.classList.add(fresh?"attentionArrival":"travel-step");
-  step++;travelHopTimer=setTimeout(hop,(fresh?ATTENTION_WALK_MS:AUTO_WALK_MS)*lastMoveMultiplier)
+  startRoomTravel(next,function(){
+   currentId=next;noticeScavenge(r);beginRoomEffects(next,false);finishRoomEffects();history.push(next);totalMoves++;
+   var fresh=r.attentionActive&&!r.attentionEmphasized;if(fresh)r.attentionEmphasized=true;
+   markArrival(next);update();var el=document.querySelector('.cell[data-id="'+next+'"]');if(el&&fresh)el.classList.add("attentionArrival");
+   step++;saveRun();
+   // A genuine new clue retains its brief emphasis pause. Ordinary hops start immediately.
+   if(fresh)travelHopTimer=setTimeout(hop,ATTENTION_WALK_MS);else hop()
+  })
  }
- travelHopTimer=setTimeout(hop,AUTO_WALK_MS*movementMultiplier())
+ hop()
 }
-
-function enterRoom(id){if(performance.now()<movementUntil)return;if(codexOpen||layerTransition||layerOf(id)!==activeLayer||gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);movementUntil=lastMoveMultiplier>1?performance.now()+280*lastMoveMultiplier:0;markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;noticeScavenge(room(id));searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openRoomFeature(id,true);return}pendingAction="room-entry";update();searchCurrentRoom(id)}
+function enterRoom(id){
+ if(roomTravel||codexOpen||layerTransition||layerOf(id)!==activeLayer||gameOver||pendingAction||fastTraveling||id===currentId)return false;
+ if(room(currentId).links.indexOf(id)<0)return false;if(!gateAccess(currentId,id,false)){gateDenied();return false}
+ return startRoomTravel(id,function(){commitRoomEntry(id)})
+}
+function commitRoomEntry(id){if(codexOpen||layerTransition||layerOf(id)!==activeLayer||gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;noticeScavenge(room(id));searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openRoomFeature(id,true);return}pendingAction="room-entry";update();searchCurrentRoom(id)}
 function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);if((r.event==="consumable"||r.event==="trinket"&&!Object.keys(TRINKETS).some(function(id){return !relicState.trinkets.includes(id)}))&&!requireRewardSpace()){finishRoomEffects();update();return}r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(CONTENT[r.event]&&CONTENT[r.event].category==="discoveries"){finishRoomEffects();openContent(id,true);return}if(r.event==="stairs"){finishRoomEffects();update();updateContext();return}if(r.event==="chest"){openChestCard(id,true);return}if(r.event==="altar"){finishRoomEffects();openAltar(id,true);return}if(r.event==="trinket"||r.event==="consumable"){resolveGateItem(r.event);finishRoomEffects();return}if(r.event==="monster"||r.event==="trap"||r.event==="heal"||HAZARD_POOL.includes(r.event)){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
 function resolveGateItem(kind){
  if(kind==="trinket"){
@@ -1689,7 +1736,7 @@ resolveDice=function(type,roll){
  var contentResult=null;
  if(isContentDice(type))contentResult=resolveContentDice(type,roll);else if(type==="monster"&&encounterMonster!=="basic")resolveSpecialMonster(encounterMonster,roll);else if(type==="heal"&&roll>=3&&hpBefore>=3)finishDiceResult("","");else resolveDiceCore(type,roll);
  var encounterGold=score-scoreBefore;if(encounterGold>0){gold+=encounterGold;$("diceDetail").textContent=$("diceDetail").textContent.replace(/score/gi,"Gold")}
- 
+
  if(hp<hpBefore){
   if(conditions.sickness){hp-=hpBefore-hp;delete conditions.sickness}
   var damage={amount:hpBefore-hp,source:type,prevented:false,protector:null};
@@ -1705,7 +1752,7 @@ resolveDice=function(type,roll){
   if(!shieldBefore){shield=true;$("diceResult").textContent="DIVINE SHIELD";$("diceDetail").textContent="The next point of damage will be absorbed. 🛡"}
   else{var blessing=goldReward(10+floorNo);shield=true;gold=goldBefore+blessing;score=scoreBefore+blessing;gainFate(.15);$("diceResult").textContent="BLESSING";$("diceDetail").textContent="Shield renewed • +"+blessing+" Gold"}
  }
- 
+
  hp=Math.max(0,hp);
  if(contentResult){contentResult.conditions.forEach(applyCondition);$("diceDetail").textContent=previewTextCommitted(contentResult,hpBefore,goldBefore,fateBefore)}
  trackGold(gold-goldBefore);
@@ -1750,7 +1797,7 @@ function descend(){
  score+=exitBonus;emitEffect("onFloorEnd",{floor:floorNo});debugFloor();learn("learnedDescend");floorNo++;gainFate(.25);newFloor(false,"You descend deeper.");
  showLocalFeedback(currentId,"DEEPER","","DESCENDED",950);if(combo-oldFate>=.2)setTimeout(function(){showLocalFeedback(currentId,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},520);return true
 }
-function finish(title){if(gameOver)return;debugFloor();gameOver=true;cancelMemoryWipe();$("endTitle").textContent=title;$("deathCause").textContent=causeOfDeath?causeOfDeath.icon+" "+causeOfDeath.label:"";$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";showDeathConclusion()}
+function finish(title){if(gameOver)return;debugFloor();gameOver=true;cancelRoomTravel();cancelMemoryWipe();$("endTitle").textContent=title;$("deathCause").textContent=causeOfDeath?causeOfDeath.icon+" "+causeOfDeath.label:"";$("endText").textContent="The run is over. Your score and depth tell the story.";$("finalScore").textContent=Math.floor(score).toLocaleString();$("sumFloor").textContent=floorNo;$("sumMoves").textContent=totalMoves;$("sumRooms").textContent=Object.keys(searched).length;$("sumPerfect").textContent=perfectFloors;$("again").textContent="NEW RUN";showDeathConclusion()}
 // Death is already final and saved as ended. These are presentation-only states.
 var DEATH_INPUT_GUARD_MS=300,deathReadyAt=0,deathPointer=null;
 function resetDeathConclusion(){deathPointer=null;deathReadyAt=0;$("deathConclusion").hidden=true;document.body.classList.remove("death-conclusion");$("relicBar").inert=false}
@@ -1769,6 +1816,7 @@ $("deathConclusion").addEventListener("click",function(e){e.preventDefault();e.s
 $("deathConclusion").addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&!e.repeat&&performance.now()>=deathReadyAt){e.preventDefault();e.stopPropagation();showDeathResults()}});
 function addLink(a,b,target){var e=document.createElement("div");e.className="link";e.dataset.from=a.id;e.dataset.to=b.id;if(fateGate&&((a.id===fateGate.roomId&&b.id===fateGate.parentId)||(b.id===fateGate.roomId&&a.id===fateGate.parentId)))e.className+=" gateLink"+(combo>=fateGate.requirement?" gateReady":" gateSealed")+(fateGate.resolved?" gateResolved":"");var d=Math.min(knownDistance(a.id),knownDistance(b.id));if(d<=1)e.className+=" recent";else if(d>=4)e.className+=" veryold";else if(d>=3)e.className+=" old";var size=7.2,ax=a.x/W*100+1.7+size/2,ay=a.y/H*100+1.7+size/2,bx=b.x/W*100+1.7+size/2,by=b.y/H*100+1.7+size/2;if(a.y===b.y){e.style.left=(Math.min(ax,bx)+size/2)+"%";e.style.top=(ay-.55)+"%";e.style.width=Math.max(.2,Math.abs(ax-bx)-size)+"%";e.style.height="1.1%"}else{e.style.left=(ax-.55)+"%";e.style.top=(Math.min(ay,by)+size/2)+"%";e.style.width="1.1%";e.style.height=Math.max(.2,Math.abs(ay-by)-size)+"%"}(target||$("activeMap")||$("board")).appendChild(e)}
 function render(){
+ if(roomTravel)return;
  if(memoryWipe&&memoryWipe.phase==="running")return;
  if(layerVisual&&layerVisual.phase!=="prepare"){layerVisual.dirty=true;return}
  // Keep the pressed room node stable while a shared tap/hold gesture is tracked.
@@ -1832,8 +1880,7 @@ function render(){
 
   cell.style.left=(r.x/W*100+1.7)+"%";
   cell.style.top=(r.y/H*100+1.7)+"%";
-  var lightOpacity=d===0?1:d===1?.94:d===2?.66:Math.max(.27,.46-(d-3)*.06);
-  var lightSaturation=d===0?1.08:d===1?1:d===2?.72:.48;
+  var light=lightAtDistance(d),lightOpacity=light.opacity,lightSaturation=light.saturation;
   cell.style.opacity=lightOpacity;
   cell.style.filter="saturate("+lightSaturation+")";
   if(!r.searched){cell.style.setProperty("--frontier-room-opacity","1");cell.style.setProperty("--frontier-floor-opacity",lightOpacity);cell.style.setProperty("--frontier-brightness",d<=1?"1.08":d===2?".82":".58");cell.style.setProperty("--frontier-hint-alpha",hintData?Math.max(.12,hintData.strength).toFixed(2):".12");cell.style.filter="none"}
@@ -2022,7 +2069,7 @@ function loadRun(){
  try{if(raw.length>1000000)throw new Error("Save too large");var s=migrateSave(JSON.parse(raw));if(!validateSave(s))throw new Error("Invalid active run");if(s.status==="ended")return null;return s}
  catch(e){persistenceWarning(e);try{localStorage.setItem(SAVE_KEY+".invalid",JSON.stringify({savedAt:Date.now(),reason:String(e),raw:raw}));localStorage.removeItem(SAVE_KEY)}catch(backupError){storageBlocked=true;persistenceWarning(backupError)}return null}
 }
-function resetRestoreRuntime(){resetDeathConclusion();cancelMemoryWipe();movementUntil=0;lastMoveMultiplier=1;cancelChestHold();
+function resetRestoreRuntime(){cancelRoomTravel();resetDeathConclusion();cancelMemoryWipe();cancelChestHold();
  closeCodex();codexFresh={};
  hideReroll();finishLayerVisual(false);
  cancelItemReveal();cancelAltarHold();cancelSlotGesture();clearFastPreview();clearFeedback();clearTimeout(arrivalTimer);clearTimeout(deathTimer);clearTimeout(travelHopTimer);if(scoreAnimation)cancelAnimationFrame(scoreAnimation);
@@ -2054,17 +2101,18 @@ $("continueRun").addEventListener("click",function(){if(startupSave)restoreRun(s
 $("newSavedRun").addEventListener("click",function(){$("resumeChoices").hidden=true;$("replaceRunChoices").hidden=false;$("cancelNewRun").focus()});
 $("cancelNewRun").addEventListener("click",function(){$("replaceRunChoices").hidden=true;$("resumeChoices").hidden=false;$("continueRun").focus()});
 $("confirmNewRun").addEventListener("click",function(){clearRun();startupSave=null;$("resumeOverlay").hidden=true;beginRun()});
-function flushLifecycleRun(){if(memoryWipe)finishMemoryWipe();cancelChestHold();
+function flushLifecycleRun(){var wasMoving=!!roomTravel;cancelRoomTravel();if(memoryWipe)finishMemoryWipe();cancelChestHold();
  finishLayerVisual(true);cancelRerollHold();
  // Background timers may continue to run. Discard this route and invalidate queued callbacks
  // before flushing the existing safe snapshot; never snapshot transient traversal here.
  var traveling=fastTraveling;
  if(traveling){clearTimeout(travelHopTimer);travelHopTimer=null;travelSerial++;fastTraveling=false}
  flushRun();
- if(traveling){update();updateContext()}
+ if(traveling||wasMoving){update();updateContext()}
 }
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")flushLifecycleRun()});
 window.addEventListener("pagehide",flushLifecycleRun);
+window.addEventListener("resize",function(){if(roomTravel)flushLifecycleRun()});
 // Nested gameplay helpers form one transaction; rendering/animation callbacks do not save.
 openDroppedConsumable=committed(openDroppedConsumable);
 openContent=committed(openContent);actOnContent=committed(actOnContent);
@@ -2075,7 +2123,7 @@ beginRun=committed(beginRun);newFloor=committed(newFloor);enterRoom=committed(en
 
 $("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — Playtest Refinement";
 window.__dofTest={
- content:CONTENT,contentTuning:CONTENT_TUNING,contentOutcome:contentOutcome,openContent:openContent,actOnContent:actOnContent,applyCondition:applyCondition,clearConditions:clearConditions,conditions:function(){return jsonCopy(conditions)},movementMultiplier:movementMultiplier,mapVisible:mapVisible,memoryWipe:function(){return memoryWipe?{phase:memoryWipe.phase,order:memoryWipe.order,visible:Object.keys(memoryWipe.visible)}:null},openDroppedConsumable:openDroppedConsumable,
+ content:CONTENT,contentTuning:CONTENT_TUNING,contentOutcome:contentOutcome,openContent:openContent,actOnContent:actOnContent,applyCondition:applyCondition,clearConditions:clearConditions,conditions:function(){return jsonCopy(conditions)},movementMultiplier:movementMultiplier,travelState:function(){return roomTravel?{from:roomTravel.from,to:roomTravel.to,duration:roomTravel.duration,started:roomTravel.started,progress:roomTravel.progress}:null},mapVisible:mapVisible,memoryWipe:function(){return memoryWipe?{phase:memoryWipe.phase,order:memoryWipe.order,visible:Object.keys(memoryWipe.visible)}:null},openDroppedConsumable:openDroppedConsumable,
  codex:function(){return{entries:CARD_REGISTRY,discovered:JSON.parse(JSON.stringify(codexState.discovered)),open:codexOpen}},showCodex:showCodex,closeCodex:closeCodex,openCodexDetail:openCodexDetail,
  layerChance:layerChance,traverseStairs:traverseStairs,layerInfo:function(){return{layers:layers,activeLayer:activeLayer,transition:layerTransition}},
  chestCandidates:chestCandidates,chooseChestContent:chooseChestContent,generateChest:generateChest,openChestCard:openChestCard,openChest:openChest,

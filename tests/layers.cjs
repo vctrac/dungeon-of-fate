@@ -2,14 +2,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
 const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.readFile(path.join(root,req.url==='/'?'index.html':req.url),(e,data)=>{res.setHeader('Content-Type',req.url.endsWith('.js')?'application/javascript':'text/html');res.writeHead(e?404:200).end(data)}));
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;try{
  browser=await chromium.launch({headless:true,...(process.env.PWA_BROWSER?{executablePath:process.env.PWA_BROWSER}:{})});
- const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port);
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(require('./movement-test-helpers.cjs').install);await page.goto('http://127.0.0.1:'+server.address().port);
  const save=()=>page.evaluate(()=>__dofTest.serializeRun()),resume=async()=>{await page.reload();await page.locator('#continueRun').click()};
- async function fixture(type,exitSecondary=false){return page.evaluate(({type,exitSecondary})=>{
+ async function fixture(type,exitSecondary=false){return page.evaluate(async({type,exitSecondary})=>{
   const t=__dofTest;t.newRun();for(let i=0;i<300;i++){t.setFloor(12);let s=t.serializeRun();if(s.floor.layers[1]?.type!==type||(exitSecondary&&s.floor.exitId<81))continue;
    const stair=s.floor.rooms.find(r=>r.layerId===0&&r.event==='stairs'),parent=stair.links[0];
    s.floor.currentId=parent;s.floor.rooms[parent].visited=s.floor.rooms[parent].searched=s.floor.rooms[parent].known=true;s.floor.history.push(parent);s.run.searched[parent]=true;
    s.relicState.trinkets=['blood','eye'];s.relicState.floorUsed={blood:true};s.relicState.coinCharges=4;s.relicState.bargainCharges=3;s.relicState.wardArmed=true;s.run.shield=true;s.run.hp=2;
-   if(!t.restoreRun(s))throw Error('fixture restore');t.enter(stair.id);t.saveRun();return stair.id;
+   if(!t.restoreRun(s))throw Error('fixture restore');await testMove(t,stair.id);t.saveRun();return stair.id;
   }throw Error('no layer fixture')},{type,exitSecondary})}
  for(const type of ['upper','lower']){
   const stair=await fixture(type,true),before=await save(),target=before.floor.rooms[stair].stairTo;

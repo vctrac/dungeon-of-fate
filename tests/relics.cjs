@@ -11,7 +11,7 @@ let browser;
  browser=await chromium.launch({headless:true,...(process.env.PWA_BROWSER?{executablePath:process.env.PWA_BROWSER}:{})});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:'+server.address().port+'/');
+ await page.addInitScript(require('./movement-test-helpers.cjs').install);await page.goto('http://127.0.0.1:'+server.address().port+'/');
  const state=()=>page.evaluate(()=>__dofTest.state());
  const reset=()=>page.evaluate(()=>{__dofTest.newRun();__dofTest.setConsumable(null)});
  const clear=()=>page.evaluate(()=>__dofTest.clearPending());
@@ -28,10 +28,10 @@ let browser;
   await reset();await page.waitForTimeout(400);
   if(held)await page.evaluate(id=>giveConsumable(id),held);
   const before=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent}));
-  await page.evaluate(()=>{
+  await page.evaluate(async()=>{
    const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);
    __dofTest.setRoomFixture(id,{event:'empty',eventResolved:false,visited:false,searched:false});
-   __dofTest.enter(id);
+   await testMove(__dofTest,id);
   });
   const during=await page.locator('#consumableSlot').evaluate(el=>({opacity:getComputedStyle(el).opacity,text:el.textContent,disabled:el.disabled}));
   assert.equal(during.opacity,before.opacity);assert.equal(during.text,before.text);assert.equal(during.disabled,false); // Empty-room commit is now synchronous.
@@ -116,7 +116,7 @@ let browser;
  // Full slot: either choice is explicit.
  await page.evaluate(()=>{giveConsumable('flask');giveConsumable('charm')});
  assert.equal((await state()).pendingAction,'item-card');await page.locator('#itemChoice').click({position:{x:5,y:5}});assert.equal((await state()).relics.consumable,'flask');
- await page.evaluate(()=>{const t=__dofTest,s=t.state();if(t.serializeRun().floor.rooms[s.currentId].droppedConsumable!=='charm')throw Error('Declined reward must stay loose');const next=s.rooms[s.currentId].links.find(id=>id!==s.exitId);t.setRoomFixture(next,{event:'empty',eventResolved:true});t.enter(next);giveConsumable('bargain')});await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'bargain');
+ await page.evaluate(async()=>{const t=__dofTest,s=t.state();if(t.serializeRun().floor.rooms[s.currentId].droppedConsumable!=='charm')throw Error('Declined reward must stay loose');const next=s.rooms[s.currentId].links.find(id=>id!==s.exitId);t.setRoomFixture(next,{event:'empty',eventResolved:true});await testMove(t,next);giveConsumable('bargain')});await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'bargain');
  // Dangerous item requires a hold; movement/cancel and a tap do not spend it.
  await page.locator('#consumableSlot').tap();assert.equal((await state()).hp,3);await page.locator('#itemChoice').click({position:{x:5,y:5}});
  let slot=await page.locator('#consumableSlot').boundingBox();
@@ -125,16 +125,16 @@ let browser;
  await page.mouse.move(slot.x+20,slot.y+20);await page.mouse.down();await page.waitForTimeout(610);await page.mouse.up();
  s=await state();assert.equal(s.hp,1);assert.equal(s.relics.bargainCharges,3);assert.equal(s.relics.consumable,null);
  // Revisiting does not consume a charge.
- const visited=await page.evaluate(()=>{
-  const s=__dofTest.state(),id=s.rooms[s.currentId].links[0];__dofTest.setRoomFixture(id,{visited:true,searched:true,eventResolved:true});__dofTest.enter(id);return id
+ const visited=await page.evaluate(async()=>{
+  const s=__dofTest.state(),id=s.rooms[s.currentId].links[0];__dofTest.setRoomFixture(id,{visited:true,searched:true,eventResolved:true});await testMove(__dofTest,id);return id
  });
  assert.equal((await state()).relics.bargainCharges,3);
  // Three fresh entry fixtures use the real movement/encounter pipeline. The third is still protected.
  for(let entry=1;entry<=3;entry++){
-  await page.evaluate(()=>{
+  await page.evaluate(async()=>{
    const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);
    __dofTest.setRoomFixture(id,{visited:false,searched:false,eventResolved:false,event:'monster',monsterKind:'basic'});
-   __dofTest.enter(id);
+   await testMove(__dofTest,id);
   });
   await page.waitForSelector('#diceOverlay.awaiting-swipe');
   assert.equal((await state()).relics.bargainCharges,3-entry);

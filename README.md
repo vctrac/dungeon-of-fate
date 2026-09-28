@@ -13,15 +13,20 @@ https://vctrac.github.io/dungeon-of-fate/
 Focused delta from completed V2.21 (`c1d1c5a`). Follow-up tuning and a Fruit Tree retheme; no new inventory slots, event pools,
 dice balance, card framework or death résumé redesign.
 
-- **Slowed:** centralized multiplier is **4.0**. Normal arrival stays 280 ms;
-  Slowed arrival/manual movement guard is 1,120 ms. Ordinary auto-walk hops stay
-  150 ms, or 600 ms while Slowed (existing attention pauses are also multiplied).
-  The auto-walk arrival pulse is 180 → 720 ms; its more-specific CSS previously
-  overrode the general arrival duration and kept this feedback at normal speed.
-  All three conditions now start/refresh at **10 completed movements** (⑩ → ①).
-  Countdown semantics, stairs and cross-floor behavior are unchanged. Cards, dice,
-  holds and the Amnesia wipe keep their normal timing. Sickness can still clear
-  early on damage; Garden clears all conditions. Preview, HUD and validation use
+- **Visible movement / Slowed:** manual movement and every auto-walk hop share
+  one light-travel animation: **220 ms** normally, **550 ms** while Slowed
+  (**2.5×**, centralized). The glow moves immediately between room centers along
+  the straight corridor; existing room light/falloff follows its interpolated
+  position. Geometry and room nodes are cached once, with no map rebuild during
+  travel. Arrival commits position, reveal, entry effects, condition countdown
+  and the safe snapshot together. Backgrounding or resizing during travel
+  cancels presentation at the last committed room; no route resumes on reload.
+  New ❗ information retains its separate **400 ms** emphasis pause; cards,
+  dice, holds, arrival pulses and Amnesia keep normal timing. Reduced motion
+  skips travel animation and commits one arrival immediately.
+  All three conditions start/refresh at **10 completed movements** (⑩ → ①).
+  Stairs and cross-floor behavior are unchanged. Sickness can still clear early
+  on damage; Garden clears all conditions. Preview, HUD and validation use
   the centralized `CONTENT_TUNING.conditionMoves`.
 - **Amnesia:** the authoritative remembered-room mask commits with the accepted
   encounter. After result dismissal, a transient snapshot of the previously
@@ -91,7 +96,7 @@ dice balance, card framework or death résumé redesign.
 Held/drop exchange commits atomically. New floors naturally discard old room
 items. Wipe timers and death-conclusion input are not saved. Existing V2.21
 active saves remain readable. Neither `dof.activeRun` nor `dof.codex` is cleared
-by the PWA cache update (`dungeon-of-fate-v2.21.1-2`).
+by the PWA cache update (`dungeon-of-fate-v2.21.1-3`).
 
 **Verification:** `tests/refinement.cjs` covers actual Scavenge discovery,
 Altar/Chest encounter-only discovery, exchange/reload/occupied-room safety,
@@ -102,7 +107,11 @@ VM DOM mocks now include the body used by conclusion presentation. The existing
 death-layout test now acknowledges the conclusion before checking résumé bounds.
 The follow-up adds `tests/loose-consumables.cjs` for real reward paths, persistent
 Corpse/item coexistence, exchanges, capacity and marker privacy. Condition tests
-now cover ten hops/stair movements and 4× timing. All **23 executable suites pass**, including 4,000-floor content generation,
+now cover ten hops/stair movements and 2.5× visible travel.
+`tests/visible-movement.cjs` checks real taps, intermediate light/falloff positions,
+stable map DOM, no early reveal/entry, atomic arrival, interruption/reload, real
+RAF completion and reduced motion. Existing movement fixtures await arrival.
+All **24 executable suites pass**, including 4,000-floor content generation,
 Shrine caps, Chests, layers, cards, conditions, Rerolls, items, auto-walk, active-run
 persistence and actual service-worker offline launch. Browser runs used headless
 Chromium; emoji glyph coverage there is limited, so physical-device icon rendering
