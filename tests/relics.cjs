@@ -175,14 +175,14 @@ let browser;
  await page.evaluate(()=>{giveTrinket('doll');giveTrinket('blood')});
  assert.doesNotThrow(()=>JSON.parse(JSON.stringify(s.relics)));
  await reset();s=await state();assert.deepEqual(s.relics,{trinkets:[],capacity:3,consumable:null,starterItem:s.relics.starterItem,starterInspected:false,floorUsed:{},bargainCharges:0,bargainRoom:null,coinCharges:0,coinRoom:null,wardArmed:false,pendingItem:null});
- // All relics fit the original footer height; slot remains touch-sized.
+ // Narrow phones give the message its own row; item targets retain their size.
  for(const size of [{width:320,height:568},{width:390,height:844},{width:844,height:390}]){
   await page.setViewportSize(size);
   await page.evaluate(()=>{['doll','blood','eye'].forEach(giveTrinket);giveConsumable('bargain');__dofTest.useConsumable(true);giveConsumable('flask')});
   const geometry=await page.evaluate(()=>{
    const footer=document.querySelector('#footer').getBoundingClientRect(),slot=document.querySelector('#consumableSlot').getBoundingClientRect();
    return{height:footer.height,slot:slot.width,inside:slot.right<=innerWidth&&slot.bottom<=innerHeight,scroll:document.documentElement.scrollWidth<=innerWidth}
-  });assert.equal(geometry.height,54);assert(geometry.slot>=44&&geometry.inside&&geometry.scroll);
+  });assert.equal(geometry.height,size.width<=380?80:54);assert(geometry.slot>=44&&geometry.inside&&geometry.scroll);
   await reset();
  }
  assert.deepEqual(errors,[]);

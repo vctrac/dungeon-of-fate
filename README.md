@@ -13,6 +13,18 @@ https://vctrac.github.io/dungeon-of-fate/
 Focused delta from completed V2.21 (`c1d1c5a`). Follow-up tuning and a Fruit Tree retheme; no new inventory slots, event pools,
 dice balance, card framework or death résumé redesign.
 
+- **Footer hitbox correction:** Archive previously used absolute positioning
+  over a 55 px inventory spacer. Its 66.5 px label-driven button overlapped the
+  Consumable by about 19.5×27 px and intercepted both pointer and touch events.
+  Footer grid tracks now reserve separate inventory and **64×44 px Archive**
+  regions with an **8 px gap**. The Consumable stays **44×44 px**; Trinket slots
+  retain their existing size. At widths ≤380 px, the message occupies a compact
+  row above the controls. Archive text wraps within its bounded button; existing
+  game safe-area padding remains authoritative. No input/hold handlers changed.
+  `tests/hud-hitboxes.cjs` checks bounds and hit-testing, real touch tap/hold,
+  partial mouse holds, Archive/Trinket access and boundary separation at
+  320×568, 360×800, 390×844, 430×932, 568×320 and 844×390, including enlarged
+  labels and simulated safe-area padding.
 - **Universal card actions:** all explicit gameplay card buttons now use the
   same **650 ms hold-to-act** controller and charge ring. Gameplay card surfaces
   apply it by default, including dynamically added buttons; only non-gameplay
@@ -110,7 +122,7 @@ dice balance, card framework or death résumé redesign.
 Held/drop exchange commits atomically. New floors naturally discard old room
 items. Wipe timers and death-conclusion input are not saved. Existing V2.21
 active saves remain readable. Neither `dof.activeRun` nor `dof.codex` is cleared
-by the PWA cache update (`dungeon-of-fate-v2.21.1-4`).
+by the PWA cache update (`dungeon-of-fate-v2.21.1-5`).
 
 **Verification:** `tests/refinement.cjs` covers actual Scavenge discovery,
 Altar/Chest encounter-only discovery, exchange/reload/occupied-room safety,
