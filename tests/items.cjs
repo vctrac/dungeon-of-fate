@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  try{
  browser=await chromium.launch({headless:true,...(process.env.PWA_BROWSER?{executablePath:process.env.PWA_BROWSER}:{})});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:'+server.address().port);const state=()=>page.evaluate(()=>__dofTest.state()),reset=()=>page.evaluate(()=>__dofTest.newRun());
+ await page.addInitScript(require('./movement-test-helpers.cjs').install);await page.goto('http://127.0.0.1:'+server.address().port);const state=()=>page.evaluate(()=>__dofTest.state()),reset=()=>page.evaluate(()=>__dofTest.newRun());
  const close=()=>page.locator('#itemChoice').click({position:{x:5,y:5}});
  const hold=async()=>{const b=await page.locator('#consumableSlot').boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.waitForTimeout(250);assert.equal(await page.locator('#consumableSlot.holding').count(),1);await page.waitForTimeout(370);await page.mouse.up()};
  const starters=await page.evaluate(()=>{const found={coin:0,ward:0};for(let i=0;i<60;i++){__dofTest.newRun();const s=__dofTest.state();if(s.cards.active||s.relics.coinCharges||s.relics.wardArmed||s.relics.trinkets.length)throw Error('starter effects');found[s.relics.consumable]++}return found});assert(starters.coin>0&&starters.ward>0);
@@ -31,11 +31,11 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  // Actual movement pipeline: Coin does not affect its activation room, includes fifth room and Scavenge, and excludes revisits.
  await reset();await page.evaluate(()=>{__dofTest.setConsumable('coin');__dofTest.setCombo(1);__dofTest.useConsumable(true);__dofTest.resolveSimple('treasure')});assert.equal((await state()).gold,30);
  for(let i=1;i<=5;i++){
-  const before=(await state()).gold;await page.evaluate(()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);__dofTest.setCombo(1);__dofTest.setRoomFixture(id,{event:'treasure',visited:false,searched:false,eventResolved:false});__dofTest.enter(id)});
+  const before=(await state()).gold;await page.evaluate(async()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);__dofTest.setCombo(1);__dofTest.setRoomFixture(id,{event:'treasure',visited:false,searched:false,eventResolved:false});await testMove(__dofTest,id)});
   await page.waitForFunction(()=>__dofTest.state().pendingAction===null);const s=await state();assert.equal(s.gold-before,60);assert.equal(s.relics.coinCharges,5-i);assert.equal(s.relics.coinRoom,s.currentId);
  }
  await page.evaluate(()=>{localStorage.setItem('dof.learnedScavenge','1');__dofTest.setCombo(1);__dofTest.scavenge(__dofTest.state().currentId,.55)});let s=await state();assert.equal(s.relics.coinCharges,0);assert.equal(await page.locator('#coinState').innerText(),'🪙×2 ◉');
- await page.evaluate(()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links[0];__dofTest.setRoomFixture(id,{visited:true,searched:true,eventResolved:true});__dofTest.enter(id)});assert.equal((await state()).relics.coinRoom,null);assert.equal((await state()).relics.coinCharges,0);
+ await page.evaluate(async()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links[0];__dofTest.setRoomFixture(id,{visited:true,searched:true,eventResolved:true});await testMove(__dofTest,id)});assert.equal((await state()).relics.coinRoom,null);assert.equal((await state()).relics.coinCharges,0);
  // All relevant Gold paths double once, including guaranteed clues and Horseshoe, but not unrelated wallet changes.
  for(const type of ['treasure','rich','key','monster','trap','heal','loot','scavenge','horseshoe']){
   const gains=[];
@@ -56,7 +56,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>fs.r
  for(const scavenged of [false,true]){
   await reset();await page.evaluate(()=>{__dofTest.setConsumable('ward');__dofTest.useConsumable(true);__dofTest.setCombo(5);__dofTest.setFloor(2)});assert((await state()).relics.wardArmed);
   if(scavenged)await page.evaluate(()=>{localStorage.setItem('dof.learnedScavenge','1');__dofTest.scavenge(__dofTest.state().currentId,.99)});
-  else{await page.evaluate(()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);__dofTest.setRoomFixture(id,{event:'trap',visited:false,searched:false,eventResolved:false});__dofTest.enter(id)});await page.waitForFunction(()=>__dofTest.state().pendingAction===null)}
+  else{await page.evaluate(async()=>{const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);__dofTest.setRoomFixture(id,{event:'trap',visited:false,searched:false,eventResolved:false});await testMove(__dofTest,id)});await page.waitForFunction(()=>__dofTest.state().pendingAction===null)}
   s=await state();assert(!s.relics.wardArmed);assert.equal(s.hp,3);assert.equal(s.combo,5);assert.equal(s.diceOverlay,'none');assert.equal(s.pendingAction,null);
  }
  // Lethal rescue must survive encounter continuation at either low or high Fate.

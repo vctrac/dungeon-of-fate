@@ -3,14 +3,14 @@ const root=path.resolve(__dirname,'..'),baseline=process.env.LAYER_BASELINE;
 const server=http.createServer((req,res)=>fs.readFile(req.url==='/'?(baseline||path.join(root,'index.html')):path.join(root,req.url),(e,data)=>{res.setHeader('Content-Type',req.url.endsWith('.js')?'application/javascript':'text/html');res.writeHead(e?404:200).end(data)}));
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;try{
  browser=await chromium.launch({headless:true,...(process.env.PWA_BROWSER?{executablePath:process.env.PWA_BROWSER}:{})});
- const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port);
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(require('./movement-test-helpers.cjs').install);await page.goto('http://127.0.0.1:'+server.address().port);
  const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');
  const results=[];
  for(const type of ['upper','lower'])for(const back of [false,true]){
-  await page.evaluate(({type,back})=>{const t=__dofTest;t.newRun();for(let i=0;i<500;i++){t.setFloor(20);const s=t.serializeRun();if(s.floor.layers[1]?.type!==type)continue;
+  await page.evaluate(async({type,back})=>{const t=__dofTest;t.newRun();for(let i=0;i<500;i++){t.setFloor(20);const s=t.serializeRun();if(s.floor.layers[1]?.type!==type)continue;
    s.floor.rooms.forEach(r=>{if(r.active)r.known=r.visited=r.searched=r.eventResolved=true});if(s.fateGate)s.fateGate.entered=s.fateGate.discovered=true;
    const stair=s.floor.rooms.find(r=>r.event==='stairs'&&r.layerId===(back?1:0));s.floor.activeLayer=stair.layerId;s.floor.currentId=stair.links[0];s.floor.history.push(s.floor.currentId);
-   if(!t.restoreRun(s))throw Error('fixture');t.enter(stair.id);window.originId=stair.id;window.originMoves=t.serializeRun().run.totalMoves;return
+   if(!t.restoreRun(s))throw Error('fixture');await testMove(t,stair.id);window.originId=stair.id;window.originMoves=t.serializeRun().run.totalMoves;return
   }throw Error('no layers')},{type,back});
   await page.evaluate(()=>{window.oldMap=document.querySelector('#activeMap');window.mutations=0;window.observer=new MutationObserver(ms=>{for(const m of ms)mutations+=m.addedNodes.length+m.removedNodes.length});__dofTest.traverseStairs();window.destMap=document.querySelector('#activeMap');observer.observe(document.querySelector('#board'),{childList:true,subtree:true});window.retained=document.querySelector('.layerGhost')===oldMap});
   await page.waitForTimeout(90);

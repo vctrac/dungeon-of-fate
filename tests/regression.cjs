@@ -23,7 +23,7 @@ let browser;
  page.on('pageerror',e=>errors.push(e.message));
  const state=()=>page.evaluate(()=>__dofTest.state());
  const clear=()=>page.evaluate(()=>{__dofTest.clearPending();__dofTest.clearFeedback()});
- await page.goto(url);await page.waitForTimeout(400);
+ await page.addInitScript(require('./movement-test-helpers.cjs').install);await page.goto(url);await page.waitForTimeout(400);
  assert.match(await page.title(),/V2\.21/);assert.equal((await state()).hp,3);
  assert(await page.locator('.cell').count()>1);assert.match(await page.locator('#hp').innerText(),/❤️/);
  assert(await page.locator('#gold').innerText());assert.equal(await page.locator('.current').count(),1);
@@ -37,9 +37,9 @@ let browser;
   });assert(result.connected&&result.exit&&result.frontier);
  }
  await page.waitForTimeout(400);
- let next=await page.evaluate(()=>{
+ let next=await page.evaluate(async()=>{
   const s=__dofTest.state(),id=s.rooms[s.currentId].links.find(id=>id!==s.exitId);
-  __dofTest.setRoomEvent(id,'empty');__dofTest.enter(id);return id;
+  __dofTest.setRoomEvent(id,'empty');await testMove(__dofTest,id);return id;
  });
  await page.waitForTimeout(450);
  let s=await state();assert.equal(s.currentId,next);assert(s.rooms[next].links.every(id=>s.rooms[id].known));
@@ -201,7 +201,7 @@ let browser;
  await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await context.setOffline(true);await page.goto(url+'index.html');if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();assert(await page.locator('.current').count());
- assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.21.1-2'))),true);
+ assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.21.1-3'))),true);
  await page.goto(url);if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();assert(await page.locator('.current').count());
  await context.setOffline(false);
  assert.deepEqual(errors,[]);
