@@ -1,0 +1,1 @@
+exports.hold=async function(page,selector){await page.locator(selector).waitFor({state:"visible"});const b=await page.locator(selector).boundingBox();if(!b)throw Error('Missing action '+selector);await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.waitForTimeout(710);await page.mouse.up()};

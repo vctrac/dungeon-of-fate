@@ -254,7 +254,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @keyframes gateDenied{20%,60%{filter:brightness(1.8);transform:translateX(-2px)}40%{transform:translateX(2px)}}
 @keyframes gateCross{35%{box-shadow:0 0 24px #fff0b5;filter:brightness(1.7)}}
 #altarOffer{position:relative;align-self:stretch;min-height:110px;font-size:25px;white-space:pre-line;line-height:1.6;border:2px solid #b99dd0;background:radial-gradient(ellipse,#55405f,#231b2b);touch-action:none}
-#altarOffer::before{content:"HOLD";display:block;font-size:10px;letter-spacing:2px;color:#d5bddf}#altarOffer:disabled{opacity:.35}#altarOffer.holding::after,#rerollButton.holding::after,#chestOpen.holding::after{content:"";position:absolute;inset:-4px;border-radius:12px;padding:3px;pointer-events:none;background:conic-gradient(#ffe1ac var(--charge,0deg),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+#altarOffer::before{content:"HOLD";display:block;font-size:10px;letter-spacing:2px;color:#d5bddf}#altarOffer:disabled{opacity:.35}.itemChoicePanel button.holding::after,#encounterResolution button.holding::after{content:"";position:absolute;inset:-4px;border-radius:12px;padding:3px;pointer-events:none;background:conic-gradient(#ffe1ac var(--charge,0deg),transparent 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 #altarOffer[hidden],#closeItem[hidden],#cardContinue[hidden]{display:none}#cardContinue{font-size:10px;letter-spacing:1px;color:#bda887;padding:8px 0}
 @media(max-height:540px){#altarOffer{min-height:88px;font-size:21px}}
 @media(prefers-reduced-motion:reduce){.gateDenied,.cell.gateEntered.current-arrival .floor{animation:none}}
@@ -408,6 +408,9 @@ body.death-conclusion #board .tutorialGesture,body.death-conclusion #board .stai
 .travelLight{position:absolute;left:0;top:0;z-index:20;border-radius:50%;pointer-events:none;background:radial-gradient(circle,#fff4c4 0,#f4d68baa 32%,#d9a94f44 65%,transparent 75%);box-shadow:0 0 18px #ffd579dd,0 0 42px #d9a94f88,0 0 72px #c58a3044;will-change:transform}
 .lightTravel .cell,.lightTravel .floor{transition:none!important;animation:none!important}
 .lightTravel .currentGlyph{visibility:hidden}
+/* The shared action contract supplies both instruction and progress feedback. */
+.itemChoicePanel button:not([data-card-tap]),#encounterResolution button:not([data-card-tap]){touch-action:none;user-select:none;position:relative}
+.itemChoicePanel button:not([data-card-tap])::before{content:"HOLD";display:block;font-size:9px;letter-spacing:2px;line-height:12px;color:#dbcba9}
 </style>
 </head>
 <body>
@@ -423,8 +426,8 @@ body.death-conclusion #board .tutorialGesture,body.death-conclusion #board .stai
  <div class="itemChoicePanel" tabindex="-1">
   <div id="itemReason" class="itemReason"></div><div id="itemArt" aria-hidden="true"></div><h2 id="itemName"></h2>
   <div id="itemVisual" aria-hidden="true"></div><p id="itemDescription"></p><div id="itemState"></div>
-  <div id="replaceTrinkets" role="radiogroup" aria-label="Trinket to replace"></div><button id="replaceSelected" type="button" hidden disabled>REPLACE</button><div id="consumableChoices"><button id="keepItem" type="button"></button><button id="takeItem" type="button"></button></div>
-  <button id="contentAction" type="button" hidden></button><button id="chestOpen" type="button" hidden aria-label="Hold to open chest">OPEN</button><button id="altarOffer" type="button" hidden></button><div id="cardContinue" aria-hidden="true">TAP OUTSIDE TO CONTINUE</div><button id="closeItem" type="button">✕ Leave</button>
+  <div id="replaceTrinkets" role="radiogroup" aria-label="Trinket to replace"></div><button id="replaceSelected" type="button" hidden disabled>REPLACE</button><div id="consumableChoices"><button id="keepItem" data-card-tap type="button"></button><button id="takeItem" type="button"></button></div>
+  <button id="contentAction" type="button" hidden></button><button id="chestOpen" type="button" hidden aria-label="Hold to open chest">OPEN</button><button id="altarOffer" type="button" hidden></button><div id="cardContinue" aria-hidden="true">TAP OUTSIDE TO CONTINUE</div><button id="closeItem" data-card-tap type="button">✕ Leave</button>
  </div>
 </div>
 <div id="codexOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="codexTitle"><section class="codexBrowser"><header><button id="codexBack" type="button" aria-label="Back">←</button><h2 id="codexTitle">ARCHIVE</h2><span id="codexCount"></span></header><nav id="codexFilters" aria-label="Card category"></nav><div id="codexGrid"></div></section><div id="codexDetail" hidden><article id="codexCard" tabindex="-1" aria-labelledby="codexName"><div id="codexArt"></div><h2 id="codexName"></h2><div id="codexEffect"></div><p id="codexDescription"></p></article></div></div>
@@ -565,7 +568,7 @@ function announceRelic(id,text,target){effectNotice(text);resourceFlight(TRINKET
 // Serializable queue entries describe cards; gameplay commits once, at presentation/choice.
 // Informational cards are manually advanced today. Decision cards never auto-advance.
 var selectedTrinket=null;
-var cardState={queue:[],active:null},itemFocusReturn=null,slotSuppressClick=false,cardPointer=null,altarGesture=null;
+var cardState={queue:[],active:null},itemFocusReturn=null,slotSuppressClick=false,cardPointer=null;
 var ITEM_VISUALS={eye:"? → 👁",blood:"👹 ✓ → ♥   1× / floor",horseshoe:"⚅ → 🪙",doll:"☠ → ♥   ✦ → ×1   🪆 → ✕",flask:"🧪 → +1 ♥",charm:"🛡 → ♥ ✓",bargain:"♥♥♥ → ♥   🛡 ×3 rooms",coin:"🪙 ×2   ⑤ → ④ → ③ → ② → ①",ward:"✂ → ⚠ ✓"};
 
 var CARD_CATEGORIES={creatures:{name:"CREATURES",icon:"👁"},items:{name:"ITEMS",icon:"✧"},hazards:{name:"HAZARDS",icon:"⚠"},discoveries:{name:"DISCOVERIES",icon:"✦"}};
@@ -891,21 +894,8 @@ function presentMimic(){
  var r=room(currentId),mimic=!!(r.chest&&r.chest.opened&&r.chest.kind==='mimic');$("eventCard").classList.toggle('mimic',mimic);
  if(mimic){$("eventArt").textContent='🧰 → 👹';$("diceTitle").textContent='MIMIC';$("eventCard").setAttribute('aria-label','The chest was a Mimic. Swipe to confront it.')}
 }
-// Chest uses the same deliberate duration/progress ring and cancellation rules as Reroll.
-var chestGesture=null;
-function cancelChestHold(){if(chestGesture){clearTimeout(chestGesture.timer);chestGesture=null}$("chestOpen").classList.remove("holding");$("chestOpen").style.removeProperty("--charge")}
-function startChestHold(g){
- if(chestGesture||!cardState.active||cardState.active.type!=="chest"||$("chestOpen").hidden||document.visibilityState==="hidden")return;
- chestGesture=g;$("chestOpen").classList.add("holding");
- animateDecisionHold($("chestOpen"),g,function(){return chestGesture===g},function(){cancelChestHold();if(document.visibilityState!=="hidden"&&cardState.active===g.decision)openChest()})
-}
-$("chestOpen").addEventListener("pointerdown",function(e){e.preventDefault();e.stopPropagation();cardPointer=null;if(e.isPrimary===false||chestGesture){cancelChestHold();return}if(e.pointerType==="mouse"&&e.button!==0)return;this.setPointerCapture(e.pointerId);startChestHold({id:e.pointerId,x:e.clientX,y:e.clientY,start:performance.now(),decision:cardState.active})});
-$("chestOpen").addEventListener("pointermove",function(e){e.stopPropagation();if(!chestGesture||chestGesture.id!==e.pointerId)return;var b=this.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom||Math.hypot(e.clientX-chestGesture.x,e.clientY-chestGesture.y)>14)cancelChestHold()});
-["pointerup","pointercancel","lostpointercapture","blur"].forEach(function(name){$("chestOpen").addEventListener(name,function(e){e.stopPropagation();cardPointer=null;cancelChestHold()})});
-$("chestOpen").addEventListener("click",function(e){e.preventDefault();e.stopPropagation()});
-$("chestOpen").addEventListener("keydown",function(e){e.stopPropagation();if(e.key!==" "&&e.key!=="Enter")return;e.preventDefault();if(!e.repeat)startChestHold({key:e.key,start:performance.now(),decision:cardState.active})});
-$("chestOpen").addEventListener("keyup",function(e){e.stopPropagation();if(e.key===" "||e.key==="Enter"){e.preventDefault();cancelChestHold()}});
-window.addEventListener("blur",cancelChestHold);
+function cancelChestHold(){cancelCardHold()}
+$("chestOpen").addEventListener("click",function(e){e.stopPropagation();openChest()});
 
 function openAltar(id,automatic){
  var r=room(id);if(!r||id!==currentId||r.event!=="altar"||r.altarUsed||(automatic&&r.altarCardSeen)||gameOver||pendingAction)return false;
@@ -928,20 +918,8 @@ function sacrificeAltar(){
  var r=room(cardState.active.roomId);r.altarUsed=true;r.altarFateBefore=combo;breakFate();r.altarFateAfter=combo;hp=Math.min(3,hp+1);
  emitEffect("onAltarSacrifice",{roomId:r.id,before:r.altarFateBefore,after:combo});resourceFlight("♥","hp");showLocalFeedback(r.id,"✦ → ♥ +1","fate","",1000);debugFloor();closeItemCard(false);return true
 }
-function cancelAltarHold(){if(altarGesture){clearTimeout(altarGesture.timer);altarGesture=null}$("altarOffer").classList.remove("holding");$("altarOffer").style.removeProperty("--charge")}
-function startAltarHold(gesture){
- if(!altarAvailable())return;altarGesture=gesture;$("altarOffer").classList.add("holding");
- function tick(now){if(altarGesture!==gesture)return;$("altarOffer").style.setProperty("--charge",Math.min(360,(now-gesture.start)/650*360)+"deg");requestAnimationFrame(tick)}
- requestAnimationFrame(tick);gesture.timer=setTimeout(function(){if(altarGesture!==gesture||cardState.active!==gesture.card)return;cancelAltarHold();sacrificeAltar()},650)
-}
-$("altarOffer").addEventListener("pointerdown",function(e){
- if(e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0)||altarGesture||!altarAvailable())return;e.preventDefault();e.stopPropagation();this.setPointerCapture(e.pointerId);startAltarHold({id:e.pointerId,x:e.clientX,y:e.clientY,start:performance.now(),card:cardState.active})
-},{passive:false});
-$("altarOffer").addEventListener("pointermove",function(e){if(altarGesture&&altarGesture.id===e.pointerId&&Math.hypot(e.clientX-altarGesture.x,e.clientY-altarGesture.y)>14)cancelAltarHold()});
-["pointerup","pointercancel","lostpointercapture","blur"].forEach(function(name){$("altarOffer").addEventListener(name,function(e){e.stopPropagation();cancelAltarHold()})});
-$("altarOffer").addEventListener("click",function(e){e.preventDefault();e.stopPropagation()});
-$("altarOffer").addEventListener("keydown",function(e){if(e.key!==" "&&e.key!=="Enter")return;e.preventDefault();e.stopPropagation();if(!e.repeat&&!altarGesture)startAltarHold({key:e.key,start:performance.now(),card:cardState.active})});
-$("altarOffer").addEventListener("keyup",function(e){if(e.key===" "||e.key==="Enter"){e.preventDefault();e.stopPropagation();cancelAltarHold()}});
+function cancelAltarHold(){cancelCardHold()}
+$("altarOffer").addEventListener("click",function(e){e.stopPropagation();sacrificeAltar()});
 function dollRescue(){
  effectNotice("☠ → 🪆 → ♥   ✦ ×1");
  var doll=document.createElement("div");doll.className="dollRescue";doll.textContent="🪆";$("effectLayer").appendChild(doll);$("hp").classList.add("deathRescue");
@@ -1572,7 +1550,7 @@ function resolveDice(type,roll){var result="",detail="";if(type==="monster"){if(
 function finishDiceResult(result,detail){setEncounterResolution();$("diceResult").textContent=result;$("diceDetail").textContent=detail;$("message").textContent=detail;encounterResolved=true;$("diceOverlay").classList.add("resolved");encounterCloseAction=function(){pendingEncounter=null;$("diceOverlay").style.display="none";$("diceOverlay").classList.remove("resolved");encounterResolved=false;encounterCloseAction=null;pendingAction=null;update();if(hp<=0)finish("YOU DIED");else if(!startMemoryWipe())pumpCards()}}
 // Read-only consequence projection. Acceptance still uses the existing encounter resolver.
 // Tests compare every projected resource delta against that resolver, including item hooks.
-var REROLL_MIN_FATE=2,REROLL_FATE_BURN=.25,REROLL_REVEAL_DELAY=350,rerollTimer=null,rerollGesture=null,REROLL_HOLD_MS=650;
+var REROLL_MIN_FATE=2,REROLL_FATE_BURN=.25,REROLL_REVEAL_DELAY=350,rerollTimer=null;
 function rerollFateAfterCost(fate){return Math.max(1,Math.round((1+(fate-1)*(1-REROLL_FATE_BURN))*100)/100)}
 function previewOutcome(type,roll,kind){
  var p={hp:hp,shield:shield,gold:gold,score:score,combo:combo,fateGainRemainder:fateGainRemainder},notes=[];
@@ -1653,28 +1631,42 @@ function rerollOutcome(){
  if(window.__DOF_DEBUG__)console.debug("[DOF reroll]",{type:e.type,kind:e.monsterKind,before:offer.before,after:offer.after,original:e.roll,final:pendingEncounter.roll});
  update();showDice(e.type,true);return true
 }
-// Same deliberate 650ms hold and --charge ring vocabulary as the Altar.
-function cancelRerollHold(){if(rerollGesture){clearTimeout(rerollGesture.timer);rerollGesture=null}$("rerollButton").classList.remove("holding");$("rerollButton").style.removeProperty("--charge")}
-function animateDecisionHold(button,gesture,current,complete){
- function tick(now){if(!current())return;button.style.setProperty("--charge",Math.min(360,(now-gesture.start)/REROLL_HOLD_MS*360)+"deg");requestAnimationFrame(tick)}
- requestAnimationFrame(tick);gesture.timer=setTimeout(function(){if(current())complete()},REROLL_HOLD_MS)
+// Gameplay card surfaces default to hold-to-act, including buttons added later.
+// Explicit data-card-tap is reserved for non-gameplay navigation/dismissal.
+var CARD_ACTION_HOLD_MS=650,cardHold=null,heldCardClicks=new WeakSet();
+function cancelCardHold(){
+ var g=cardHold;if(!g)return;cardHold=null;clearTimeout(g.timer);cancelAnimationFrame(g.frame);
+ g.button.classList.remove("holding");g.button.style.removeProperty("--charge")
 }
-function startRerollHold(gesture){
- if(rerollGesture||!canReroll()||$("rerollButton").hidden||document.visibilityState==="hidden")return;
- rerollGesture=gesture;$("rerollButton").classList.add("holding");
- animateDecisionHold($("rerollButton"),gesture,function(){return rerollGesture===gesture},function(){cancelRerollHold();if(document.visibilityState!=="hidden"&&pendingEncounter===gesture.decision)rerollOutcome()})
+function cancelRerollHold(){cancelCardHold()}
+function installCardActions(root,decision){
+ function action(e){var b=e.target.closest&&e.target.closest("button");return b&&root.contains(b)&&!b.hasAttribute("data-card-tap")?b:null}
+ function isolate(e){e.preventDefault();e.stopImmediatePropagation();cardPointer=null;continuePointer=null}
+ function start(button,input){
+  if(button.disabled||button.hidden||document.visibilityState==="hidden"||gameOver)return;
+  var g=Object.assign({button:button,decision:decision(),start:performance.now()},input);cardHold=g;
+  button.classList.add("holding");button.style.setProperty("--charge","0deg");
+  function valid(){return cardHold===g&&decision()===g.decision&&button.isConnected&&!button.disabled&&button.getClientRects().length&&document.visibilityState!=="hidden"&&!gameOver}
+  function tick(now){if(cardHold!==g)return;if(!valid()){cancelCardHold();return}button.style.setProperty("--charge",Math.min(360,(now-g.start)/CARD_ACTION_HOLD_MS*360)+"deg");g.frame=requestAnimationFrame(tick)}
+  g.frame=requestAnimationFrame(tick);g.timer=setTimeout(function(){if(cardHold!==g)return;if(!valid()){cancelCardHold();return}cancelCardHold();cardPointer=null;continuePointer=null;var click=new MouseEvent("click",{bubbles:true,cancelable:true});heldCardClicks.add(click);button.dispatchEvent(click)},CARD_ACTION_HOLD_MS)
+ }
+ root.addEventListener("pointerdown",function(e){
+  if(e.isPrimary===false||cardHold){cancelCardHold();isolate(e);return}
+  var b=action(e);if(!b)return;isolate(e);if(e.pointerType==="mouse"&&e.button!==0)return;
+  b.setPointerCapture(e.pointerId);start(b,{id:e.pointerId,x:e.clientX,y:e.clientY})
+ },true);
+ root.addEventListener("pointermove",function(e){var g=cardHold;if(!g||g.id!==e.pointerId)return;isolate(e);var b=g.button.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom||Math.hypot(e.clientX-g.x,e.clientY-g.y)>14)cancelCardHold()},true);
+ ["pointerup","pointercancel","lostpointercapture"].forEach(function(name){root.addEventListener(name,function(e){if(action(e)||cardHold&&cardHold.id===e.pointerId){isolate(e);cancelCardHold()}},true)});
+ root.addEventListener("click",function(e){if(action(e)&&!heldCardClicks.has(e))isolate(e)},true);
+ root.addEventListener("contextmenu",function(e){if(action(e))isolate(e)},true);
+ root.addEventListener("keydown",function(e){var b=action(e);if(!b||e.key!==" "&&e.key!=="Enter")return;isolate(e);if(!e.repeat&&!cardHold)start(b,{key:e.key})},true);
+ root.addEventListener("keyup",function(e){if(action(e)&&(e.key===" "||e.key==="Enter")){isolate(e);cancelCardHold()}},true);
+ root.addEventListener("blur",function(){cancelCardHold()},true)
 }
-$("rerollButton").addEventListener('pointerdown',function(e){
- e.preventDefault();e.stopPropagation();continuePointer=null;
- if(e.isPrimary===false||rerollGesture){cancelRerollHold();return}if(e.pointerType==='mouse'&&e.button!==0)return;
- this.setPointerCapture(e.pointerId);startRerollHold({id:e.pointerId,x:e.clientX,y:e.clientY,start:performance.now(),decision:pendingEncounter})
-});
-$("rerollButton").addEventListener('pointermove',function(e){e.stopPropagation();if(!rerollGesture||rerollGesture.id!==e.pointerId)return;var b=this.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom||Math.hypot(e.clientX-rerollGesture.x,e.clientY-rerollGesture.y)>14)cancelRerollHold()});
-['pointerup','pointercancel','lostpointercapture','blur'].forEach(function(name){$("rerollButton").addEventListener(name,function(e){e.stopPropagation();continuePointer=null;cancelRerollHold()})});
-$("rerollButton").addEventListener('click',function(e){e.preventDefault();e.stopPropagation()});
-$("rerollButton").addEventListener('keydown',function(e){e.stopPropagation();if(e.key!==' '&&e.key!=='Enter')return;e.preventDefault();if(!e.repeat)startRerollHold({key:e.key,start:performance.now(),decision:pendingEncounter})});
-$("rerollButton").addEventListener('keyup',function(e){e.stopPropagation();if(e.key===' '||e.key==='Enter'){e.preventDefault();cancelRerollHold()}});
-window.addEventListener('blur',cancelRerollHold);
+installCardActions($("itemChoice"),function(){return cardState.active});
+installCardActions($("encounterResolution"),function(){return pendingEncounter});
+window.addEventListener("blur",cancelCardHold);
+$("rerollButton").addEventListener("click",function(e){e.stopPropagation();rerollOutcome()});
 
 function disarmTrap(){
  if(!relicState.wardArmed)return false;

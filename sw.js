@@ -1,4 +1,4 @@
-const CACHE = 'dungeon-of-fate-v2.21.1-3';
+const CACHE = 'dungeon-of-fate-v2.21.1-4';
 const SHELL = ['./index.html', './card_frame.png', './assets/card_outer_frame.png', './assets/card_interior_texture.png', './assets/card_artwork_frame_9slice.png', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
