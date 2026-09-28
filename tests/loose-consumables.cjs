@@ -13,8 +13,8 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((q,r)=>fs.readF
   await resume();await dismiss();await resume();s=await save();assert.equal(s.floor.rooms[id].droppedConsumable||null,held?found:null);
   if(held){
    for(let i=0;i<3;i++){await page.locator('.cell.current').tap();assert.equal((await save()).pending.cards.active.id,found);await dismiss();assert.equal((await save()).floor.rooms[id].droppedConsumable,found)}
-   await page.locator('.cell.current').tap();await page.locator('#takeItem').tap();s=await save();assert.equal(s.relicState.consumable,found);assert.equal(s.floor.rooms[id].droppedConsumable,held);await resume();await page.locator('.cell.current').tap();await page.locator('#takeItem').tap();s=await save();assert.equal(s.relicState.consumable,held);assert.equal(s.floor.rooms[id].droppedConsumable,found);
-   await page.evaluate(()=>__dofTest.setConsumable(null));await page.locator('.cell.current').tap();await resume();await page.locator('#takeItem').tap();s=await save();assert.equal(s.relicState.consumable,found);assert.equal(s.floor.rooms[id].droppedConsumable,null);
+   await page.locator('.cell.current').tap();await require('./card-hold-helpers.cjs').hold(page,'#takeItem');s=await save();assert.equal(s.relicState.consumable,found);assert.equal(s.floor.rooms[id].droppedConsumable,held);await resume();await page.locator('.cell.current').tap();await require('./card-hold-helpers.cjs').hold(page,'#takeItem');s=await save();assert.equal(s.relicState.consumable,held);assert.equal(s.floor.rooms[id].droppedConsumable,found);
+   await page.evaluate(()=>__dofTest.setConsumable(null));await page.locator('.cell.current').tap();await resume();await require('./card-hold-helpers.cjs').hold(page,'#takeItem');s=await save();assert.equal(s.relicState.consumable,found);assert.equal(s.floor.rooms[id].droppedConsumable,null);
   }
   await page.locator('.cell.current').tap();assert.equal(await page.locator('#itemName').innerText(),'Corpse Remains');await dismiss();
  }

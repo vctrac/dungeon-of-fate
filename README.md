@@ -13,6 +13,20 @@ https://vctrac.github.io/dungeon-of-fate/
 Focused delta from completed V2.21 (`c1d1c5a`). Follow-up tuning and a Fruit Tree retheme; no new inventory slots, event pools,
 dice balance, card framework or death résumé redesign.
 
+- **Universal card actions:** all explicit gameplay card buttons now use the
+  same **650 ms hold-to-act** controller and charge ring. Gameplay card surfaces
+  apply it by default, including dynamically added buttons; only non-gameplay
+  dismissal/navigation may explicitly opt out with `data-card-tap`. This covers
+  Chest OPEN, Corpse SEARCH, Flower PICK, Fruit Tree EAT, Garden REST, Hole
+  REACH INSIDE, Altar OFFER, REROLL, loose Consumable TAKE/SWAP and selected
+  Trinket replacement confirmation. Trinket selection itself remains a tap.
+  Pointer/keyboard release, drag beyond 14 px or outside the button, multi-touch,
+  blur, backgrounding, hidden/removed buttons or a changed decision cancel the
+  hold. Taps and canceled holds cannot propagate to backdrop acceptance/dismissal.
+  Completion dispatches one guarded action and clears its timer/animation first.
+  HUD consumable holds, outside dismissal, Archive and death navigation remain
+  unchanged. No hold progress enters saved gameplay state. Movement remains
+  **220 ms / 550 ms (2.5×)** and conditions remain **10 movements**.
 - **Visible movement / Slowed:** manual movement and every auto-walk hop share
   one light-travel animation: **220 ms** normally, **550 ms** while Slowed
   (**2.5×**, centralized). The glow moves immediately between room centers along
@@ -96,7 +110,7 @@ dice balance, card framework or death résumé redesign.
 Held/drop exchange commits atomically. New floors naturally discard old room
 items. Wipe timers and death-conclusion input are not saved. Existing V2.21
 active saves remain readable. Neither `dof.activeRun` nor `dof.codex` is cleared
-by the PWA cache update (`dungeon-of-fate-v2.21.1-3`).
+by the PWA cache update (`dungeon-of-fate-v2.21.1-4`).
 
 **Verification:** `tests/refinement.cjs` covers actual Scavenge discovery,
 Altar/Chest encounter-only discovery, exchange/reload/occupied-room safety,
@@ -111,7 +125,10 @@ now cover ten hops/stair movements and 2.5× visible travel.
 `tests/visible-movement.cjs` checks real taps, intermediate light/falloff positions,
 stable map DOM, no early reveal/entry, atomic arrival, interruption/reload, real
 RAF completion and reduced motion. Existing movement fixtures await arrival.
-All **24 executable suites pass**, including 4,000-floor content generation,
+`tests/card-holds.cjs` additionally covers shared/future action defaults, canceled
+holds, Discovery actions, exchange/replacement, keyboard, lifecycle and backdrop
+isolation. Positive action tests complete holds rather than tapping.
+All **25 executable suites pass**, including 4,000-floor content generation,
 Shrine caps, Chests, layers, cards, conditions, Rerolls, items, auto-walk, active-run
 persistence and actual service-worker offline launch. Browser runs used headless
 Chromium; emoji glyph coverage there is limited, so physical-device icon rendering

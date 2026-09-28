@@ -116,7 +116,7 @@ let browser;
  // Full slot: either choice is explicit.
  await page.evaluate(()=>{giveConsumable('flask');giveConsumable('charm')});
  assert.equal((await state()).pendingAction,'item-card');await page.locator('#itemChoice').click({position:{x:5,y:5}});assert.equal((await state()).relics.consumable,'flask');
- await page.evaluate(async()=>{const t=__dofTest,s=t.state();if(t.serializeRun().floor.rooms[s.currentId].droppedConsumable!=='charm')throw Error('Declined reward must stay loose');const next=s.rooms[s.currentId].links.find(id=>id!==s.exitId);t.setRoomFixture(next,{event:'empty',eventResolved:true});await testMove(t,next);giveConsumable('bargain')});await page.locator('#takeItem').click();assert.equal((await state()).relics.consumable,'bargain');
+ await page.evaluate(async()=>{const t=__dofTest,s=t.state();if(t.serializeRun().floor.rooms[s.currentId].droppedConsumable!=='charm')throw Error('Declined reward must stay loose');const next=s.rooms[s.currentId].links.find(id=>id!==s.exitId);t.setRoomFixture(next,{event:'empty',eventResolved:true});await testMove(t,next);giveConsumable('bargain')});await require('./card-hold-helpers.cjs').hold(page,'#takeItem');assert.equal((await state()).relics.consumable,'bargain');
  // Dangerous item requires a hold; movement/cancel and a tap do not spend it.
  await page.locator('#consumableSlot').tap();assert.equal((await state()).hp,3);await page.locator('#itemChoice').click({position:{x:5,y:5}});
  let slot=await page.locator('#consumableSlot').boundingBox();
