@@ -15,6 +15,64 @@ content: Square, Rectangle, Round and Chamfered. No textures, room-size classes,
 new content or topology changes. The existing Archive/Consumable footer overlap
 fix is already included and remains unchanged.
 
+### Follow-up — movement performance audit
+
+The moving light already used one cancellable RAF loop, cached endpoints and
+stable map DOM. Shapes, corridors and room geometry were **not** rebuilt per
+animation frame. No frame-level layout reads or layout/reflow were observed.
+The scaling cost was lighting: every visible active-layer room received repeated
+inherited CSS variable, opacity and filter writes, including unused variables and
+unchanging far-room values. Inactive layers were not traversed by this loop.
+
+`startRoomTravel()` now prepares light endpoints/midpoints and room presentation
+flags once per hop. It establishes constant light once, retains only rooms with
+changing falloff in the frame list, and writes individual properties only when
+their value changes. Landmark variables are written only on landmarks; frontier
+brightness uses its existing explicit floor filter without also updating an
+unused CSS variable. The midpoint check preserves dimming on equal-distance
+cycle rooms. The same interpolated light position, opacity, saturation,
+brightness, glow, shadows, clip paths and SVG outlines are retained.
+
+Representative 30-frame Chromium audit (4 versus 33 visible active-layer rooms):
+
+| Frame work | Few: before → after | Many: before → after |
+|---|---:|---:|
+| Observed style mutations | 570 → 300 | 1,790 → 1,045 |
+| CSS custom-property writes | 420 → 150 | 1,980 → 60 |
+| Style recalculation time | 94.4 → 48.9 ms | 145.1 → 74.7 ms |
+| Mean JS frame handler | 0.41 → 0.31 ms | 1.40 → 0.77 ms |
+| Frame layout reads / geometry calls | 0 → 0 | 0 → 0 |
+
+These are development-host measurements, not Android frame-rate claims. Timing
+varies between runs; the write reductions are deterministic. Paint time did not
+improve consistently. Diagnostic filter-disable and broad compositing-hint
+controls did not justify shipping a visual change or extra per-room GPU hints.
+No filters, glows or silhouettes were removed. Arrival still uses the normal
+renderer/save boundary; this is not a renderer rewrite.
+
+`tests/movement-performance.cjs` creates a deterministic floor with all four
+shapes and markers, compares few/many revealed rooms, records CDP metrics and
+paint events, and checks stable DOM, no frame geometry/layout reads, exact sampled
+computed light styles against a supplied baseline, 40 alternating manual hops,
+auto-walk and cleaned RAF/light state. It also checks retained DOM/listeners after
+GC (no retained listener growth or growing map/light DOM in the stress run).
+All ten targeted suites passed. Optional `MOVEMENT_BASELINE=/path/to/old-index.html`,
+`MOVEMENT_REPORT=/tmp/report.json` and `MOVEMENT_COMPARE=/tmp/old-report.json`
+allow repeatable before/after runs with `PWA_BROWSER` set to Chromium.
+
+Focused regressions cover moving light, auto-walk checkpoints, room shapes,
+layers/performance, Amnesia/refinements, loose consumables, persistence and actual
+service-worker offline launch. The corridor test now determines edge direction
+from logical coordinates rather than a pixel-top heuristic that could misclassify
+large rectangles. Room scale, X/Y spacing, 220/550 ms travel, Slowed, conditions,
+visibility and save schema are unchanged. Cache revision: `dungeon-of-fate-v2.22-3`.
+
+On older Android hardware, compare fresh versus fully explored floors, repeated
+manual hops and long auto-walk, normal/Slowed travel, both layers, Amnesia,
+background/resume and descent. Look for smooth falloff/light travel, correct
+arrival timing and no retained glow. Physical-device profiling remains necessary
+to establish the remaining paint/GPU cost and actual frame-rate improvement.
+
 ### Follow-up — room scale and portrait density
 
 Rendering-only tuning in `MAP_GEOMETRY`: `roomVisualScale: 1.30`,
@@ -98,7 +156,7 @@ movement completion, room content, loose objects or visibility state.
 
 Visible light travel is unchanged: **220 ms normal, 2.5× / 550 ms Slowed**. No new
 movement delays or per-frame DOM reconstruction. Version is V2.22; service-worker
-cache is `dungeon-of-fate-v2.22-2`.
+cache is `dungeon-of-fate-v2.22-3`.
 
 ### Verification and phone playtest
 
