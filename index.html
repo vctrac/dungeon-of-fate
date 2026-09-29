@@ -1529,19 +1529,37 @@ function startRoomTravel(id,onArrival){
  var from=knownDistances(source.id),to=knownDistances(id),light=document.createElement("div");light.className="travelLight";light.setAttribute("aria-hidden","true");
  var a=roomPosition(source,rect.width,rect.height),b=roomPosition(target,rect.width,rect.height),x=a.x,y=a.y,dx=b.x-a.x,dy=b.y-a.y;
  var t={from:source.id,to:id,duration:NORMAL_MOVE_DURATION*movementMultiplier(),started:performance.now(),progress:0,frame:null,map:map,light:light,world:rooms};
- var cells=Array.from(map.querySelectorAll(".cell")).map(function(el){return{el:el,floor:el.querySelector(".floor"),room:presentedRoom(room(+el.dataset.id)),a:from[el.dataset.id]===undefined?6:from[el.dataset.id],b:to[el.dataset.id]===undefined?6:to[el.dataset.id]}});
+ var cells=Array.from(map.querySelectorAll(".cell")).map(function(el){
+  var c={el:el,floor:el.querySelector(".floor"),room:presentedRoom(room(+el.dataset.id)),landmark:el.classList.contains("landmark"),a:from[el.dataset.id]===undefined?6:from[el.dataset.id],b:to[el.dataset.id]===undefined?6:to[el.dataset.id],last:null};
+  c.initial=lightAtDistance(Math.min(c.a,c.b+1));var middle=lightAtDistance(Math.min(c.a+.5,c.b+.5)),end=lightAtDistance(Math.min(c.a+1,c.b));
+  // Adjacent graph distances differ by at most one. Also sample the midpoint:
+  // equal-distance rooms can dim halfway through a hop even when endpoints match.
+  c.changes=["opacity","brightness"].concat(c.room.searched?["saturation"]:[]).some(function(k){return c.initial[k]!==middle[k]||c.initial[k]!==end[k]});return c
+ });
+ function illuminate(c,l){
+  var old=c.last;
+  if(c.room.searched&&c.landmark){
+   if(!old||old.opacity!==l.opacity)c.el.style.setProperty("--room-opacity",l.opacity);
+   if(!old||old.saturation!==l.saturation)c.el.style.setProperty("--room-saturation",l.saturation)
+  }else if(!c.room.searched){
+   if(!old||old.opacity!==l.opacity)c.el.style.setProperty("--frontier-floor-opacity",l.opacity)
+  }else{
+   if(!old||old.opacity!==l.opacity)c.el.style.opacity=l.opacity;
+   if(!old||old.saturation!==l.saturation)c.el.style.filter="saturate("+l.saturation+")"
+  }
+  if(!old||old.brightness!==l.brightness)c.floor.style.filter="brightness("+l.brightness+")";
+  c.last=l
+ }
+ // Static far-room light is established once. Only changing falloff participates
+ // in the frame loop; no room geometry, visibility or DOM structure changes here.
+ var changingCells=cells.filter(function(c){return c.changes});
  roomTravel=t;pendingAction="room-travel";clearTimeout(arrivalTimer);arrivalId=null;cancelSlotGesture();clearFastPreview();$("board").inert=true;updateRelicHUD();
  map.classList.add("lightTravel");var current=map.querySelector(".current");if(current)current.classList.remove("current");light.style.width=light.style.height=Math.max(18,rect.width*.045)+"px";map.appendChild(light);
  function paint(p){
   t.progress=p;light.style.transform="translate3d("+(x+dx*p)+"px,"+(y+dy*p)+"px,0) translate(-50%,-50%)";
-  cells.forEach(function(c){var l=lightAtDistance(Math.min(c.a+p,c.b+1-p));
-   c.el.style.setProperty("--room-opacity",l.opacity);c.el.style.setProperty("--room-saturation",l.saturation);
-   if(!c.room.searched){c.el.style.setProperty("--frontier-floor-opacity",l.opacity);c.el.style.setProperty("--frontier-brightness",l.brightness)}
-   else if(!c.el.classList.contains("landmark")){c.el.style.opacity=l.opacity;c.el.style.filter="saturate("+l.saturation+")"}
-   c.floor.style.filter="brightness("+l.brightness+")";
-  })
+  changingCells.forEach(function(c){illuminate(c,lightAtDistance(Math.min(c.a+p,c.b+1-p)))})
  }
- paint(0);
+ cells.forEach(function(c){illuminate(c,c.initial)});paint(0);
  function frame(now){
   if(roomTravel!==t)return;
   if(document.visibilityState==="hidden"){flushLifecycleRun();return}
