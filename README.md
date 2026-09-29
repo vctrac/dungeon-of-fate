@@ -15,6 +15,48 @@ content: Square, Rectangle, Round and Chamfered. No textures, room-size classes,
 new content or topology changes. The existing Archive/Consumable footer overlap
 fix is already included and remains unchanged.
 
+### Follow-up — room scale and portrait density
+
+Rendering-only tuning in `MAP_GEOMETRY`: `roomVisualScale: 1.30`,
+`gridSpacingX: 1`, `gridSpacingY: 0.70`, `roomSpan: 0.072`,
+`minClearance: 2` px and a 44 px preferred touch size.
+
+Previously centers were spaced by board width/9 and height/9, and ordinary
+silhouettes spanned 7.2% of the smaller board dimension. They now span 9.36%
+(+30%), with a clearance clamp for unusually constrained layouts. Horizontal
+pitch stays width/9. Vertical pitch is height/9 multiplied by
+`max(0.70, min(1, width/height))`: 30% tighter on tall portrait maps, transitioning
+to no compression on square/landscape maps. Rectangle long-axis factor is reduced
+slightly from 1.15 to 1.10 (short axis remains 0.85), retaining a roughly 1.29:1
+silhouette and a visible gap instead of allowing enlarged neighbors to merge.
+Corridor thickness is unchanged.
+
+`mapGeometry()` / `roomPosition()` centralize screen-space mapping for rooms,
+connections, moving light, feedback fallback positions and stair transition
+anchors. Both layers share the centered bounding box of all generated rooms;
+unknown/unremembered rooms never change the bounds, so exploration/Amnesia cannot
+shift the map. Bounds are computed once per render, not per animation frame.
+Natural empty regions remain and the dungeon is never stretched to fill them.
+No logical coordinates, generation, shape selection, saves or movement timing
+change. Touch regions remain generous and are capped below the new grid pitch
+where a 44 px target would overlap a neighbor. Loose-item markers are inset within
+their room target so the tighter rows do not let item hitboxes reach adjacent rooms.
+
+Measured board geometry (Square/Round/Chamfered width; rectangle factors above):
+
+| Viewport | Map viewport | Room before → after | X pitch | Y pitch before → after |
+|---|---|---|---|---|
+| 320×568 | 300×430 | 21.60 → 28.08 px | 33.33 px | 47.78 → 33.44 px |
+| 390×844 | 370×732 | 26.64 → 34.63 px | 41.11 px | 81.33 → 56.93 px |
+| 430×932 | 410×820 | 29.52 → 38.38 px | 45.56 px | 91.11 → 63.78 px |
+| 844×390 | 700×278 | 20.02 → 26.02 px | 77.78 px | 30.89 → 30.89 px |
+
+The focused shape test additionally checks centering, unchanged horizontal pitch,
+responsive vertical pitch, minimum rectangle clearance and actual moving-light
+midpoints against rendered rooms for all 16 shape pairs. Layout checks include
+320×568, 390×844, 430×932, 844×390 and 1280×800. Cache revision is
+`dungeon-of-fate-v2.22-2`; visible version remains V2.22.
+
 ### Geometry and generation
 
 `ROOM_SHAPES` centralizes topology-weighted selection (percentages):
@@ -35,9 +77,9 @@ shape directly. Older rooms without the optional field use a deterministic fallb
 no save schema bump, run clearing or Archive changes are needed.
 
 `roomGeometry()` supplies shared centers, silhouette bounds and separate touch
-bounds for both layers. Square/Round/Chamfered span 7.2% of the smaller map dimension;
-Rectangle uses 1.15 × 0.85 of that span (1.35:1 ratio). Existing room centers and
-spacing stay fixed. Round uses a circular border; Chamfered clips 25% corners and
+bounds for both layers. Square/Round/Chamfered use the shared visual span described above;
+Rectangle uses 1.10 × 0.85 of that span (1.29:1 ratio). Logical room coordinates
+and topology stay fixed. Round uses a circular border; Chamfered clips 25% corners and
 uses a small SVG outline. Existing CSS fills, state colors and lighting remain
 separate from geometry, ready for a future clipped material without adding any now.
 
@@ -56,7 +98,7 @@ movement completion, room content, loose objects or visibility state.
 
 Visible light travel is unchanged: **220 ms normal, 2.5× / 550 ms Slowed**. No new
 movement delays or per-frame DOM reconstruction. Version is V2.22; service-worker
-cache is `dungeon-of-fate-v2.22-1`.
+cache is `dungeon-of-fate-v2.22-2`.
 
 ### Verification and phone playtest
 

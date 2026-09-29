@@ -402,7 +402,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 .cell.travel-step.current .floor{animation-duration:var(--travel-arrival-ms,180ms)}
 /* Shared lower action shelf; dice resolution remains outside the physical card. */
 .worldCard #replaceSelected,.worldCard #consumableChoices,.worldCard #chestOpen,.worldCard #contentAction{top:auto;bottom:11%}
-.droppedItem{position:absolute;right:-3px;bottom:-6px;z-index:9;font-size:14px;background:#25281e;border:1px solid #b8a36b;border-radius:5px;padding:2px;min-width:22px;min-height:22px;touch-action:manipulation}
+.droppedItem{position:absolute;right:0;bottom:0;z-index:9;font-size:14px;background:#25281e;border:1px solid #b8a36b;border-radius:5px;padding:2px;min-width:22px;min-height:22px;touch-action:manipulation}
 .droppedItem:disabled{pointer-events:none}
 .layerMap .memoryForgotten{opacity:0!important;pointer-events:none!important;transition:opacity 50ms linear}
 #deathConclusion{position:fixed;inset:0;z-index:190;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse,#08090855,transparent 72%);text-align:center;touch-action:manipulation;color:#eee2cd;text-shadow:0 2px 12px #000}
@@ -1061,7 +1061,7 @@ function growLayer(offset,root,target){
 
 }
 // Architecture uses only stable topology, never event/content or gameplay RNG.
-var ROOM_SHAPES={weights:{terminal:[45,10,10,35],straight:[20,55,15,10],corner:[35,10,20,35],three:[25,10,40,25],four:[20,5,50,25]},kinds:["square","rectangle","round","chamfered"],rectangleLong:1.15,rectangleShort:.85};
+var ROOM_SHAPES={weights:{terminal:[45,10,10,35],straight:[20,55,15,10],corner:[35,10,20,35],three:[25,10,40,25],four:[20,5,50,25]},kinds:["square","rectangle","round","chamfered"],rectangleLong:1.10,rectangleShort:.85};
 function shapeHash(text){var h=2166136261;for(var i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function chooseRoomShape(r,seed){
  var horizontal=r.links.filter(function(id){return room(id).y===r.y}).length,vertical=r.links.length-horizontal;
@@ -1070,11 +1070,29 @@ function chooseRoomShape(r,seed){
  return{kind:ROOM_SHAPES.kinds[i],orientation:horizontal>vertical?"horizontal":vertical>horizontal?"vertical":shapeHash(seed+":"+r.id+":axis")%2?"horizontal":"vertical"}
 }
 function assignRoomShapes(){var seed=shapeHash(floorNo+":"+rooms.filter(function(r){return r.active}).map(function(r){return r.id+"="+r.links.slice().sort(function(a,b){return a-b}).join(",")}).join(";"));rooms.forEach(function(r){if(r.active)r.shape=chooseRoomShape(r,seed)})}
+// Screen-space tuning only: shared by rooms, links, travel and layer anchors.
+var MAP_GEOMETRY={roomVisualScale:1.30,gridSpacingX:1,gridSpacingY:.70,roomSpan:.072,minClearance:2,touchSize:44};
+var mapBounds=null;
+function generatedMapBounds(){
+ if(mapBounds&&mapBounds.world===rooms)return mapBounds;
+ var b={world:rooms,minX:W-1,maxX:0,minY:H-1,maxY:0},found=false;
+ rooms.forEach(function(r){if(r.active){found=true;b.minX=Math.min(b.minX,r.x);b.maxX=Math.max(b.maxX,r.x);b.minY=Math.min(b.minY,r.y);b.maxY=Math.max(b.maxY,r.y)}});
+ if(!found){b.minX=b.minY=0;b.maxX=W-1;b.maxY=H-1}mapBounds=b;return b
+}
+function mapGeometry(width,height){
+ var c=MAP_GEOMETRY,bounds=generatedMapBounds(),stepX=width/W*c.gridSpacingX;
+ // Compress portrait rows; do not compress the already short landscape axis.
+ var stepY=height/H*Math.max(c.gridSpacingY,Math.min(1,width/height));
+ var base=Math.min(Math.min(width,height)*c.roomSpan*c.roomVisualScale,(Math.min(stepX,stepY)-c.minClearance)/ROOM_SHAPES.rectangleLong);
+ return{stepX:stepX,stepY:stepY,originX:width/2-(bounds.minX+bounds.maxX)*stepX/2,originY:height/2-(bounds.minY+bounds.maxY)*stepY/2,base:base}
+}
+function roomPosition(r,width,height,m){m=m||mapGeometry(width,height);return{x:m.originX+r.x*m.stepX,y:m.originY+r.y*m.stepY}}
+function layerOrigin(r,width,height){var p=roomPosition(r,width,height);return p.x/width*100+"% "+p.y/height*100+"%"}
 function roomGeometry(r,width,height){
  r=presentedRoom(r);var shape=r.searched?(r.shape||chooseRoomShape(r,floorNo)): {kind:"square",orientation:"horizontal"};
- var base=Math.min(width,height)*.072,w=base,h=base;
+ var m=mapGeometry(width,height),p=roomPosition(r,width,height,m),base=m.base,w=base,h=base;
  if(shape.kind==="rectangle"){w*=shape.orientation==="horizontal"?ROOM_SHAPES.rectangleLong:ROOM_SHAPES.rectangleShort;h*=shape.orientation==="vertical"?ROOM_SHAPES.rectangleLong:ROOM_SHAPES.rectangleShort}
- return{kind:shape.kind,orientation:shape.orientation,x:(r.x/W+.053)*width,y:(r.y/H+.053)*height,w:w,h:h,hitW:Math.min(width/W-2,Math.max(44,w)),hitH:Math.min(height/H-2,Math.max(44,h))}
+ return{kind:shape.kind,orientation:shape.orientation,x:p.x,y:p.y,w:w,h:h,hitW:Math.min(m.stepX-MAP_GEOMETRY.minClearance,Math.max(MAP_GEOMETRY.touchSize,w)),hitH:Math.min(m.stepY-MAP_GEOMETRY.minClearance,Math.max(MAP_GEOMETRY.touchSize,h))}
 }
 function applyRoomGeometry(cell,r,width,height){var g=roomGeometry(r,width,height);cell.dataset.shape=g.kind;cell.dataset.orientation=g.orientation;cell.style.left=(g.x-g.hitW/2)+"px";cell.style.top=(g.y-g.hitH/2)+"px";cell.style.width=g.hitW+"px";cell.style.height=g.hitH+"px";cell.style.setProperty("--chamber-w",g.w+"px");cell.style.setProperty("--chamber-h",g.h+"px")}
 function addRoomFloor(cell){var floor=document.createElement("div");floor.className="floor";if(cell.dataset.shape==="chamfered")floor.innerHTML='<svg class="shapeOutline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="25,1 75,1 99,25 99,75 75,99 25,99 1,75 1,25"/></svg>';cell.appendChild(floor)}
@@ -1119,7 +1137,7 @@ function traverseStairs(){
  layerTransition=!reduced;
  if(!reduced)layerVisual={phase:"prepare",source:source,destination:null,dirty:false};
  $("board").style.setProperty("--layer-duration",LAYER_CONFIG.transitionMs+"ms");update();updateContext();if(reduced)return true;
- var visual=layerVisual,origin=(r.x/W*100+5.3)+"% "+(r.y/H*100+5.3)+"%",map=$("activeMap");visual.destination=map;
+ var visual=layerVisual,origin=layerOrigin(r,$("board").clientWidth,$("board").clientHeight),map=$("activeMap");visual.destination=map;
  map.style.transformOrigin=origin;map.classList.add("layerCompositing",ascending?"layerPrepareUp":"layerPrepareDown");
  document.querySelectorAll(".inactiveLayer").forEach(function(el){el.hidden=true});
  if(source){source.className="layerMap layerGhost layerCompositing";source.style.transformOrigin=origin;$("board").appendChild(source)}
@@ -1337,9 +1355,10 @@ function clearFeedback(){feedbackEntries.slice().forEach(removeFeedback)}
 function feedbackAnchor(entry){
  var board=$("board"),r=room(entry.id),cell=document.querySelector('.cell[data-id="'+entry.id+'"]'),br=board.getBoundingClientRect(),cr=cell?cell.getBoundingClientRect():null;
  var w=entry.el.offsetWidth,h=entry.el.offsetHeight,pad=14;
- var cx=cr?cr.left-br.left-board.clientLeft+cr.width/2:(r.x/W+.053)*board.clientWidth;
- var top=cr?cr.top-br.top-board.clientTop:(r.y/H+.017)*board.clientHeight;
- var bottom=cr?cr.bottom-br.top-board.clientTop:top+board.clientHeight*.072;
+ var g=roomGeometry(r,board.clientWidth,board.clientHeight);
+ var cx=cr?cr.left-br.left-board.clientLeft+cr.width/2:g.x;
+ var top=cr?cr.top-br.top-board.clientTop:g.y-g.hitH/2;
+ var bottom=cr?cr.bottom-br.top-board.clientTop:g.y+g.hitH/2;
  var y=top-h-8;if(y<pad+8)y=bottom+8;
  return{x:Math.max(pad,Math.min(board.clientWidth-w-pad,cx-w/2)),y:Math.max(pad+8,Math.min(board.clientHeight-h-pad-4,y)),w:w,h:h}
 }
@@ -1508,7 +1527,7 @@ function startRoomTravel(id,onArrival){
  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){committed(onArrival)();return true}
  var map=$("activeMap"),source=room(currentId),target=room(id),rect=map.getBoundingClientRect();
  var from=knownDistances(source.id),to=knownDistances(id),light=document.createElement("div");light.className="travelLight";light.setAttribute("aria-hidden","true");
- var x=(source.x/W*100+5.3)*rect.width/100,y=(source.y/H*100+5.3)*rect.height/100,dx=(target.x-source.x)/W*rect.width,dy=(target.y-source.y)/H*rect.height;
+ var a=roomPosition(source,rect.width,rect.height),b=roomPosition(target,rect.width,rect.height),x=a.x,y=a.y,dx=b.x-a.x,dy=b.y-a.y;
  var t={from:source.id,to:id,duration:NORMAL_MOVE_DURATION*movementMultiplier(),started:performance.now(),progress:0,frame:null,map:map,light:light,world:rooms};
  var cells=Array.from(map.querySelectorAll(".cell")).map(function(el){return{el:el,floor:el.querySelector(".floor"),room:presentedRoom(room(+el.dataset.id)),a:from[el.dataset.id]===undefined?6:from[el.dataset.id],b:to[el.dataset.id]===undefined?6:to[el.dataset.id]}});
  roomTravel=t;pendingAction="room-travel";clearTimeout(arrivalTimer);arrivalId=null;cancelSlotGesture();clearFastPreview();$("board").inert=true;updateRelicHUD();
@@ -1850,9 +1869,10 @@ function render(){
  mapRenderPending=false;
  var board=$("board"),feedbackLayer=$("feedbackLayer");Array.prototype.slice.call(board.children).forEach(function(el){if(el!==feedbackLayer)el.remove()});if(!feedbackLayer){feedbackLayer=document.createElement("div");feedbackLayer.id="feedbackLayer";board.appendChild(feedbackLayer)}
 
+ mapBounds=null; // Recompute once from both layers, never from explored/remembered rooms.
  var mapWidth=board.clientWidth,mapHeight=board.clientHeight;
  var activeMap=document.createElement("div");activeMap.roomMetrics={width:mapWidth,height:mapHeight};activeMap.id="activeMap";activeMap.className="layerMap";activeMap.inert=layerTransition;board.appendChild(activeMap);
- layers.forEach(function(layer){if(layer.id===activeLayer)return;var back=document.createElement("div");back.roomMetrics={width:mapWidth,height:mapHeight};back.className="layerMap inactiveLayer";back.inert=true;back.setAttribute("aria-hidden","true");var anchor=rooms.find(function(r){return layerOf(r.id)===layer.id&&r.event==="stairs"});if(anchor)back.style.transformOrigin=(anchor.x/W*100+5.3)+"% "+(anchor.y/H*100+5.3)+"%";board.insertBefore(back,activeMap);
+ layers.forEach(function(layer){if(layer.id===activeLayer)return;var back=document.createElement("div");back.roomMetrics={width:mapWidth,height:mapHeight};back.className="layerMap inactiveLayer";back.inert=true;back.setAttribute("aria-hidden","true");var anchor=rooms.find(function(r){return layerOf(r.id)===layer.id&&r.event==="stairs"});if(anchor)back.style.transformOrigin=layerOrigin(anchor,mapWidth,mapHeight);board.insertBefore(back,activeMap);
   rooms.forEach(function(r){if(layerOf(r.id)!==layer.id||!r.active||!mapVisible(r))return;
    r.links.forEach(function(id){if(id>r.id&&mapVisible(room(id)))addLink(r,room(id),back)});
    var cell=document.createElement("div");cell.className="layerRoom";cell.dataset.id=r.id;r=presentedRoom(r);applyRoomGeometry(cell,r,mapWidth,mapHeight);addRoomFloor(cell);var glyph=document.createElement("span");glyph.className="icon";glyph.textContent=r.event==="stairs"?(layers[layerOf(r.stairTo)].height>layer.height?"▲":"▼"):r.searched?"·":"?";cell.appendChild(glyph);back.appendChild(cell)
@@ -2155,7 +2175,7 @@ window.__dofTest={
  layerChance:layerChance,traverseStairs:traverseStairs,layerInfo:function(){return{layers:layers,activeLayer:activeLayer,transition:layerTransition}},
  chestCandidates:chestCandidates,chooseChestContent:chooseChestContent,generateChest:generateChest,openChestCard:openChestCard,openChest:openChest,
  previewOutcome:previewOutcome,revealOutcome:revealOutcome,rerollOutcome:rerollOutcome,canReroll:canReroll,rerollFateAfterCost:rerollFateAfterCost,
- shapeConfig:ROOM_SHAPES,chooseRoomShape:chooseRoomShape,roomGeometry:roomGeometry,
+ mapGeometry:mapGeometry,mapGeometryConfig:MAP_GEOMETRY,roomPosition:roomPosition,shapeConfig:ROOM_SHAPES,chooseRoomShape:chooseRoomShape,roomGeometry:roomGeometry,
  serializeRun:serializeRun,saveRun:saveRun,loadRun:loadRun,restoreRun:restoreRun,validateSave:validateSave,flushRun:flushRun,
  inGateBranch:inGateBranch,gateBranchSize:gateBranchSize,meaningfulScavenge:meaningfulScavenge,finishItemReveal:finishItemReveal,gateRequirement:gateRequirement,gateReward:gateReward,gateAccess:gateAccess,normalReachableWithoutGate:normalReachableWithoutGate,openAltar:openAltar,sacrificeAltar:sacrificeAltar,unexploredCount:unexploredCount,
  inspectItem:inspectItem,closeItemCard:function(acquired){finishItemReveal();return closeItemCard(acquired)},replaceTrinket:replaceTrinket,pumpCards:pumpCards,beginRoomEffects:beginRoomEffects,finishRoomEffects:finishRoomEffects,monsterRate:monsterRate,fateGainFactor:fateGainFactor,continueEncounter:continueEncounter,
