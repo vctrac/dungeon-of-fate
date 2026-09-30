@@ -15,6 +15,34 @@ content: Square, Rectangle, Round and Chamfered. No textures, room-size classes,
 new content or topology changes. The existing Archive/Consumable footer overlap
 fix is already included and remains unchanged.
 
+### Follow-up — card gestures, living creatures and Fate Compass
+
+Cards support a downward drag to dismiss/decline/accept using their existing
+semantics. A 12px vertical dead zone precedes a 96px dismissal threshold; shorter
+drags return without committing. Gameplay actions still require a 650ms hold.
+Tap-outside remains available. Unresolved creature introductions retain their
+existing confront swipe; dragging a pending result accepts that result once.
+
+Encounter cards keep the same size through reveal and resolution. Results,
+consequences and Reroll live in the lower card interior. The independent large
+die overlaps the bottom in portrait and sits beside the card on short landscape
+screens; it fades during dismissal and returns on cancellation. Card transforms
+separate layout from dismissal, leaving room for future tilt (not implemented).
+
+Evil Eye senses only directly connected unresolved **living** creatures, without
+remembering them or revealing their type. Guardian, Thief and revealed Mimic are
+living; Spirit is not. Vampire's Blood uses this same metadata and heals the first
+useful living victory each floor; full health does not spend its activation.
+Amnesia does not suppress these present supernatural senses.
+
+**Fate Compass** is a normal collectible Trinket. Its HUD needle gives the spatial
+EXIT bearing (eight directions), never a path or map reveal. ↕ means the EXIT is
+on another layer; it does not point toward stairs. The Archive now contains 30
+entries. Existing active saves and Archive progress remain intact; gesture state
+is transient and pending encounter persistence is unchanged. Movement timing,
+Slowed timing, room scale/spacing and map animation work are unchanged. PWA cache:
+`dungeon-of-fate-v2.22-4`.
+
 ### Follow-up — movement performance audit
 
 The moving light already used one cancellable RAF loop, cached endpoints and

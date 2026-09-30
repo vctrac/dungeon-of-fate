@@ -55,7 +55,7 @@ module.exports=()=>{
   t.newRun();let s=state(),ids=s.rooms.filter(r=>r.active&&!r.known&&r.id!==s.exitId).slice(0,3).map(r=>r.id);
   ids.forEach((id,i)=>t.setRoomFixture(id,{event:'monster',monsterKind:['basic','thief','spirit'][i]}));t.acquireTrinket('eye');t.closeItemCard();
   check(ids.every(id=>!state().rooms[id].known&&!state().rooms[id].eyeMarked),'eye hidden');
-  ids.forEach(id=>{t.setRoomFixture(id,{searched:false,visited:false,known:false,eyeMarked:false});const neighbor=state().rooms[id].links[0];t.markVisited([neighbor]);check(state().rooms[id].eyeMarked,'eye frontier')});
+  ids.forEach(id=>{t.setRoomFixture(id,{searched:false,visited:false,known:false,eyeMarked:false});const neighbor=state().rooms[id].links[0];t.markVisited([neighbor]);check(!state().rooms[id].eyeMarked,'no permanent eye memory')});
   // Five-floor reward sweep: every room, every encounter won, normal Scavenge finds, no deaths.
   let wallets=[];
   for(let run=0;run<30;run++){
