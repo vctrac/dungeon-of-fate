@@ -86,7 +86,7 @@ let browser;
  s=await resolve('basic',5);assert(!s.relics.floorUsed.blood);
  await page.evaluate(()=>__dofTest.setVitals(1,false));s=await resolve('thief',5);assert.equal(s.hp,2);assert(s.relics.floorUsed.blood);
  s=await resolve('spirit',6);assert.equal(s.hp,2);
- await page.evaluate(()=>__dofTest.newFloor());s=await resolve('spirit',5);assert.equal(s.hp,3);
+ await page.evaluate(()=>__dofTest.newFloor());s=await resolve('spirit',5);assert.equal(s.hp,2);assert(!s.relics.floorUsed.blood);s=await resolve('basic',5);assert.equal(s.hp,3);
  // Every perfect encounter roll dispatches a reusable passive hook.
  for(const type of ['monster','trap','heal']){
   await reset();await page.evaluate(type=>{__dofTest.setVitals(2,false);__dofTest.resolveDice(type,6)},type);
@@ -100,7 +100,7 @@ let browser;
   await page.evaluate(n=>__dofTest.setFloor(n),floor);
   const info=await page.evaluate(()=>{
    const s=__dofTest.state();
-   return{all:s.rooms.filter(r=>r.active&&r.known&&!r.searched&&r.event==='monster').every(r=>r.eyeMarked),only:s.rooms.filter(r=>r.eyeMarked).every(r=>r.event==='monster'&&r.known&&!r.searched),icons:[...document.querySelectorAll('.eye-known .icon')].every(el=>el.textContent==='👹')}
+   return{all:s.rooms.every(r=>!r.eyeMarked),only:[...document.querySelectorAll('.eye-known')].every(el=>__dofTest.sensesLiving(s.rooms[+el.dataset.id])),icons:[...document.querySelectorAll('.eye-known .icon')].every(el=>el.textContent==='👁')}
   });assert(info.all&&info.only&&info.icons);
  }
  console.log('PASS lethal-only Doll and Blood floor limits, protection priority, Evil Eye on every floor, perfect-roll hook, coexistence without duplicates');
