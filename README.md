@@ -8,6 +8,87 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.23 — First Chapter: progression and Guardian General
+
+Content eligibility is now separate from encounter frequency and behavior.
+Floors 1–24 select Guardian or Wretch (equal identity weights), both living and
+using the same Basic Heart-threat table. Wretch currently shares Guardian's
+placeholder icon. The Monster frequency curve is unchanged: 14% at Floor 2,
+scaling to 30% at Floor 20. Eligible families retain the existing weighting curve,
+with a 60% minimum Basic-family share; identities are weighted within each family.
+
+The existing floor-wide ordinary danger budget is retained, including Floor 1's
+special case. Early ordinary hazards select Spikes at 90% and generic Trap at
+10% per placement. Repeated Spikes are allowed so variety does not make Trap
+common. Generic Trap remains available through Scavenge and Gate plumbing.
+Later existing hazards retain their resolution tables and Archive entries.
+At Floor 26 the existing broader Hazard pool and Thief/Spirit eligibility resume
+as a provisional fallback; the finer future introduction schedule below is not
+implemented. Gargoyle and Skeleton are not registered or generated yet.
+
+**Weakness** replaces Sickness: **💔 WEAK ⑩**, ten completed movements, refresh
+rather than stack, and double the next qualifying incoming Heart hit through the
+existing protection pipeline. Fruit Tree cures Weakness before healing; Garden
+clears all conditions. Rotten Spores retains its POISONED result wording.
+Slowed and Amnesia are unchanged, including **220ms normal / 550ms Slowed** travel.
+The existing save loader performs a small old condition-key rename; there is no
+new migration framework or save-schema version. Archive progress is retained.
+
+### Boss I — Guardian General
+
+Boss slots cycle every 25 floors: I / II / III / IV at 25 / 50 / 75 / 100, then
+repeat at 125 / 150 / 175 / 200. Only slot I has content. Unimplemented slots use
+safe ordinary floors and EXIT behavior; there is no placeholder combat.
+
+The Guardian General is living, Basic-compatible and starts at **♥♥♥**. Its EXIT
+is a natural terminal room (exactly one connection), selected from distant leaves
+before events are assigned. Generation retries when necessary; after 16 attempts
+it suppresses optional loop edges using the existing tree growth routine to
+ensure a terminal candidate. No room is bolted onto the map. Normal EXIT topology,
+room shapes, stairs, Chest/Gate branches and special-room placement remain intact.
+
+Discovering the General opens its Archive-backed preparation card. Drag/outside
+dismissal leaves it unresolved and the player may retreat. **HOLD FIGHT** (650ms)
+commits the entire fight, locking exploration and item activation until victory
+or death. Each round reserves a D6 result through the existing pending/Reroll
+system; previews apply nothing, and each new round may challenge Fate once.
+
+| D6 | Committed effect |
+| --- | --- |
+| 1 | Player −1 Heart, then Weakness ⑩ |
+| 2–3 | Player −1 Heart |
+| 4–5 | Boss −1 Heart |
+| 6 | CRITICAL: Boss −2 Hearts |
+
+New Weakness is applied after that round's hit; existing Weakness can amplify it.
+Boss HP never goes below zero and persists between rounds/reloads. Accepting a
+surviving round starts the next round in the same encounter composition; it cannot
+abandon combat. Vampire's Blood only considers final defeat, not successful hits.
+Golden Horseshoe still recognizes roll 6. Victory resolves the threat, displays
+EXIT UNLOCKED, and leaves descent to the normal deliberate EXIT interaction.
+
+Boss identity/HP/discovery/commitment/round live on the EXIT room; the existing
+pending encounter stores the reserved result, preview and Reroll state. Reload
+restores a committed fight without resetting HP or providing an escape. Death
+uses the existing conclusion and ended-save lifecycle. Guardian, Wretch and
+Guardian General have distinct Creature identities: **32 Archive entries**.
+Eligibility and generation never unlock Archive entries.
+
+### Future progression direction — not implemented
+
+- Floors 26–49: Gargoyle, later Skeleton and Thief; broader hazards.
+- Floor 50: Boss II, undecided.
+- Floors 51–74: Spirit, possible future item-threatening Thief and other content.
+- Floor 75: Boss III, undecided.
+- Floors 76–99: another Ghost type, likely Golem and stronger status hazards.
+- Floor 100: Boss IV, intended final normal-content introduction milestone.
+- Floor 101+: full eligible pool, endless scaling/repetition and the boss cycle.
+
+Direct Heart threats remain the primary creature family; specialized Gold/FATE/
+item attackers supplement them. This release does not implement that final
+weighting schedule, Keys/Doors, the Gate redesign, new deep hazards or Bosses II–IV.
+PWA cache: `dungeon-of-fate-v2.23-1`.
+
 ## V2.22 — Room Shapes
 
 Ordinary chambers now have four small abstract silhouettes, independent of their
@@ -245,7 +326,7 @@ dice balance, card framework or death résumé redesign.
   dice, holds, arrival pulses and Amnesia keep normal timing. Reduced motion
   skips travel animation and commits one arrival immediately.
   All three conditions start/refresh at **10 completed movements** (⑩ → ①).
-  Stairs and cross-floor behavior are unchanged. Sickness can still clear early
+  Stairs and cross-floor behavior are unchanged. Weakness can still clear early
   on damage; Garden clears all conditions. Preview, HUD and validation use
   the centralized `CONTENT_TUNING.conditionMoves`.
 - **Amnesia:** the authoritative remembered-room mask commits with the accepted
@@ -298,7 +379,7 @@ dice balance, card framework or death résumé redesign.
   action availability. Gate item resolution also retains its source if blocked.
 - **Fruit Tree:** the former Food Discovery is now **🌳 Fruit Tree**, with edible
   fruit wording. Internal `food` / `discovery:food` IDs, rarity, state and Archive
-  discovery remain. Sickness cure has priority over +1 Heart; healthy/full Hearts
+  discovery remain. Weakness cure has priority over +1 Heart; healthy/full Hearts
   leave the fruit untouched. Successful benefit consumes/resolves the fruit.
 - **Death:** after the existing lethal-result beat and all protection/rescue
   checks, the final map remains with **YOU DIED / Touch anywhere to continue**.
@@ -1097,7 +1178,7 @@ playable Archive entry, but its resolver and protection plumbing remain.
 All four Hazards share d6 Fate changes: 1–2 = −1, 3–4 = −0.5, 5–6 = base +0.2
 through the normal diminishing-gain helper. No new roll-six Fate bonus.
 Spikes deals one incoming Heart on 1–2 and Slowed on 1–4; Mosquitoes never
-hurt Hearts; Spores applies Sickness on 1–4 and Slowed additionally on 1–2;
+hurt Hearts; Spores applies Weakness on 1–4 and Slowed additionally on 1–2;
 Stones deals one incoming Heart on 1–2 and Amnesia on 1–4. All use the existing
 full encounter reveal and separate die/result/Reroll region.
 
@@ -1124,7 +1205,7 @@ Hole .104, Picture .098. These are placements, not guaranteed player encounters.
 
 First entry presents a Discovery; subsequent traversal is quiet. Tapping the
 current room reopens a remaining landmark. Garden REST repeatedly clears all
-conditions without healing. Food cures Sickness first, otherwise heals one
+conditions without healing. Food cures Weakness first, otherwise heals one
 Heart, and stays uneaten at full healthy HP. Flower grants diminishing Fate
 and is consumed. Picture and Monolith are atmospheric, action-free cards.
 Corpse SEARCH and Hole REACH INSIDE use the existing one-Reroll pipeline and
@@ -1161,7 +1242,7 @@ UI, dice and floor descent do not decrement; descent does not clear conditions.
 Slowed lengthens arrival animation and prevents another immediate manual entry
 until that animation completes. Its timing is transient and not saved.
 
-Sickness doubles the next incoming HP hit and is consumed when it amplifies
+Weakness doubles the next incoming HP hit and is consumed when it amplifies
 that hit, even if Bargain or Shield subsequently prevents it. Ordering remains
 Bargain → Shield → lethal Doll rescue, preserving the unused protection below
 it. Preview mirrors this without mutating any resource, condition or item.
@@ -1209,7 +1290,7 @@ Physical-device checklist:
 - Descend with conditions and force-close; confirm durations survive unchanged.
 - Amnesia hides old knowledge but permits navigation; revisit rooms and watch
   knowledge return on the fifth movement or Garden REST.
-- Return to Garden repeatedly; test Food while Sick, injured, and healthy/full.
+- Return to Garden repeatedly; test Food while Weak, injured, and healthy/full.
 - Decline Corpse/Hole and return; test supplies replacement and surprise Wasps chain.
 - First-ever Spikes with Ward must unlock Archive, show Spikes, then visibly disarm.
 - Persistent/consumed Discovery landmarks remain readable on both layers.

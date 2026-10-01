@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((q,r)=>fs.readF
  const snapshot=()=>page.evaluate(()=>{const s=__dofTest.serializeRun();return{run:s.run,floor:s.floor,relicState:s.relicState,pending:s.pending}});
  async function press(selector,ms){const b=await page.locator(selector).boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();assert(await page.locator(selector).evaluate(e=>e.classList.contains('holding')));await page.waitForTimeout(ms);await page.mouse.up()}
  for(const type of ['corpse','flower','food','garden','hole']){
-  await page.evaluate(type=>{const t=__dofTest;t.newRun();t.setVitals(2,false);t.applyCondition('sickness');t.setRoomFixture(t.state().currentId,{event:type,contentState:{seen:false,resolved:false,consumed:false}});t.openContent(t.state().currentId,true)},type);
+  await page.evaluate(type=>{const t=__dofTest;t.newRun();t.setVitals(2,false);t.applyCondition('weakness');t.setRoomFixture(t.state().currentId,{event:type,contentState:{seen:false,resolved:false,consumed:false}});t.openContent(t.state().currentId,true)},type);
   const before=await snapshot();await page.locator('#contentAction').tap();assert.deepEqual(await snapshot(),before);await press('#contentAction',140);assert.deepEqual(await snapshot(),before);assert(await page.locator('#itemChoice').isVisible());
   await press('#contentAction',710);const after=await snapshot();assert.notDeepEqual(after,before);if(type==='corpse'||type==='hole')assert.equal(after.pending.encounter.type,type);else if(type==='garden')assert.deepEqual(after.run.conditions,{});else assert(after.floor.rooms[after.floor.currentId].contentState.consumed);
   await page.mouse.up();assert.deepEqual(await snapshot(),after);

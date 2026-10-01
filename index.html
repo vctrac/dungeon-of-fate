@@ -393,6 +393,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 #encounterDie{position:absolute;left:50%;transform:translateX(-50%);width:var(--encounter-die-size);height:var(--encounter-die-size);visibility:hidden;z-index:4;transition:opacity 160ms ease-out}
 .resolution-active #encounterDie{visibility:visible}
 #encounterDie .die,#encounterDie .die.rolling{width:100%;height:100%;font-size:calc(var(--encounter-die-size)*.79);margin:0}
+.cell.bossThreat .floor{border-color:#c66b58}.cell.bossThreat .exitMark{color:#ebad88}.cell.bossDefeated .exitMark{color:#b9d69e}.eventCard.boss #monsterThreat{width:100%;right:0;bottom:7%;font-size:clamp(12px,6cqw,24px);color:#edb09c}
 .cardGestureHint{position:absolute;top:100%;left:0;width:100%;font-size:9px;line-height:14px;color:#c4b594}
 .cardDismiss{position:relative;flex:none;transition:transform 180ms ease-out,opacity 180ms ease-out;touch-action:none}
 .cardDismiss.dragging{transition:none}
@@ -526,11 +527,31 @@ function $(id){return document.getElementById(id)} function room(id){return room
 // V2.14 effect definitions are behavior; relicState contains only serializable run data.
 function freshRelicState(){return{trinkets:[],capacity:3,consumable:null,starterItem:null,starterInspected:false,floorUsed:{},bargainCharges:0,bargainRoom:null,coinCharges:0,coinRoom:null,wardArmed:false,pendingItem:null}}
 var relicState=freshRelicState(),encounterMonster="basic",slotGesture=null;
+// Identity, behavior, life and depth eligibility are independent metadata.
+var CONTENT_PROGRESSION={earlyEnd:24,minBasicShare:.60,earlyHazards:{spikes:.90,trap:.10}};
 var MONSTERS={
- basic:{icon:"👹",name:"Guardian",resource:"♥",living:true},
- thief:{icon:"🥷",name:"Thief",resource:"🪙",living:true},
- spirit:{icon:"👻",name:"Spirit",resource:"✦",living:false}
+ basic:{icon:"👹",name:"Guardian",resource:"♥",living:true,family:"basic",minDepth:1,weight:1},
+ wretch:{icon:"👹",name:"Wretch",resource:"♥",living:true,family:"basic",minDepth:1,weight:1},
+ thief:{icon:"🥷",name:"Thief",resource:"🪙",living:true,family:"thief",minDepth:26,weight:1},
+ spirit:{icon:"👻",name:"Spirit",resource:"✦",living:false,family:"spirit",minDepth:26,weight:1}
 };
+var BOSSES={general:{id:"general",name:"Guardian General",icon:"👹",resource:"♥",boss:true,living:true,family:"basic",maxHp:3}};
+function bossMilestone(depth){return depth>=25&&depth%25===0?((depth/25-1)%4)+1:null}
+function bossForFloor(depth){return bossMilestone(depth)===1?BOSSES.general:null}
+function eligibleCreatures(depth){return Object.keys(MONSTERS).filter(function(id){return depth>=MONSTERS[id].minDepth})}
+function creatureFamilyWeights(depth){
+ var eligible=eligibleCreatures(depth),legacy=monsterWeights(depth),weights={},sum=0;
+ eligible.forEach(function(id){weights[MONSTERS[id].family]=legacy[MONSTERS[id].family]||0});
+ Object.keys(weights).forEach(function(k){sum+=weights[k]});Object.keys(weights).forEach(function(k){weights[k]/=sum});
+ if(weights.basic<CONTENT_PROGRESSION.minBasicShare){var old=weights.basic;Object.keys(weights).forEach(function(k){weights[k]=k==="basic"?CONTENT_PROGRESSION.minBasicShare:weights[k]*(1-CONTENT_PROGRESSION.minBasicShare)/(1-old)})}
+ return weights
+}
+function ordinaryHazards(depth){return depth<=CONTENT_PROGRESSION.earlyEnd?Object.keys(CONTENT_PROGRESSION.earlyHazards):HAZARD_POOL.slice()}
+function hazardAllocation(depth){
+ if(depth>CONTENT_PROGRESSION.earlyEnd)return shuffle(ordinaryHazards(depth));
+ // Early readability deliberately permits repeated Spikes; forcing variety would make Trap 50%.
+ return [0,1,2].map(function(){var value=Math.random(),ids=ordinaryHazards(depth);for(var i=0;i<ids.length;i++){value-=CONTENT_PROGRESSION.earlyHazards[ids[i]];if(value<0)return ids[i]}return ids[0]})
+}
 function monsterRate(depth){return .14+.16*Math.min(1,Math.max(0,(depth-2)/18))}
 function monsterWeights(depth){
  if(depth<=1)return{basic:1,thief:0,spirit:0};
@@ -543,7 +564,11 @@ function scaleMonsters(){
  var candidates=shuffle(eligible.filter(function(r){return r.event==="empty"&&!(floorNo===1&&room(startId).links.indexOf(r.id)>=0)}));
  for(var i=0;i<Math.max(0,desired-existing)&&i<candidates.length;i++)candidates[i].event="monster"
 }
-function pickMonster(depth,roll){var w=monsterWeights(depth);return roll<w.basic?"basic":roll<w.basic+w.thief?"thief":"spirit"}
+function pickMonster(depth,roll){
+ var ids=eligibleCreatures(depth),families=creatureFamilyWeights(depth);
+ for(var i=0;i<ids.length;i++){var m=MONSTERS[ids[i]],total=ids.filter(function(id){return MONSTERS[id].family===m.family}).reduce(function(sum,id){return sum+MONSTERS[id].weight},0);roll-=families[m.family]*m.weight/total;if(roll<0)return ids[i]}
+ return ids[ids.length-1]
+}
 var TRINKETS={
  doll:{icon:"🪆",name:"Voodoo Doll",description:"Prevents lethal damage once: survive at 1 heart, break Fate, and destroy the Doll.",hooks:{
   onDamage:function(ctx){if(!ctx.prevented&&hp<=0){ctx.prevented=true;ctx.protector="doll";breakFate();relicState.trinkets=relicState.trinkets.filter(function(id){return id!=="doll"});dollRescue()}}
@@ -574,8 +599,8 @@ function emitEffect(hook,ctx){
 }
 function addRelicGold(amount){gold+=amount;score+=amount;trackGold(amount);emitEffect("onGoldGain",{amount:amount})}
 var MIMIC_CREATURE={icon:"🧰",name:"Mimic",living:true};
-function creatureDefinition(kind,r){return r&&r.chest&&r.chest.opened&&r.chest.kind==="mimic"?MIMIC_CREATURE:MONSTERS[kind]||MONSTERS.basic}
-function sensesLiving(r){return !!(relicState.trinkets.includes("eye")&&r.active&&r.event==="monster"&&!r.eventResolved&&!r.primaryResolved&&layerOf(r.id)===activeLayer&&room(currentId).links.includes(r.id)&&creatureDefinition(r.monsterKind,r).living)}
+function creatureDefinition(kind,r){if(r&&r.boss)return BOSSES[r.boss.id];return r&&r.chest&&r.chest.opened&&r.chest.kind==="mimic"?MIMIC_CREATURE:MONSTERS[kind]||MONSTERS.basic}
+function sensesLiving(r){return !!(relicState.trinkets.includes("eye")&&r.active&&(r.boss?r.boss.state!=="defeated":r.event==="monster"&&!r.eventResolved&&!r.primaryResolved)&&layerOf(r.id)===activeLayer&&room(currentId).links.includes(r.id)&&creatureDefinition(r.monsterKind,r).living)}
 // Old saved flags are not reconnaissance memory. Sensing is computed from current state.
 function identifyMonsters(){rooms.forEach(function(r){r.eyeMarked=false})}
 function compassDirection(){
@@ -616,14 +641,14 @@ var CONTENT={
  stones:{category:"hazards",name:"Falling Stones",icon:"🪨",tags:["environmental","head-impact"],dice:true,description:"The ceiling has other plans."},
  wasps:{category:"hazards",name:"Wasps",icon:"🐝",tags:["swarm"],description:"Apparently, someone already lives here."},
  garden:{category:"discoveries",name:"Small Garden",icon:"🌿",weight:2.5,action:"REST",description:"A quiet place to catch your breath. Rest clears conditions, not wounds."},
- food:{category:"discoveries",name:"Fruit Tree",icon:"🌳",weight:4,action:"EAT",description:"A small tree bearing edible fruit. Cure Sickness, or restore one Heart."},
+ food:{category:"discoveries",name:"Fruit Tree",icon:"🌳",weight:4,action:"EAT",description:"A small tree bearing edible fruit. Cure Weakness, or restore one Heart."},
  corpse:{category:"discoveries",name:"Corpse Remains",icon:"💀",weight:4,action:"SEARCH",dice:true,description:"Someone came this way before you. Perhaps something remains."},
  flower:{category:"discoveries",name:"Ominous Flower",icon:"🥀",weight:2.5,action:"PICK",description:"A strange bloom bends toward you. Pick it to gain Fate."},
  picture:{category:"discoveries",name:"Old Picture",icon:"🖼️",weight:1,description:"The painted doorway looks almost familiar. Almost."},
  monolith:{category:"discoveries",name:"Unreadable Monolith",icon:"🗿",weight:2.5,description:"Marks cover the stone. Their meaning escapes you."},
  hole:{category:"discoveries",name:"Hole in the Wall",icon:"🕳️",weight:1,action:"REACH INSIDE",dice:true,description:"You can't see what's inside."}
 };
-var HAZARD_POOL=["spikes","mosquitoes","spores","stones"],CONDITIONS={slowed:{icon:"🐌",name:"Slowed"},sickness:{icon:"🤢",name:"Sick"},amnesia:{icon:"🧠",name:"Amnesia"}};
+var HAZARD_POOL=["spikes","mosquitoes","spores","stones"],CONDITIONS={slowed:{icon:"🐌",name:"Slowed"},weakness:{icon:"💔",name:"WEAK"},amnesia:{icon:"🧠",name:"Amnesia"}};
 var conditions={},rememberedRooms={};
 var NORMAL_MOVE_DURATION=220,roomTravel=null;
 var MEMORY_WIPE_STEP_MS=60,MEMORY_WIPE_MAX_STEPS=20,memoryWipe=null;
@@ -669,9 +694,9 @@ function moveConditions(id){
 }
 function mapVisible(r){return (r.known||sensesLiving(r))&&(memoryWipe&&memoryWipe.visible[r.id]||!conditions.amnesia||rememberedRooms[r.id]||r.id===currentId||room(currentId).links.includes(r.id))}
 function presentedRoom(r){if(memoryWipe&&memoryWipe.visible[r.id]&&r.id!==currentId)return memoryWipe.presentation[r.id];if(!conditions.amnesia||rememberedRooms[r.id]||r.id===currentId)return r;
- return Object.assign({},r,{event:"empty",searched:false,visited:false,scavenged:false,clued:false,lootClued:false,attentionActive:false,eyeMarked:false,chest:null,droppedConsumable:null,altarCardSeen:false,hint:"neutral",exactHint:null})
+ return Object.assign({},r,{event:"empty",searched:false,visited:false,scavenged:false,clued:false,lootClued:false,attentionActive:false,eyeMarked:false,chest:null,boss:null,droppedConsumable:null,altarCardSeen:false,hint:"neutral",exactHint:null})
 }
-function updateConditions(){var el=$("conditions");el.textContent=Object.keys(conditions).map(function(k){return CONDITIONS[k].icon+" "+["","①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩"][conditions[k]]}).join("  ");el.setAttribute("aria-label",Object.keys(conditions).map(function(k){return conditionText(k,conditions[k])}).join(", "))}
+function updateConditions(){var el=$("conditions");el.textContent=Object.keys(conditions).map(function(k){return CONDITIONS[k].icon+(k==="weakness"?" WEAK ":" ")+["","①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩"][conditions[k]]}).join("  ");el.setAttribute("aria-label",Object.keys(conditions).map(function(k){return conditionText(k,conditions[k])}).join(", "))}
 function generateDiscoveries(){
  var roll=Math.random(),count=roll<CONTENT_TUNING.discoveryCounts[0]?0:roll<CONTENT_TUNING.discoveryCounts[0]+CONTENT_TUNING.discoveryCounts[1]?1:2;
  var candidates=rooms.filter(function(r){return r.active&&r.event==="empty"&&r.id!==startId&&r.id!==exitId&&!inGateBranch(r.id)&&(!fateGate||r.id!==fateGate.parentId)}),pool=Object.keys(CONTENT).filter(function(id){return CONTENT[id].weight});
@@ -693,21 +718,22 @@ function renderContentCard(){
  ["chestOpen","altarOffer","replaceSelected","replaceTrinkets","consumableChoices","closeItem"].forEach(function(id){$(id).hidden=true});
  $("itemArt").classList.remove("holdDemo");$("itemChoice").hidden=false;$("itemArt").textContent=def.icon;$("itemName").textContent=def.name;$("itemReason").textContent=def.category.toUpperCase();$("itemDescription").textContent=def.description;
  $("itemVisual").textContent=card.notice;$("itemState").textContent=state.resolved&&card.id!=="garden"?"Searched":"";
- $("contentAction").hidden=!action;$("contentAction").textContent=def.action||"";$("contentAction").disabled=card.id==="food"&&!conditions.sickness&&hp>=3;
- if(card.id==="food")$("itemVisual").textContent=conditions.sickness?"🤢 → ✓":hp<3?"♥ +1":"You're not hungry.";
- if(card.id==="garden")$("itemVisual").textContent="🐌 🤢 🧠 → ✓";
+ $("contentAction").hidden=!action;$("contentAction").textContent=def.action||"";$("contentAction").disabled=card.id==="food"&&!conditions.weakness&&hp>=3;
+ if(card.id==="food")$("itemVisual").textContent=conditions.weakness?"💔 → ✓":hp<3?"♥ +1":"You're not hungry.";
+ if(card.id==="garden")$("itemVisual").textContent="🐌 💔 🧠 → ✓";
  if(card.id==="flower")$("itemVisual").textContent="✦ +"+CONTENT_TUNING.flowerFate;
  $("cardContinue").hidden=false;$("cardContinue").textContent="↓ SWIPE DOWN TO CONTINUE";document.querySelector(".itemChoicePanel").focus({preventScroll:true})
 }
 function actOnContent(){
+ if(cardState.active&&cardState.active.type==="boss")return beginBossFight();
  var card=cardState.active;if(!card||card.type!=="content"||card.roomId!==currentId||gameOver)return false;
  var r=room(currentId),state=r.contentState,def=CONTENT[card.id];if(!state||state.consumed||(state.resolved&&card.id!=="garden")||!def.action)return false;
- if(card.id==="food"&&!conditions.sickness&&hp>=3)return false;
+ if(card.id==="food"&&!conditions.weakness&&hp>=3)return false;
  if(card.id==="corpse"&&!requireRewardSpace())return false;
  if(def.dice){var type=card.id;closeItemCard(false);pendingAction=type;showDice(type);return true}
  var message="";
  if(card.id==="garden"){clearConditions();message="A moment of peace."}
- if(card.id==="food"){if(conditions.sickness){delete conditions.sickness;message="You feel better."}else{hp=Math.min(3,hp+1);message="Refreshing fruit."}state.consumed=true;state.resolved=true}
+ if(card.id==="food"){if(conditions.weakness){delete conditions.weakness;message="You feel better."}else{hp=Math.min(3,hp+1);message="Refreshing fruit."}state.consumed=true;state.resolved=true}
  if(card.id==="flower"){gainFate(CONTENT_TUNING.flowerFate);state.consumed=true;state.resolved=true;message="The bloom fades. Fate stirs."}
  closeItemCard(false);finishRoomEffects();update();updateContext(message);return true
 }
@@ -718,7 +744,7 @@ function contentOutcome(type,roll){
   out.label={spikes:["IMPALED","WOUNDED","DODGED"],mosquitoes:["TORMENTED","PESTERED","SHOOED AWAY"],spores:["POISONED","WEAKENED","RESISTED"],stones:["BONKED","DAZED","DODGED"]}[type][band];
   if(band===0&&(type==="spikes"||type==="stones"))out.hp=-1;
   if(band<2&&type==="spikes")out.conditions=["slowed"];
-  if(band<2&&type==="spores")out.conditions=band===0?["sickness","slowed"]:["sickness"];
+  if(band<2&&type==="spores")out.conditions=band===0?["weakness","slowed"]:["weakness"];
   if(band<2&&type==="stones")out.conditions=["amnesia"];
  }else if(type==="corpse"){out.label=["NOTHING","LOOSE COINS","SUPPLIES"][band];if(band===1)out.gold=CONTENT_TUNING.corpseGold;if(band===2)out.consumable=true}
  else if(type==="hole"){out.label=roll<=2?"WASPS!":roll<=4?"NOTHING HERE!":roll===5?"LOOSE COINS":"LUCKY FIND!";if(roll<=2){out.fate=-CONTENT_TUNING.holeLoss;out.wasps=true}if(roll===5)out.gold=CONTENT_TUNING.holeGold;if(roll===6){out.gold=CONTENT_TUNING.holeLuckyGold;out.fate=CONTENT_TUNING.holeLuckyFate}}
@@ -738,7 +764,8 @@ function resolveContentDice(type,roll){
 var CARD_REGISTRY={};
 Object.keys(TRINKETS).forEach(function(id){CARD_REGISTRY["trinket:"+id]={id:"trinket:"+id,category:"items",kind:"trinket",name:TRINKETS[id].name,icon:TRINKETS[id].icon,description:TRINKETS[id].description,effect:ITEM_VISUALS[id]}});
 Object.keys(CONSUMABLES).forEach(function(id){CARD_REGISTRY["consumable:"+id]={id:"consumable:"+id,category:"items",kind:"consumable",name:CONSUMABLES[id].name,icon:CONSUMABLES[id].icon,description:CONSUMABLES[id].description,effect:ITEM_VISUALS[id]}});
-Object.keys(MONSTERS).forEach(function(id){var m=MONSTERS[id];CARD_REGISTRY["creature:"+id]={id:"creature:"+id,category:"creatures",name:m.name,icon:m.icon,effect:"⚄ → "+m.resource,description:id==="basic"?"A creature that threatens Hearts.":id==="thief"?"A creature that threatens your carried Gold.":"A creature that threatens accumulated Fate."}});
+Object.keys(MONSTERS).forEach(function(id){var m=MONSTERS[id];CARD_REGISTRY["creature:"+id]={id:"creature:"+id,category:"creatures",name:m.name,icon:m.icon,effect:"⚄ → "+m.resource,description:m.family==="basic"?"A creature that threatens Hearts.":id==="thief"?"A creature that threatens your carried Gold.":"A creature that threatens accumulated Fate."}});
+CARD_REGISTRY["creature:general"]={id:"creature:general",category:"creatures",name:BOSSES.general.name,icon:BOSSES.general.icon,effect:"♥♥♥ · ⚄ → ♥ / Boss hits",description:"A living commander guarding the EXIT. Hold FIGHT to commit; defeat it to descend."};
 CARD_REGISTRY["creature:mimic"]={id:"creature:mimic",category:"creatures",name:"Mimic",icon:"👹",effect:"🧰 → 👹",description:"A hidden creature revealed by opening a chest. Confront it in battle."};
 Object.keys(CONTENT).forEach(function(id){var c=CONTENT[id];CARD_REGISTRY[contentCardId(id)]={id:contentCardId(id),category:c.category,name:c.name,icon:c.icon,description:c.description,effect:c.dice?"⚄ → ?":c.action||""}});
 CARD_REGISTRY["hazard:trap"]={id:"hazard:trap",category:"hazards",name:"Trap",icon:"⚠",effect:"⚄ → ♥ / ✦",description:"A hidden mechanism, sometimes disturbed while scavenging."};
@@ -788,7 +815,7 @@ function frameCard(panel,template,category,fresh){
  crest.textContent=CARD_CATEGORIES[category].icon;crest.setAttribute("aria-label",CARD_CATEGORIES[category].name);
  var badge=panel.querySelector(".cardNew");if(!badge){badge=document.createElement("span");badge.className="cardNew";badge.textContent="NEW";panel.appendChild(badge)}badge.hidden=!fresh;
 }
-function encounterCardId(type){var r=room(currentId);return type==="monster"?(r.chest&&r.chest.opened&&r.chest.kind==="mimic"?"creature:mimic":"creature:"+(r.monsterKind||"basic")):CONTENT[type]?contentCardId(type):type==="trap"?"hazard:trap":"discovery:shrine"}
+function encounterCardId(type){var r=room(currentId);if(type==="boss")return "creature:"+r.boss.id;return type==="monster"?(r.chest&&r.chest.opened&&r.chest.kind==="mimic"?"creature:mimic":"creature:"+(r.monsterKind||"basic")):CONTENT[type]?contentCardId(type):type==="trap"?"hazard:trap":"discovery:shrine"}
 function frameEncounter(type){var id=encounterCardId(type),fresh=discoverCard(id);frameCard(document.querySelector(".encounterPanel"),"dice",(CARD_REGISTRY[id]||{category:"hazards"}).category,fresh);}
 function showCodex(){
  if(gameOver||codexOpen||layerTransition||fastTraveling||(pendingAction&&pendingAction!=="startup"))return false;
@@ -840,6 +867,7 @@ function pumpCards(){
  if(gameOver||pendingAction||fastTraveling||cardState.active||!cardState.queue.length)return;
  cancelSlotGesture();clearFastPreview();itemFocusReturn=document.activeElement;
  var card=cardState.queue.shift();cardState.active=card;cardPointer=null;
+ if(card.type==="boss"){pendingAction="item-card";update();renderBossCard();return}
  if(card.type==="content"){pendingAction="item-card";update();renderContentCard();return}
  if(card.type==="chest"){pendingAction="item-card";update();renderChestCard();return}
  if(card.type==="altar"){pendingAction="item-card";update();renderAltarCard();return}
@@ -915,9 +943,47 @@ function closeItemCard(acquired){cancelChestHold();$("contentAction").hidden=tru
  var card=cardState.active;if(!card||itemRevealCard)return false;
  $("chestOpen").hidden=true;cancelAltarHold();cardPointer=null;cardState.active=null;relicState.pendingItem=null;pendingAction=null;$("itemChoice").hidden=true;
  if(card.type==="item"&&(acquired||(!card.decision&&card.mode==="discovery")))resourceFlight(itemDefinition(card.kind,card.id).icon,card.kind==="trinket"?"trinkets":"consumableSlot");
- if(card.type==="chest"&&!room(card.roomId).chest.opened)finishRoomEffects();
+ if(card.type==="boss"||card.type==="chest"&&!room(card.roomId).chest.opened)finishRoomEffects();
  resolveGateOpportunity();update();pumpCards();if(!pendingAction){if(!awardPerfectFloor())updateContext();if(itemFocusReturn&&itemFocusReturn.isConnected)itemFocusReturn.focus({preventScroll:true});else $("consumableSlot").focus({preventScroll:true})}return true
 }
+function bossLocked(r){return !!(r&&r.boss&&r.boss.state!=="defeated")}
+function bossHearts(n){return n>0?"♥".repeat(n):"DEFEATED"}
+function openBossCard(id){
+ var r=room(id);if(!bossLocked(r)||id!==currentId||gameOver||pendingAction||fastTraveling||r.boss.state==="active")return false;
+ r.boss.discovered=true;var fresh=discoverCard("creature:"+r.boss.id);if(fresh)codexFresh["creature:"+r.boss.id]=true;
+ cardState.queue.push({type:"boss",roomId:id,decision:true});pumpCards();return true
+}
+function renderBossCard(){
+ var card=cardState.active,b=room(card.roomId).boss,def=BOSSES[b.id];
+ frameCard(document.querySelector('.itemChoicePanel'),"info","creatures",!!codexFresh["creature:"+b.id]);
+ $("itemChoice").hidden=false;$("itemArt").classList.remove('holdDemo');$("itemArt").textContent=def.icon;$("itemName").textContent=def.name.toUpperCase();$("itemReason").textContent="BOSS · EXIT GUARDED";$("itemVisual").textContent=bossHearts(b.hp);$("itemDescription").textContent="Prepare before committing. Once you FIGHT, only victory or death ends the encounter.";$("itemState").textContent="Living · "+b.hp+" / "+b.maxHp+" Hearts";
+ ["replaceTrinkets","replaceSelected","consumableChoices","chestOpen","altarOffer","closeItem","keepItem"].forEach(function(id){$(id).hidden=true});
+ $("contentAction").hidden=false;$("contentAction").disabled=false;$("contentAction").textContent="FIGHT";$("cardContinue").hidden=false;$("cardContinue").textContent="↓ SWIPE DOWN TO PREPARE";document.querySelector('.itemChoicePanel').focus({preventScroll:true})
+}
+function startBossRound(){
+ var b=room(currentId).boss;if(!b||b.state!=="active"||gameOver||deathPending)return false;
+ b.round++;pendingAction="boss";showDice("boss");return true
+}
+function beginBossFight(){
+ var card=cardState.active;if(!card||card.type!=="boss"||card.roomId!==currentId||!bossLocked(room(currentId)))return false;
+ var b=room(currentId).boss;if(b.state!=="unresolved")return false;
+ cancelCardHold();cardState.active=null;cardPointer=null;$("itemChoice").hidden=true;$("contentAction").hidden=true;b.state="active";startBossRound();update();return true
+}
+function presentBossEncounter(){
+ var b=room(currentId).boss,def=BOSSES[b.id];$("eventCard").classList.add('boss');$("eventArt").textContent=def.icon;$("diceTitle").textContent=def.name.toUpperCase();$("monsterThreat").textContent=bossHearts(b.hp);$("eventCard").setAttribute('aria-label',def.name+', '+b.hp+' of '+b.maxHp+' Hearts');
+}
+function bossOutcome(roll){return{label:roll===1?"WEAKENED":roll<=3?"WOUNDED":roll===6?"CRITICAL!":"HIT",hp:roll<=3?-1:0,hits:roll>=4?(roll===6?2:1):0,conditions:roll===1?["weakness"]:[]}}
+function resolveBossDice(roll){
+ var b=room(currentId).boss,out=bossOutcome(roll);if(!b||b.state!=="active")return null;
+ if(out.hp){hp+=out.hp;floorDamage++}b.hp=Math.max(0,b.hp-out.hits);
+ if(b.hp===0){b.state="defeated";room(currentId).eventResolved=room(currentId).primaryResolved=true}
+ finishDiceResult(b.state==="defeated"?"GUARDIAN GENERAL DEFEATED":out.label,"");return out
+}
+function bossRoundContinuation(){
+ if(room(currentId).boss.state==="active")encounterCloseAction=function(){startBossRound();update()};
+ // The defeated result keeps finishDiceResult's normal return-to-map continuation.
+}
+
 var CHEST_SPAWN_CHANCE=.20,CHEST_LOOT_WEIGHTS={consumable:.45,trinket:.35,mimic:.20};
 function chestCandidates(){return rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId&&r.event==='empty'&&r.links.length===1&&r.links[0]!==startId&&!inGateBranch(r.id)&&(!fateGate||r.id!==fateGate.parentId)})}
 function preferredChestCandidates(eligible){
@@ -955,7 +1021,7 @@ function openChest(){
  if(loot.kind!=='mimic')finishRoomEffects();
  update();return true
 }
-function openRoomFeature(id,automatic){if(!automatic&&room(id).droppedConsumable)return openDroppedConsumable(id);if(!automatic&&!room(id).eventResolved&&["consumable","trinket"].includes(room(id).event)){pendingAction="room-entry";searchCurrentRoom(id);return true}if(CONTENT[room(id).event])return openContent(id,automatic);if(room(id).event==="stairs")return !automatic&&id===currentId&&traverseStairs();return room(id).event==='chest'?openChestCard(id,automatic):openAltar(id,automatic)}
+function openRoomFeature(id,automatic){if(bossLocked(room(id)))return openBossCard(id);if(!automatic&&room(id).droppedConsumable)return openDroppedConsumable(id);if(!automatic&&!room(id).eventResolved&&["consumable","trinket"].includes(room(id).event)){pendingAction="room-entry";searchCurrentRoom(id);return true}if(CONTENT[room(id).event])return openContent(id,automatic);if(room(id).event==="stairs")return !automatic&&id===currentId&&traverseStairs();return room(id).event==='chest'?openChestCard(id,automatic):openAltar(id,automatic)}
 function presentMimic(){
  var r=room(currentId),mimic=!!(r.chest&&r.chest.opened&&r.chest.kind==='mimic');$("eventCard").classList.toggle('mimic',mimic);
  if(mimic){$("eventArt").textContent='🧰 → 👹';$("diceTitle").textContent='MIMIC';$("eventCard").setAttribute('aria-label','The chest was a Mimic. Swipe to confront it.')}
@@ -1104,12 +1170,12 @@ function appendLayer(type,height){
  for(var i=0;i<LAYER_CELLS;i++)rooms.push({id:offset+i,layerId:id,x:i%W,y:Math.floor(i/W),active:false,links:[],known:false,visited:false,searched:false,scavenged:false,clued:false,event:"empty",hint:"neutral",exactHint:null});
  N=rooms.length;return offset
 }
-function growLayer(offset,root,target){
+function growLayer(offset,root,target,treeOnly){
  var active=[root],i;room(root).active=true;
  while(active.length<target){var candidates=[];for(i=0;i<active.length;i++)adjacent(room(active[i])).forEach(function(n){if(!n.active&&candidates.indexOf(n.id)<0)candidates.push(n.id)});if(!candidates.length)break;var pick=candidates[Math.floor(Math.random()*candidates.length)];room(pick).active=true;active.push(pick)}
  var connected={},frontier=[root];connected[root]=true;
  while(frontier.length){var fi=Math.floor(Math.random()*frontier.length),from=room(frontier[fi]),opts=adjacent(from).filter(function(n){return n.active&&!connected[n.id]});if(!opts.length){frontier.splice(fi,1);continue}var to=opts[Math.floor(Math.random()*opts.length)];from.links.push(to.id);to.links.push(from.id);connected[to.id]=true;frontier.push(to.id)}
- var possible=[];for(i=offset;i<offset+LAYER_CELLS;i++){var rr=room(i);if(!rr.active)continue;adjacent(rr).forEach(function(n){if(n.active&&n.id>rr.id&&rr.links.indexOf(n.id)<0)possible.push([rr,n])})}shuffle(possible);for(i=0;i<Math.floor(target*.14)&&i<possible.length;i++){possible[i][0].links.push(possible[i][1].id);possible[i][1].links.push(possible[i][0].id)}
+ var possible=[];for(i=offset;i<offset+LAYER_CELLS;i++){var rr=room(i);if(!rr.active)continue;adjacent(rr).forEach(function(n){if(n.active&&n.id>rr.id&&rr.links.indexOf(n.id)<0)possible.push([rr,n])})}shuffle(possible);for(i=0;i<(treeOnly?0:Math.floor(target*.14))&&i<possible.length;i++){possible[i][0].links.push(possible[i][1].id);possible[i][1].links.push(possible[i][0].id)}
 
 }
 // Architecture uses only stable topology, never event/content or gameplay RNG.
@@ -1148,22 +1214,32 @@ function roomGeometry(r,width,height){
 }
 function applyRoomGeometry(cell,r,width,height){var g=roomGeometry(r,width,height);cell.dataset.shape=g.kind;cell.dataset.orientation=g.orientation;cell.style.left=(g.x-g.hitW/2)+"px";cell.style.top=(g.y-g.hitH/2)+"px";cell.style.width=g.hitW+"px";cell.style.height=g.hitH+"px";cell.style.setProperty("--chamber-w",g.w+"px");cell.style.setProperty("--chamber-h",g.h+"px")}
 function addRoomFloor(cell){var floor=document.createElement("div");floor.className="floor";if(cell.dataset.shape==="chamfered")floor.innerHTML='<svg class="shapeOutline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="25,1 75,1 99,25 99,75 75,99 25,99 1,75 1,25"/></svg>';cell.appendChild(floor)}
+// Select before content/Gates/Chests: EXIT remains reserved throughout generation.
+function selectBossExit(){
+ var d=distancesFrom(startId),candidates=rooms.filter(function(r){return r.active&&r.id!==startId&&r.links.length===1&&r.event!=="stairs"});
+ var layerCandidates=candidates.filter(function(r){return layerOf(r.id)===layerOf(exitId)});if(layerCandidates.length)candidates=layerCandidates;
+ if(!candidates.length)return false;
+ var far=Math.max.apply(null,candidates.map(function(r){return d[r.id]}));candidates=candidates.filter(function(r){return d[r.id]>=far-1});exitId=candidates[Math.floor(Math.random()*candidates.length)].id;return true
+}
 function generateDungeon(){
- floorFortune=combo;rooms=[];layers=[];activeLayer=0;appendLayer("base",0);
+ floorFortune=combo;var bossDef=bossForFloor(floorNo),attempt=0;
+ while(true){rooms=[];layers=[];activeLayer=0;appendLayer("base",0);
  var target=floorNo===1?20+Math.floor(Math.random()*5):27+Math.floor(Math.random()*9);
- growLayer(0,Math.floor(Math.random()*LAYER_CELLS),target);chooseEndpoints();
+ growLayer(0,Math.floor(Math.random()*LAYER_CELLS),target,attempt>=16);chooseEndpoints();
  if(layers.length<LAYER_CONFIG.maxLayers&&Math.random()<layerChance(floorNo)){
   var candidates=rooms.filter(function(r){return r.active&&r.id!==startId&&r.id!==exitId}),stair=candidates[Math.floor(Math.random()*candidates.length)];
   var upper=Math.random()<LAYER_CONFIG.upper,offset=appendLayer(upper?"upper":"lower",upper?1:-1),other=offset+stair.id;
-  growLayer(offset,other,LAYER_CONFIG.minRooms+Math.floor(Math.random()*(LAYER_CONFIG.maxRooms-LAYER_CONFIG.minRooms+1)));
+  growLayer(offset,other,LAYER_CONFIG.minRooms+Math.floor(Math.random()*(LAYER_CONFIG.maxRooms-LAYER_CONFIG.minRooms+1)),attempt>=16);
   stair.event="stairs";stair.stairTo=other;room(other).event="stairs";room(other).stairTo=stair.id;
   if(Math.random()<LAYER_CONFIG.secondaryExit){
    var d=distancesFrom(other),far=rooms.filter(function(r){return r.active&&r.layerId===1&&r.id!==other}).sort(function(a,b){return d[b.id]-d[a.id]});
    exitId=far[Math.floor(Math.random()*Math.min(5,far.length))].id
   }
  }
+ if(!bossDef||selectBossExit())break;attempt++;
+ }
  placeEvents();scaleMonsters();rooms.forEach(function(r){if(r.event==="monster")r.monsterKind=pickMonster(floorNo,Math.random())});applyFortune();assignRoomHints();
- floorEconomy.monsters={basic:0,thief:0,spirit:0};rooms.forEach(function(r){if(r.active&&r.event==="monster")floorEconomy.monsters[r.monsterKind]++});floorEconomy.monsterCount=Object.values(floorEconomy.monsters).reduce(function(a,b){return a+b},0);generateActiveFate();generateChest();generateScavengeOpportunities();generateDiscoveries();assignRoomShapes();debugFloor();
+ floorEconomy.monsters={};Object.keys(MONSTERS).forEach(function(id){floorEconomy.monsters[id]=0});rooms.forEach(function(r){if(r.active&&r.event==="monster")floorEconomy.monsters[r.monsterKind]++});floorEconomy.monsterCount=Object.values(floorEconomy.monsters).reduce(function(a,b){return a+b},0);generateActiveFate();generateChest();generateScavengeOpportunities();generateDiscoveries();assignRoomShapes();if(bossDef)room(exitId).boss={id:bossDef.id,maxHp:bossDef.maxHp,hp:bossDef.maxHp,discovered:false,state:"unresolved",round:0};debugFloor();
 }
 // Visual state is deliberately absent from saves. Identity checks invalidate stale callbacks.
 function finishLayerVisual(refresh){
@@ -1293,7 +1369,7 @@ function activeFateDebug(){return{gate:fateGate?Object.assign({},fateGate):null,
 function chooseEndpoints(){var d=[],q=[],i;do{startId=Math.floor(Math.random()*N)}while(!room(startId).active);for(i=0;i<N;i++)d[i]=-1;d[startId]=0;q.push(startId);for(i=0;i<q.length;i++)room(q[i]).links.forEach(function(id){if(d[id]<0){d[id]=d[q[i]]+1;q.push(id)}});var far=[];for(i=0;i<N;i++)if(room(i).active&&i!==startId)far.push(i);far.sort(function(a,b){return d[b]-d[a]});exitId=far[Math.floor(Math.random()*Math.min(5,far.length))]}
 function distancesFrom(id){var d={},q=[id];d[id]=0;for(var i=0;i<q.length;i++)floorNeighbors(q[i]).forEach(function(n){if(d[n]===undefined){d[n]=d[q[i]]+1;q.push(n)}});return d}
 function placeEvents(){
- var ids=[],events=["treasure","treasure","treasure","treasure","rich","monster","monster","hazard","hazard","heal","key"],used={},hazards=shuffle(HAZARD_POOL.slice());
+ var ids=[],events=["treasure","treasure","treasure","treasure","rich","monster","monster","hazard","hazard","heal","key"],used={},hazards=hazardAllocation(floorNo);
  for(var i=0;i<N;i++)if(room(i).active&&i!==startId&&i!==exitId&&room(i).event!=="stairs")ids.push(i);
  if(floorNo===1){
   var d=distancesFrom(startId),near=ids.filter(function(id){return d[id]===1}),early=ids.filter(function(id){return d[id]>=1&&d[id]<=2});shuffle(near);shuffle(early);
@@ -1391,6 +1467,7 @@ function updateContext(temporary){
  if(gameOver)return;
  var r=room(currentId);
  if(r.event==="stairs"){$("message").textContent="";return}
+ if(currentId===exitId&&bossLocked(r)){$("message").textContent="EXIT GUARDED — Tap this room to prepare / FIGHT";return}
  if(currentId===exitId&&r.searched){$("message").textContent="▼ EXIT — Hold ◆ to descend"+(unexploredCount()?" • "+unexploredCount()+" unexplored":" • Floor complete");return}
  if(pendingAction){$("message").textContent="";return}
  if(!learned("learnedFastTravel")&&usefulFastTravelExists()){$("message").textContent="◆ Hold a visited room to auto-walk";return}
@@ -1557,7 +1634,7 @@ function previewFastTravel(id){
  return true
 }
 function previewCurrentAction(id){
- if(fastTraveling||pendingAction||gameOver||id!==currentId||!room(id).searched)return false;
+ if(fastTraveling||pendingAction||gameOver||id!==currentId||!room(id).searched||bossLocked(room(id)))return false;
  var action=id===exitId?"descend":"scavenge";
  if(action==="scavenge"&&room(id).scavenged){$("message").textContent="This room has already been scavenged.";return false}
  clearFastPreview();fastTravelTarget=id;holdAction=action;
@@ -1648,7 +1725,7 @@ function enterRoom(id){
  if(room(currentId).links.indexOf(id)<0)return false;if(!gateAccess(currentId,id,false)){gateDenied();return false}
  return startRoomTravel(id,function(){commitRoomEntry(id)})
 }
-function commitRoomEntry(id){if(codexOpen||layerTransition||layerOf(id)!==activeLayer||gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;noticeScavenge(room(id));searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openRoomFeature(id,true);return}pendingAction="room-entry";update();searchCurrentRoom(id)}
+function commitRoomEntry(id){if(codexOpen||layerTransition||layerOf(id)!==activeLayer||gameOver||pendingAction||fastTraveling||id===currentId)return;var cur=room(currentId);if(cur.links.indexOf(id)<0)return;if(!gateAccess(currentId,id,false)){gateDenied();return}if(fateGate&&id===fateGate.roomId){fateGate.entered=true;emitEffect("onGateCrossed",{roomId:id})}currentId=id;beginRoomEffects(id,!room(id).visited);markArrival(id);room(id).known=true;room(id).visited=true;room(id).searched=true;noticeScavenge(room(id));searched[id]=true;revealNeighbors(id);history.push(id);totalMoves++;if(id===exitId){if(bossLocked(room(id))){update();openBossCard(id);return}finishRoomEffects();update();if(!awardPerfectFloor())updateContext();return}if(room(id).eventResolved){finishRoomEffects();update();updateContext();openRoomFeature(id,true);return}pendingAction="room-entry";update();searchCurrentRoom(id)}
 function searchCurrentRoom(id){if(id!==currentId||pendingAction!=="room-entry")return;pendingAction=null;var r=room(id);if((r.event==="consumable"||r.event==="trinket"&&!Object.keys(TRINKETS).some(function(id){return !relicState.trinkets.includes(id)}))&&!requireRewardSpace()){finishRoomEffects();update();return}r.searched=true;r.eventResolved=true;searched[currentId]=true;revealNeighbors(id);if(CONTENT[r.event]&&CONTENT[r.event].category==="discoveries"){finishRoomEffects();openContent(id,true);return}if(r.event==="stairs"){finishRoomEffects();update();updateContext();return}if(r.event==="chest"){openChestCard(id,true);return}if(r.event==="altar"){finishRoomEffects();openAltar(id,true);return}if(r.event==="trinket"||r.event==="consumable"){resolveGateItem(r.event);finishRoomEffects();return}if(r.event==="monster"||r.event==="trap"||r.event==="heal"||HAZARD_POOL.includes(r.event)){pendingAction=r.event;showDice(r.event);return}resolveSimpleEvent(r.event)}
 function resolveGateItem(kind){
  if(kind==="trinket"){
@@ -1679,7 +1756,8 @@ function previewOutcome(type,roll,kind){
  function fate(value){p.combo=Math.max(1,Math.round(value*100)/100);p.fateGainRemainder=0}
  function gain(base){var sum=p.fateGainRemainder+base*fateGainFactor(p.combo),cents=Math.floor((sum+1e-10)*100)/100;p.fateGainRemainder=sum-cents;p.combo=Math.max(1,Math.round((p.combo+cents)*100)/100)}
  function reward(base){var value=Math.floor(base*rewardMultiplier(p.combo))*roomGoldMultiplier();p.gold+=value;p.score+=value}
- var damage=false,newOutcome=isContentDice(type)?contentOutcome(type,roll):null;
+ var damage=false,newOutcome=type==="boss"?bossOutcome(roll):isContentDice(type)?contentOutcome(type,roll):null;
+ if(type==="boss"){p.bossHp=Math.max(0,room(currentId).boss.hp-newOutcome.hits);notes.push("Boss "+bossHearts(room(currentId).boss.hp)+" → "+bossHearts(p.bossHp));}
  if(newOutcome){
   if(newOutcome.hp){damage=true;p.hp+=newOutcome.hp}
   if(newOutcome.fate<0)fate(p.combo+newOutcome.fate);else if(newOutcome.fate>0)gain(newOutcome.fate);
@@ -1708,17 +1786,17 @@ function previewOutcome(type,roll,kind){
   else{p.hp=3;reward(40+floorNo*4);gain(.4)}
  }
  if(damage){
-  if(conditions.sickness){p.hp-=hp-p.hp;notes.push("🤢 → ✓")}
+  if(conditions.weakness){p.hp-=hp-p.hp;notes.push("💔 → ✓")}
   if(relicState.bargainCharges>0||relicState.bargainRoom===currentId){p.hp=hp;notes.push('☠ ♥ ✓')}
   else if(shield){p.hp=hp;p.shield=false;notes.push('🛡 → ♥ ✓')}
   else if(p.hp<=0&&relicState.trinkets.includes('doll')){p.hp=1;fate(1);notes.push('🪆 → ✕ · ♥ 1 · ✦ BREAK')}
  }
- if(type==='monster'&&creatureDefinition(kind,room(currentId)).living&&roll>=5&&p.hp<3&&relicState.trinkets.includes('blood')&&!relicState.floorUsed.blood){p.hp++;notes.push('🩸 ✓')}
+ if((type==='monster'&&roll>=5||type==='boss'&&p.bossHp===0)&&creatureDefinition(kind,room(currentId)).living&&p.hp<3&&relicState.trinkets.includes('blood')&&!relicState.floorUsed.blood){p.hp++;notes.push('🩸 ✓')}
  if(roll===6&&relicState.trinkets.includes('horseshoe')){var bonus=(25+floorNo*5)*roomGoldMultiplier();p.gold+=bonus;p.score+=bonus;notes.push('🍀 ✓')}
  p.hp=Math.max(0,p.hp);
  var parts=[];if(p.hp!==hp)parts.push('♥ '+(p.hp-hp>0?'+':'')+(p.hp-hp));if(p.gold!==gold)parts.push('🪙 '+(p.gold-gold>0?'+':'')+(p.gold-gold));if(p.combo!==combo)parts.push('✦ ×'+combo.toFixed(2)+' → ×'+p.combo.toFixed(2));
  if(!parts.length&&!notes.length)notes.push(type==='heal'?'✚ —':'✓');
- p.conditions=Object.assign({},conditions);if(damage)delete p.conditions.sickness;if(newOutcome)newOutcome.conditions.forEach(function(id){p.conditions[id]=CONTENT_TUNING.conditionMoves});
+ p.conditions=Object.assign({},conditions);if(damage)delete p.conditions.weakness;if(newOutcome)newOutcome.conditions.forEach(function(id){p.conditions[id]=CONTENT_TUNING.conditionMoves});
  return{after:p,label:newOutcome?newOutcome.label:null,text:parts.concat(notes).join(' · ')}
 }
 function hideReroll(){cancelRerollHold();clearTimeout(rerollTimer);rerollTimer=null;$("rerollButton").hidden=true;$("rerollButton").disabled=true}
@@ -1741,7 +1819,7 @@ function revealOutcome(){
 function acceptOutcome(){
  var e=pendingEncounter;if(!e||e.phase!=='preview')return;
  hideReroll();encounterMonster=e.monsterKind;resolveDice(e.type,e.roll);
- if(!deathPending&&encounterCloseAction)encounterCloseAction()
+ if(!deathPending&&encounterCloseAction&&!(e.type==="boss"&&room(currentId).boss.state==="defeated"))encounterCloseAction()
 }
 function rerollOutcome(){
  if($("rerollButton").hidden||!canReroll())return false;
@@ -1838,20 +1916,20 @@ function showDice(type,resuming){
  if(type==="monster"&&!pendingEncounter.rerollUsed){
   o.classList.add("awaiting-swipe");detail.textContent="";result.textContent="";combatReady=startRoll;
  }else startRoll();
- if(type==="monster")presentMimic();presentContentEncounter(type);
+ if(type==="boss")presentBossEncounter();if(type==="monster")presentMimic();presentContentEncounter(type);
  c.focus({preventScroll:true})
 }
 var resolveDiceCore=resolveDice;
 resolveDice=function(type,roll){
- if(gameOver||deathPending)return;
+ if(gameOver||deathPending||type==="boss"&&(!room(currentId).boss||room(currentId).boss.state!=="active"))return;
  if(type==="trap"&&disarmTrap())return;
  var fateBefore=combo,hpBefore=hp,shieldBefore=shield,scoreBefore=score,goldBefore=gold,damageBefore=floorDamage;
- var contentResult=null;
- if(isContentDice(type))contentResult=resolveContentDice(type,roll);else if(type==="monster"&&encounterMonster!=="basic")resolveSpecialMonster(encounterMonster,roll);else if(type==="heal"&&roll>=3&&hpBefore>=3)finishDiceResult("","");else resolveDiceCore(type,roll);
+ var bossBefore=type==="boss"?room(currentId).boss.hp:null,contentResult=null;
+ if(type==="boss")contentResult=resolveBossDice(roll);else if(isContentDice(type))contentResult=resolveContentDice(type,roll);else if(type==="monster"&&MONSTERS[encounterMonster].family!=="basic")resolveSpecialMonster(encounterMonster,roll);else if(type==="heal"&&roll>=3&&hpBefore>=3)finishDiceResult("","");else resolveDiceCore(type,roll);
  var encounterGold=score-scoreBefore;if(encounterGold>0){gold+=encounterGold;$("diceDetail").textContent=$("diceDetail").textContent.replace(/score/gi,"Gold")}
 
  if(hp<hpBefore){
-  if(conditions.sickness){hp-=hpBefore-hp;delete conditions.sickness}
+  if(conditions.weakness){hp-=hpBefore-hp;delete conditions.weakness}
   var damage={amount:hpBefore-hp,source:type,prevented:false,protector:null};
   // Temporary immunity preserves the shield; shield preserves the once-per-floor Doll.
   if(relicState.bargainCharges>0||relicState.bargainRoom===currentId){damage.prevented=true;damage.protector="bargain"}
@@ -1869,14 +1947,15 @@ resolveDice=function(type,roll){
  hp=Math.max(0,hp);
  if(contentResult){contentResult.conditions.forEach(applyCondition);$("diceDetail").textContent=previewTextCommitted(contentResult,hpBefore,goldBefore,fateBefore)}
  trackGold(gold-goldBefore);
- if(type==="monster"&&roll>=5)emitEffect("onMonsterVictory",{kind:encounterMonster,roll:roll});
+ if(type==="monster"&&roll>=5||type==="boss"&&room(currentId).boss.state==="defeated")emitEffect("onMonsterVictory",{kind:encounterMonster,roll:roll});
  if(roll===6)emitEffect("onPerfectRoll",{type:type,roll:roll});
- finishRoomEffects();update();if(gold<goldBefore)theftFeedback(goldBefore,gold);
+ if(type!=="boss"||room(currentId).boss.state==="defeated"||hp<=0)finishRoomEffects();update();if(gold<goldBefore)theftFeedback(goldBefore,gold);
  if(hp<=0){
-  causeOfDeath={type:type,icon:CONTENT[type]?CONTENT[type].icon:type==="trap"?"⚠":"👹",label:CONTENT[type]?CONTENT[type].name.toUpperCase():type==="trap"?"TRAP":"MONSTER"};deathPending=true;pendingAction="lethal";
+  causeOfDeath={type:type,icon:CONTENT[type]?CONTENT[type].icon:type==="trap"?"⚠":"👹",label:type==="boss"?BOSSES[room(currentId).boss.id].name.toUpperCase():CONTENT[type]?CONTENT[type].name.toUpperCase():type==="trap"?"TRAP":"MONSTER"};deathPending=true;pendingAction="lethal";
   $("tapContinue").style.visibility="hidden";$("diceDetail").textContent+=" · ♥ 0";
   deathTimer=setTimeout(function(){if(!deathPending||gameOver)return;deathPending=false;$("diceOverlay").style.display="none";encounterResolved=false;encounterCloseAction=null;finish("RUN OVER")},LETHAL_BEAT_MS);
  }
+ if(type==="boss"){$("diceDetail").textContent=["Boss "+bossHearts(bossBefore)+" → "+bossHearts(room(currentId).boss.hp),$("diceDetail").textContent,room(currentId).boss.state==="defeated"?"EXIT UNLOCKED":""].filter(Boolean).join(" · ");presentBossEncounter();bossRoundContinuation()}
  if(hp>0)pendingEncounter={type:type,roomId:currentId,monsterKind:encounterMonster,roll:roll,phase:"resolved",result:$("diceResult").textContent,detail:$("diceDetail").textContent};
 };
 function previewTextCommitted(out,hpBefore,goldBefore,fateBefore){var parts=[];if(hp!==hpBefore)parts.push("♥ "+(hp-hpBefore));if(gold!==goldBefore)parts.push("🪙 +"+(gold-goldBefore));if(combo!==fateBefore)parts.push("✦ ×"+fateBefore.toFixed(2)+" → ×"+combo.toFixed(2));return parts.concat(out.conditions.map(function(id){return conditionText(id,CONTENT_TUNING.conditionMoves)})).join(" · ")||"✓"}
@@ -1905,7 +1984,7 @@ function scavenge(id,forcedRoll){
  if(first)learn("learnedScavenge");if(combo-fateBefore>=.1)setTimeout(function(){showLocalFeedback(id,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},500);updateContext();return true
 }
 function descend(){
- if(currentId!==exitId||!room(exitId).searched||pendingAction||fastTraveling)return false;
+ if(currentId!==exitId||!room(exitId).searched||bossLocked(room(exitId))||pendingAction||fastTraveling)return false;
  var perfect=unexploredCount()===0;if(perfect&&!floorPerfectAwarded)awardPerfectFloor();var exitBonus=Math.floor((300+floorNo*80)*combo),oldFate=combo;
  score+=exitBonus;emitEffect("onFloorEnd",{floor:floorNo});debugFloor();learn("learnedDescend");floorNo++;gainFate(.25);newFloor(false,"You descend deeper.");
  showLocalFeedback(currentId,"DEEPER","","DESCENDED",950);if(combo-oldFate>=.2)setTimeout(function(){showLocalFeedback(currentId,"FATE ↑ ×"+combo.toFixed(1),"fate","",900)},520);return true
@@ -2017,10 +2096,11 @@ function render(){
   if(r.id===startId&&r.searched){
    var sm=document.createElement("div");sm.className="startMark";sm.textContent="◇ START";cell.appendChild(sm)
   }
+  if(r.boss&&r.boss.discovered&&r.searched){cell.classList.add(r.boss.state==="defeated"?"bossDefeated":"bossThreat")}
   if(r.id===exitId&&r.searched){
-   var xm=document.createElement("div");xm.className="exitMark";xm.textContent="↧ EXIT";cell.appendChild(xm)
+   var xm=document.createElement("div");xm.className="exitMark";xm.textContent=bossLocked(r)?"⚔ BOSS / EXIT":"↧ EXIT";cell.appendChild(xm)
   }
-  if(r.event!=="stairs"&&r.id===currentId&&r.searched&&((r.id===exitId&&!learned("learnedDescend"))||(r.id!==exitId&&!r.scavenged&&!learned("learnedScavenge")))){
+  if(!bossLocked(r)&&r.event!=="stairs"&&r.id===currentId&&r.searched&&((r.id===exitId&&!learned("learnedDescend"))||(r.id!==exitId&&!r.scavenged&&!learned("learnedScavenge")))){
    var tutor=document.createElement("div");tutor.className="tutorialGesture";tutor.innerHTML="HOLD<br>↓<b>"+(r.id===exitId?"▼":"◆")+"</b>";cell.appendChild(tutor)
   }
   if(r.searched&&r.event!=="empty"&&r.event!=="altar"){
@@ -2083,13 +2163,13 @@ function render(){
 function update(){updateConditions();if(layerVisual&&layerVisual.phase!=="prepare"){layerVisual.dirty=true;return}$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.22";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.23";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
 function serializeRun(){
  var savedRooms=rooms.map(function(r){var copy=Object.assign({},r);delete copy.clueRevealUntil;return copy});
- var active=cardState.active&&(cardState.active.type==="content"||cardState.active.type==="item"&&["discovery","pickup"].includes(cardState.active.mode))?cardState.active:null;
+ var active=cardState.active&&(cardState.active.type==="boss"||cardState.active.type==="content"||cardState.active.type==="item"&&["discovery","pickup"].includes(cardState.active.mode))?cardState.active:null;
  var relics=Object.assign({},relicState);delete relics.pendingItem;
  return jsonCopy({saveVersion:SAVE_VERSION,gameVersion:GAME_VERSION,savedAt:Date.now(),status:"active",
   run:{hp:hp,shield:shield,gold:gold,score:score,combo:combo,fateGainRemainder:fateGainRemainder,floorNo:floorNo,totalMoves:totalMoves,perfectFloors:perfectFloors,searched:searched,conditions:conditions,rememberedRooms:rememberedRooms},
@@ -2107,7 +2187,13 @@ function saveRun(){
  safeSnapshot=serializeRun();return flushRun()
 }
 function committed(fn){return function(){transactionDepth++;var done=false;try{var value=fn.apply(this,arguments);done=true;return value}finally{transactionDepth--;if(done&&!transactionDepth)saveRun()}}}
-function migrateSave(data){if(!data||data.saveVersion!==SAVE_VERSION)throw new Error("Unsupported save schema");return data}
+function migrateSave(data){
+ if(!data||data.saveVersion!==SAVE_VERSION)throw new Error("Unsupported save schema");
+ // Existing schema needs only a semantic key rename, never floor regeneration.
+ function rename(c){if(c&&c.sickness!==undefined){c.weakness=c.sickness;delete c.sickness}}
+ if(data.run)rename(data.run.conditions);var e=data.pending&&data.pending.encounter;
+ if(e&&e.preview){rename(e.preview.after&&e.preview.after.conditions);e.preview.text=e.preview.text.replace(/🤢 Sick/g,"💔 WEAK")}if(e&&e.detail)e.detail=e.detail.replace(/🤢 Sick/g,"💔 WEAK");return data
+}
 function validateSave(s){
  try{
   function need(ok,label){if(!ok)throw new Error(label)}
@@ -2153,6 +2239,9 @@ function validateSave(s){
   stairs.forEach(function(r){need(r.active&&id(r.stairTo)&&layerOf(r.id)!==layerOf(r.stairTo),"stair target");var other=f.rooms[r.stairTo];need(other.event==="stairs"&&other.stairTo===r.id&&r.x===other.x&&r.y===other.y&&r.id!==f.startId&&r.id!==f.exitId&&(!g||!g.branchIds.includes(r.id)),"vertical connection")});
   need(f.rooms.every(function(r){return r.stairTo===undefined||r.event==="stairs"}),"stair ownership");
   need(f.rooms.filter(function(r){return r.active&&r.event==="chest"}).length<=1,"one chest");
+  var bossRooms=f.rooms.filter(function(r){return !!r.boss});need(bossRooms.length<=1,"one boss");
+  bossRooms.forEach(function(r){var b=r.boss;need(obj(b)&&Object.prototype.hasOwnProperty.call(BOSSES,b.id)&&r.id===f.exitId&&r.active&&r.links.length===1&&r.event==="empty"&&r.stairTo===undefined&&bossForFloor(u.floorNo)&&b.id===bossForFloor(u.floorNo).id,"boss location");need(b.maxHp===BOSSES[b.id].maxHp&&integer(b.hp,0,b.maxHp)&&integer(b.round,0)&&typeof b.discovered==="boolean"&&["unresolved","active","defeated"].includes(b.state),"boss state");need(b.state==="defeated"?b.hp===0&&r.eventResolved:b.hp>0,"boss health");need(b.state!=="unresolved"||b.hp===b.maxHp&&b.round===0,"uncommitted boss");if(b.state!=="unresolved")need(b.discovered&&b.round>=1,"boss commitment");if(b.state==="active")need(b.discovered&&p.encounter&&p.encounter.type==="boss"&&p.encounter.roomId===r.id,"committed fight");});
+  if(p.encounter&&p.encounter.type==="boss")need(bossRooms.length===1&&bossRooms[0].id===f.currentId&&bossRooms[0].boss.state!=="unresolved","boss encounter");
   need(id(f.currentId)&&id(f.startId)&&id(f.exitId)&&f.startId!==f.exitId&&f.rooms[f.currentId].visited,"positions");
   need(Array.isArray(f.history)&&f.history.length&&f.history.every(id),"history");
   need(num(f.floorDamage,0)&&typeof f.floorPerfectAwarded==="boolean"&&num(f.floorFortune,1)&&integer(f.fortuneBudget,0,5)&&Array.isArray(f.fortuneUpgrades)&&f.fortuneUpgrades.length<=3&&obj(f.floorEconomy),"floor metadata");
@@ -2174,9 +2263,9 @@ function validateSave(s){
   }
   function reachable(exclude){var seen=new Set([f.startId]),q=[f.startId];for(var a=0;a<q.length;a++)(f.rooms[q[a]].stairTo===undefined?f.rooms[q[a]].links:f.rooms[q[a]].links.concat([f.rooms[q[a]].stairTo])).forEach(function(n){if(!seen.has(n)&&!exclude.includes(n)){seen.add(n);q.push(n)}});return seen}
   var all=reachable([]),normal=reachable(g?g.branchIds:[]);need(f.rooms.every(function(r){return !r.active||all.has(r.id)}),"connected floor");need(f.rooms.every(function(r){return !r.active||(g&&g.branchIds.includes(r.id))||normal.has(r.id)}),"optional gate");
-  function card(c){if(obj(c)&&c.type==="content"){need(Object.prototype.hasOwnProperty.call(CONTENT,c.id)&&id(c.roomId)&&typeof c.notice==="string"&&typeof c.decision==="boolean","content card");return}need(obj(c)&&c.type==="item"&&["trinket","consumable"].includes(c.kind)&&Object.prototype.hasOwnProperty.call(c.kind==="trinket"?TRINKETS:CONSUMABLES,c.id)&&["discovery","pickup"].includes(c.mode)&&typeof c.decision==="boolean"&&id(c.sourceRoomId),"pending item");if(c.mode==="pickup")need(c.kind==="consumable"&&c.decision&&c.sourceRoomId===f.currentId&&f.rooms[c.sourceRoomId].droppedConsumable===c.id,"pending pickup");}
+  function card(c){if(obj(c)&&c.type==="boss"){need(id(c.roomId)&&c.roomId===f.exitId&&f.rooms[c.roomId].boss&&f.rooms[c.roomId].boss.state==="unresolved"&&c.decision===true,"boss intro");return}if(obj(c)&&c.type==="content"){need(Object.prototype.hasOwnProperty.call(CONTENT,c.id)&&id(c.roomId)&&typeof c.notice==="string"&&typeof c.decision==="boolean","content card");return}need(obj(c)&&c.type==="item"&&["trinket","consumable"].includes(c.kind)&&Object.prototype.hasOwnProperty.call(c.kind==="trinket"?TRINKETS:CONSUMABLES,c.id)&&["discovery","pickup"].includes(c.mode)&&typeof c.decision==="boolean"&&id(c.sourceRoomId),"pending item");if(c.mode==="pickup")need(c.kind==="consumable"&&c.decision&&c.sourceRoomId===f.currentId&&f.rooms[c.sourceRoomId].droppedConsumable===c.id,"pending pickup");}
   need(Array.isArray(p.cards.queue)&&p.cards.queue.length<=20,"card queue");p.cards.queue.forEach(card);if(p.cards.active!==null){card(p.cards.active);var c=p.cards.active;if(c.type==="item"&&!c.decision)need(c.kind==="trinket"?t.trinkets.includes(c.id):t.consumable===c.id,"committed item")}
-  if(p.encounter!==null){var e=p.encounter;need(obj(e)&&["monster","trap","heal"].concat(Object.keys(CONTENT).filter(isContentDice)).includes(e.type)&&["ready","preview","resolved"].includes(e.phase)&&integer(e.roll,1,6)&&e.roomId===f.currentId&&Object.prototype.hasOwnProperty.call(MONSTERS,e.monsterKind)&&p.cards.active===null,"encounter");need(e.rerollUsed===undefined||typeof e.rerollUsed==="boolean","reroll flag");if(e.type==="corpse"&&e.phase!=="resolved")need(Object.prototype.hasOwnProperty.call(CONSUMABLES,e.rewardItem),"reserved supplies");if(e.rerollUsed)need(integer(e.originalRoll,1,6)&&obj(e.paid)&&num(e.paid.before,2)&&num(e.paid.after,1)&&e.paid.after<e.paid.before,"reroll payment");if(e.phase==="preview"){need(typeof e.rerollUsed==="boolean"&&obj(e.preview)&&typeof e.preview.text==="string"&&obj(e.preview.after),"preview");["hp","gold","score","combo","fateGainRemainder"].forEach(function(k){need(num(e.preview.after[k],0),"preview value")});need(e.offer===null||(!e.rerollUsed&&obj(e.offer)&&e.offer.before===u.combo&&num(e.offer.before,2)&&num(e.offer.after,1)&&e.offer.after<e.offer.before),"reroll offer")}if(e.phase==="resolved")need(typeof e.result==="string"&&typeof e.detail==="string","result")}
+  if(p.encounter!==null){var e=p.encounter;need(obj(e)&&["boss","monster","trap","heal"].concat(Object.keys(CONTENT).filter(isContentDice)).includes(e.type)&&["ready","preview","resolved"].includes(e.phase)&&integer(e.roll,1,6)&&e.roomId===f.currentId&&Object.prototype.hasOwnProperty.call(MONSTERS,e.monsterKind)&&p.cards.active===null,"encounter");need(e.rerollUsed===undefined||typeof e.rerollUsed==="boolean","reroll flag");if(e.type==="corpse"&&e.phase!=="resolved")need(Object.prototype.hasOwnProperty.call(CONSUMABLES,e.rewardItem),"reserved supplies");if(e.rerollUsed)need(integer(e.originalRoll,1,6)&&obj(e.paid)&&num(e.paid.before,2)&&num(e.paid.after,1)&&e.paid.after<e.paid.before,"reroll payment");if(e.phase==="preview"){need(typeof e.rerollUsed==="boolean"&&obj(e.preview)&&typeof e.preview.text==="string"&&obj(e.preview.after),"preview");["hp","gold","score","combo","fateGainRemainder"].forEach(function(k){need(num(e.preview.after[k],0),"preview value")});if(e.type==="boss")need(integer(e.preview.after.bossHp,0,f.rooms[f.exitId].boss.maxHp),"boss preview health");need(e.offer===null||(!e.rerollUsed&&obj(e.offer)&&e.offer.before===u.combo&&num(e.offer.before,2)&&num(e.offer.after,1)&&e.offer.after<e.offer.before),"reroll offer")}if(e.phase==="resolved")need(typeof e.result==="string"&&typeof e.detail==="string","result")}
   return true
  }catch(e){return false}
 }
@@ -2204,8 +2293,8 @@ function restoreRun(s){
   if(pendingEncounter){frameEncounter(pendingEncounter.type);
    var e=pendingEncounter;pendingAction=e.type;encounterMonster=e.monsterKind;
    if(e.phase==="ready"||e.phase==="preview"){showDice(e.type,true);if(e.phase==="preview"){encounterSerial++;renderOutcomePreview()}}
-   else{$("eventCard").className="eventCard "+e.type;$("eventArt").textContent=e.type==="monster"?MONSTERS[e.monsterKind].icon:e.type==="trap"?"⚠️":"✚";$("monsterThreat").textContent=e.type==="monster"?MONSTERS[e.monsterKind].resource:"";$("diceTitle").textContent=e.type==="monster"?MONSTERS[e.monsterKind].name:e.type==="trap"?"TRAP":"SHRINE";$("die").className="die landed";$("die").textContent=["⚀","⚁","⚂","⚃","⚄","⚅"][e.roll-1];$("diceOverlay").style.display="flex";layoutEncounter();$("tapContinue").style.visibility="";finishDiceResult(e.result,e.detail);if(e.type==="monster")presentMimic();presentContentEncounter(e.type)}
-  }else if(cardState.active){pendingAction="item-card";if(cardState.active.type==="content")renderContentCard();else renderItemCard()}
+   else{$("eventCard").className="eventCard "+e.type;$("eventArt").textContent=e.type==="monster"?MONSTERS[e.monsterKind].icon:e.type==="trap"?"⚠️":"✚";$("monsterThreat").textContent=e.type==="monster"?MONSTERS[e.monsterKind].resource:"";$("diceTitle").textContent=e.type==="monster"?MONSTERS[e.monsterKind].name:e.type==="trap"?"TRAP":"SHRINE";$("die").className="die landed";$("die").textContent=["⚀","⚁","⚂","⚃","⚄","⚅"][e.roll-1];$("diceOverlay").style.display="flex";layoutEncounter();$("tapContinue").style.visibility="";finishDiceResult(e.result,e.detail);if(e.type==="boss"){presentBossEncounter();bossRoundContinuation()}if(e.type==="monster")presentMimic();presentContentEncounter(e.type)}
+  }else if(cardState.active){pendingAction="item-card";if(cardState.active.type==="boss")renderBossCard();else if(cardState.active.type==="content")renderContentCard();else renderItemCard()}
   return true
  }finally{restoringRun=false}
 }
@@ -2232,13 +2321,15 @@ window.addEventListener("resize",function(){if(roomTravel)flushLifecycleRun();el
 // Nested gameplay helpers form one transaction; rendering/animation callbacks do not save.
 openDroppedConsumable=committed(openDroppedConsumable);
 openContent=committed(openContent);actOnContent=committed(actOnContent);
+openBossCard=committed(openBossCard);beginBossFight=committed(beginBossFight);startBossRound=committed(startBossRound);
 traverseStairs=committed(traverseStairs);
 openChest=committed(openChest);openChestCard=committed(openChestCard);
 revealOutcome=committed(revealOutcome);acceptOutcome=committed(acceptOutcome);rerollOutcome=committed(rerollOutcome);
 beginRun=committed(beginRun);newFloor=committed(newFloor);enterRoom=committed(enterRoom);searchCurrentRoom=committed(searchCurrentRoom);resolveSimpleEvent=committed(resolveSimpleEvent);showDice=committed(showDice);resolveDice=committed(resolveDice);scavenge=committed(scavenge);descend=committed(descend);sacrificeAltar=committed(sacrificeAltar);useConsumable=committed(useConsumable);inspectItem=committed(inspectItem);closeItemCard=committed(closeItemCard);replaceTrinket=committed(replaceTrinket);chooseConsumable=committed(chooseConsumable);acquireTrinket=committed(acquireTrinket);offerConsumable=committed(offerConsumable);pumpCards=committed(pumpCards);revealClue=committed(revealClue);awardPerfectFloor=committed(awardPerfectFloor);disarmTrap=committed(disarmTrap);openAltar=committed(openAltar);continueEncounter=committed(continueEncounter);finish=committed(finish);
 
-$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — Room Shapes";
+$("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V"+GAME_VERSION+" — First Chapter";
 window.__dofTest={
+ progression:CONTENT_PROGRESSION,eligibleCreatures:eligibleCreatures,creatureFamilyWeights:creatureFamilyWeights,ordinaryHazards:ordinaryHazards,bossMilestone:bossMilestone,bossForFloor:bossForFloor,bossOutcome:bossOutcome,openBossCard:openBossCard,beginBossFight:beginBossFight,boss:function(){return room(exitId).boss?jsonCopy(room(exitId).boss):null},
  creatures:MONSTERS,creatureDefinition:creatureDefinition,sensesLiving:sensesLiving,compassDirection:compassDirection,
  content:CONTENT,contentTuning:CONTENT_TUNING,contentOutcome:contentOutcome,openContent:openContent,actOnContent:actOnContent,applyCondition:applyCondition,clearConditions:clearConditions,conditions:function(){return jsonCopy(conditions)},movementMultiplier:movementMultiplier,travelState:function(){return roomTravel?{from:roomTravel.from,to:roomTravel.to,duration:roomTravel.duration,started:roomTravel.started,progress:roomTravel.progress}:null},mapVisible:mapVisible,memoryWipe:function(){return memoryWipe?{phase:memoryWipe.phase,order:memoryWipe.order,visible:Object.keys(memoryWipe.visible)}:null},openDroppedConsumable:openDroppedConsumable,
  codex:function(){return{entries:CARD_REGISTRY,discovered:JSON.parse(JSON.stringify(codexState.discovered)),open:codexOpen}},showCodex:showCodex,closeCodex:closeCodex,openCodexDetail:openCodexDetail,
