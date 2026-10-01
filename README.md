@@ -8,6 +8,22 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## V2.23.1 — first-attempt Card hold fix
+
+A touch drag emits no click, so the Card drag handler's residual click-suppression
+flag could swallow the **next completed hold's authorized click**. It then cleared,
+which made the second hold work. The drag click guard now recognizes the shared
+hold controller's existing authorized-event marker; ordinary clicks/releases
+remain isolated. Unrelated pointer IDs no longer cancel the owning hold. No gesture thresholds, jitter tolerance or gameplay changed.
+
+The hold ring and completion use one elapsed-time RAF controller (still **650ms**),
+so 100% progress and action authorization occur together. Existing pointer capture,
+early-release/cancel handling, hold ownership and Card/die drag visuals are retained.
+Regression coverage uses real touch drags followed by the first hold on every
+current gameplay action, including REROLL/FIGHT, plus jitter, release, cancellation,
+reopening, successive cards and future default actions. Physical Android checks
+remain necessary. PWA cache: `dungeon-of-fate-v2.23.1-1`.
+
 ## V2.23 — First Chapter: progression and Guardian General
 
 Content eligibility is now separate from encounter frequency and behavior.

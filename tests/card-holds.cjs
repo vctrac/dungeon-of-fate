@@ -17,9 +17,9 @@ const root=path.resolve(__dirname,'..'),server=http.createServer((q,r)=>fs.readF
  const b=await page.locator('#futureAction').boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x-20,b.y);await page.waitForTimeout(720);await page.mouse.up();assert.equal(await page.evaluate(()=>activations),0);assert(await page.locator('#itemChoice').isVisible());
  await page.locator('#futureAction').focus();await page.keyboard.down('Enter');await page.waitForTimeout(100);await page.keyboard.up('Enter');assert.equal(await page.evaluate(()=>activations),0);
  await page.keyboard.down('Enter');await page.waitForTimeout(720);await page.keyboard.down('Enter');await page.keyboard.up('Enter');assert.equal(await page.evaluate(()=>activations),1);
- await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.locator('#futureAction').dispatchEvent('pointerdown',{pointerId:99,isPrimary:false,pointerType:'touch'});await page.waitForTimeout(720);await page.mouse.up();assert.equal(await page.evaluate(()=>activations),1);
- await page.mouse.down();await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));await page.waitForTimeout(720);await page.mouse.up();assert.equal(await page.evaluate(()=>activations),1);
- await press('#futureAction',710);assert.equal(await page.evaluate(()=>activations),2);await page.locator('#itemChoice').tap({position:{x:3,y:3}});assert(await page.locator('#itemChoice').isHidden());
+ await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.locator('#futureAction').dispatchEvent('pointerdown',{pointerId:99,isPrimary:false,pointerType:'touch'});await page.waitForTimeout(720);await page.mouse.up();assert.equal(await page.evaluate(()=>activations),2);
+ await page.mouse.down();await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));await page.waitForTimeout(720);await page.mouse.up();assert.equal(await page.evaluate(()=>activations),2);
+ await press('#futureAction',710);assert.equal(await page.evaluate(()=>activations),3);await page.locator('#itemChoice').tap({position:{x:3,y:3}});assert(await page.locator('#itemChoice').isHidden());
  console.log('PASS automatic future action default, drag cancellation, keyboard, multi-touch, lifecycle, single commit and outside informational dismissal');
  await page.evaluate(()=>document.querySelector('#futureAction').remove());
  for(const selector of ['#takeItem','#replaceSelected']){

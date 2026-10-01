@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dungeon of Fate">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Dungeon of Fate V2.22 — Room Shapes</title>
+<title>Dungeon of Fate V2.23.1 — First Chapter</title>
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100f0e;color:#eee;font-family:system-ui,sans-serif}
@@ -786,6 +786,8 @@ function installCardDrag(panel){
  function dieOpacity(value){if(panel.classList.contains('encounterPanel'))$("encounterDie").style.opacity=value}
  function reset(){wrapper.classList.remove('dragging');wrapper.style.transform='';wrapper.style.opacity='';dieOpacity('');gesture=null}
  function isolate(e){e.preventDefault();e.stopImmediatePropagation()}
+ // Suppress only the drag's own trailing click, never a later fresh interaction.
+ panel.addEventListener('pointerdown',function(){suppressClick=false},true);
  panel.addEventListener('pointerdown',function(e){if(exiting||e.isPrimary===false||e.button>0||e.target.closest('button,input,label,a')||!context())return;
   isolate(e);suppressClick=false;gesture={id:e.pointerId,x:e.clientX,y:e.clientY,dy:0,active:false,context:context()};panel.setPointerCapture(e.pointerId)
  });
@@ -803,7 +805,8 @@ function installCardDrag(panel){
   },matchMedia('(prefers-reduced-motion: reduce)').matches?0:CARD_DRAG.exitMs)
  }
  panel.addEventListener('pointerup',release);panel.addEventListener('pointercancel',release);
- panel.addEventListener('click',function(e){if(suppressClick||exiting){isolate(e);suppressClick=false}},true)
+ // A completed hold is authorized by the shared controller, not a residual drag click.
+ panel.addEventListener('click',function(e){if(heldCardClicks.has(e))return;if(suppressClick||exiting){isolate(e);suppressClick=false}},true)
 }
 
 function frameCard(panel,template,category,fresh){
@@ -1835,7 +1838,7 @@ function rerollOutcome(){
 // Explicit data-card-tap is reserved for non-gameplay navigation/dismissal.
 var CARD_ACTION_HOLD_MS=650,cardHold=null,heldCardClicks=new WeakSet();
 function cancelCardHold(){
- var g=cardHold;if(!g)return;cardHold=null;clearTimeout(g.timer);cancelAnimationFrame(g.frame);
+ var g=cardHold;if(!g)return;cardHold=null;cancelAnimationFrame(g.frame);
  g.button.classList.remove("holding");g.button.style.removeProperty("--charge")
 }
 function cancelRerollHold(){cancelCardHold()}
@@ -1847,20 +1850,26 @@ function installCardActions(root,decision){
   var g=Object.assign({button:button,decision:decision(),start:performance.now()},input);cardHold=g;
   button.classList.add("holding");button.style.setProperty("--charge","0deg");
   function valid(){return cardHold===g&&decision()===g.decision&&button.isConnected&&!button.disabled&&button.getClientRects().length&&document.visibilityState!=="hidden"&&!gameOver}
-  function tick(now){if(cardHold!==g)return;if(!valid()){cancelCardHold();return}button.style.setProperty("--charge",Math.min(360,(now-g.start)/CARD_ACTION_HOLD_MS*360)+"deg");g.frame=requestAnimationFrame(tick)}
-  g.frame=requestAnimationFrame(tick);g.timer=setTimeout(function(){if(cardHold!==g)return;if(!valid()){cancelCardHold();return}cancelCardHold();cardPointer=null;continuePointer=null;var click=new MouseEvent("click",{bubbles:true,cancelable:true});heldCardClicks.add(click);button.dispatchEvent(click)},CARD_ACTION_HOLD_MS)
+  function tick(now){
+   if(cardHold!==g)return;if(!valid()){cancelCardHold();return}
+   var progress=Math.min(1,(now-g.start)/CARD_ACTION_HOLD_MS);button.style.setProperty("--charge",progress*360+"deg");
+   if(progress<1){g.frame=requestAnimationFrame(tick);return}
+   cancelCardHold();cardPointer=null;continuePointer=null;
+   var click=new MouseEvent("click",{bubbles:true,cancelable:true});heldCardClicks.add(click);button.dispatchEvent(click)
+  }
+  g.advance=tick;g.frame=requestAnimationFrame(tick)
  }
  root.addEventListener("pointerdown",function(e){
-  if(e.isPrimary===false||cardHold){cancelCardHold();isolate(e);return}
-  var b=action(e);if(!b)return;isolate(e);if(e.pointerType==="mouse"&&e.button!==0)return;
+  var b=action(e);if(cardHold){isolate(e);return}if(e.isPrimary===false){if(b)isolate(e);return}
+  if(!b)return;isolate(e);if(e.pointerType==="mouse"&&e.button!==0)return;
   b.setPointerCapture(e.pointerId);start(b,{id:e.pointerId,x:e.clientX,y:e.clientY})
  },true);
  root.addEventListener("pointermove",function(e){var g=cardHold;if(!g||g.id!==e.pointerId)return;isolate(e);var b=g.button.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom||Math.hypot(e.clientX-g.x,e.clientY-g.y)>14)cancelCardHold()},true);
- ["pointerup","pointercancel","lostpointercapture"].forEach(function(name){root.addEventListener(name,function(e){if(action(e)||cardHold&&cardHold.id===e.pointerId){isolate(e);cancelCardHold()}},true)});
+ ["pointerup","pointercancel","lostpointercapture"].forEach(function(name){root.addEventListener(name,function(e){if(action(e)||cardHold&&cardHold.id===e.pointerId){isolate(e);var g=cardHold;if(g&&g.id===e.pointerId){if(name==="pointerup"&&performance.now()-g.start>=CARD_ACTION_HOLD_MS)g.advance(performance.now());if(cardHold===g)cancelCardHold()}}},true)});
  root.addEventListener("click",function(e){if(action(e)&&!heldCardClicks.has(e))isolate(e)},true);
  root.addEventListener("contextmenu",function(e){if(action(e))isolate(e)},true);
  root.addEventListener("keydown",function(e){var b=action(e);if(!b||e.key!==" "&&e.key!=="Enter")return;isolate(e);if(!e.repeat&&!cardHold)start(b,{key:e.key})},true);
- root.addEventListener("keyup",function(e){if(action(e)&&(e.key===" "||e.key==="Enter")){isolate(e);cancelCardHold()}},true);
+ root.addEventListener("keyup",function(e){if(action(e)&&(e.key===" "||e.key==="Enter")){isolate(e);var g=cardHold;if(g&&g.key===e.key&&performance.now()-g.start>=CARD_ACTION_HOLD_MS)g.advance(performance.now());if(cardHold===g)cancelCardHold()}},true);
  root.addEventListener("blur",function(){cancelCardHold()},true)
 }
 installCardActions($("itemChoice"),function(){return cardState.active});
@@ -2163,7 +2172,7 @@ function render(){
 function update(){updateConditions();if(layerVisual&&layerVisual.phase!=="prepare"){layerVisual.dirty=true;return}$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.23";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.23.1";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
