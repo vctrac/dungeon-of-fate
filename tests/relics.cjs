@@ -62,8 +62,8 @@ let browser;
   await page.waitForFunction(()=>document.querySelector('#die').classList.contains('landed'));assert.equal(await page.locator('#diceOverlay.resolved').count(),0);
   await page.waitForSelector('#diceOverlay.resolved');await clear();
  }
- const weights=await page.evaluate(()=>[1,2,3,8].map(n=>{const counts={basic:0,thief:0,spirit:0};for(let i=0;i<100;i++)counts[__dofTest.pickMonster(n,(i+.5)/100)]++;return counts}));
- assert.deepEqual(weights,[{basic:100,thief:0,spirit:0},{basic:80,thief:20,spirit:0},{basic:78,thief:20,spirit:2},{basic:67,thief:23,spirit:10}]);
+ const weights=await page.evaluate(()=>[1,2,3,8].map(n=>{const counts={basic:0,wretch:0,thief:0,spirit:0};for(let i=0;i<100;i++)counts[__dofTest.pickMonster(n,(i+.5)/100)]++;return counts}));
+ assert.deepEqual(weights,Array.from({length:4},()=>({basic:50,wretch:50,thief:0,spirit:0})));
  console.log('PASS monster resource threats, reward bands, controlled depth weights, identities and screen-wide swipes');
  await reset();await page.evaluate(()=>__dofTest.showDice('monster'));
  const cue=await page.evaluate(()=>{

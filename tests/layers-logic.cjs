@@ -17,7 +17,7 @@ for(const depth of [1,2,3,5,6,10,11,25]){
   check(layers.length<=2&&activeLayer===0&&layerOf(startId)===0,'base/max layers');
   check(normalReachableWithoutGate(),'combined reachable without Gate');
   check(rooms.filter(r=>r.event==='chest').length<=1&&rooms.filter(r=>r.event==='altar').length<=1,'floor special caps');
-  if(depth>1)check(rooms.filter(r=>r.active&&HAZARD_POOL.includes(r.event)&&!inGateBranch(r.id)).length===2,'fixed ordinary Hazard budget');
+  if(depth>1)check(rooms.filter(r=>r.active&&(HAZARD_POOL.includes(r.event)||r.event==='trap')&&!inGateBranch(r.id)).length===2,'fixed ordinary Hazard budget');
   check(floorEconomy.bonusShrines<=1&&fortuneBudget<=5,'Fortune once per floor');
   const stairs=rooms.filter(r=>r.event==='stairs');check(stairs.length===(layers.length===2?2:0),'stairs');
   if(layers.length===2){

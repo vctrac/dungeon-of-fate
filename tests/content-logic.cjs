@@ -9,8 +9,8 @@ const discovered=JSON.stringify(codexState),counts={},sizes=[0,0,0];let secondar
 for(let seed=1;seed<=4000;seed++){
  let n=seed;Math.random=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296};floorNo=1+seed%25;combo=seed%2?1:10;newFloor(false,"");
  const active=rooms.filter(r=>r.active),ordinary=active.filter(r=>!inGateBranch(r.id));
- check(!ordinary.some(r=>r.event==='trap'||r.event==='wasps'),'no ordinary Trap/Wasps');
- const hazards=ordinary.filter(r=>HAZARD_POOL.includes(r.event));check(hazards.length===(floorNo===1&&hazards.length===3?3:2),'same danger budget');check(new Set(hazards.map(r=>r.event)).size===hazards.length,'variety');
+ check(!ordinary.some(r=>r.event==='wasps'),'no ordinary Wasps');if(floorNo>24)check(!ordinary.some(r=>r.event==='trap'),'later ordinary Trap excluded');
+ const hazards=ordinary.filter(r=>HAZARD_POOL.includes(r.event)||r.event==='trap');check(hazards.length===(floorNo===1&&hazards.length===3?3:2),'same danger budget');if(floorNo>24)check(new Set(hazards.map(r=>r.event)).size===hazards.length,'later variety');else check(hazards.every(r=>['spikes','trap'].includes(r.event)),'early eligibility');
  const discoveries=active.filter(r=>CONTENT[r.event]?.weight);sizes[discoveries.length]++;check(discoveries.length<=2&&new Set(discoveries.map(r=>r.event)).size===discoveries.length,'floor Discovery cap');
  discoveries.forEach(r=>{check(r.id!==startId&&r.id!==exitId&&r.stairTo===undefined&&!r.chest&&!inGateBranch(r.id),'ordinary candidates');check(!r.contentState.seen&&!r.contentState.resolved,'unencountered');counts[r.event]=(counts[r.event]||0)+1;if(r.layerId===1)secondary++});
  gateTraps+=active.filter(r=>inGateBranch(r.id)&&r.event==='trap').length;
@@ -26,10 +26,10 @@ for(const type of HAZARD_POOL)for(let roll=1;roll<=6;roll++){
  resolveDice(type,roll);check(hp===p.after.hp&&combo===p.after.combo&&JSON.stringify(conditions)===JSON.stringify(p.after.conditions),'preview/commit '+type+roll);pendingAction=null;pendingEncounter=null;
 }
 for(const health of [1,2])for(const protection of ['none','shield','bargain','doll']){
- clearConditions();relicState=freshRelicState();hp=health;shield=protection==='shield';if(protection==='bargain')relicState.bargainCharges=3;if(protection==='doll')relicState.trinkets=['doll'];combo=5;applyCondition('sickness');const p=previewOutcome('trap',1,'basic');resolveDice('trap',1);check(!conditions.sickness,'amplification consumed');check(hp===p.after.hp&&shield===p.after.shield,'protections match preview');deathPending=false;gameOver=false;pendingAction=null;pendingEncounter=null;
+ clearConditions();relicState=freshRelicState();hp=health;shield=protection==='shield';if(protection==='bargain')relicState.bargainCharges=3;if(protection==='doll')relicState.trinkets=['doll'];combo=5;applyCondition('weakness');const p=previewOutcome('trap',1,'basic');resolveDice('trap',1);check(!conditions.weakness,'amplification consumed');check(hp===p.after.hp&&shield===p.after.shield,'protections match preview');deathPending=false;gameOver=false;pendingAction=null;pendingEncounter=null;
 }
-clearConditions();applyCondition('slowed');applyCondition('sickness');applyCondition('amnesia');const original=JSON.stringify(rooms);for(let i=0;i<9;i++)moveConditions(currentId);check(conditions.slowed===1&&conditions.sickness===1&&conditions.amnesia===1,'nine movements');applyCondition('slowed');check(conditions.slowed===10,'refresh');moveConditions(currentId);check(!conditions.sickness&&!conditions.amnesia&&conditions.slowed===9,'expiry independently');check(JSON.stringify(rooms)===original,'memory never mutates world');
-console.log('PASS 24 Hazard tables, pure previews, Sickness/protection ordering, refresh/coexistence/expiry and non-destructive Amnesia');
+clearConditions();applyCondition('slowed');applyCondition('weakness');applyCondition('amnesia');const original=JSON.stringify(rooms);for(let i=0;i<9;i++)moveConditions(currentId);check(conditions.slowed===1&&conditions.weakness===1&&conditions.amnesia===1,'nine movements');applyCondition('slowed');check(conditions.slowed===10,'refresh');moveConditions(currentId);check(!conditions.weakness&&!conditions.amnesia&&conditions.slowed===9,'expiry independently');check(JSON.stringify(rooms)===original,'memory never mutates world');
+console.log('PASS 24 Hazard tables, pure previews, Weakness/protection ordering, refresh/coexistence/expiry and non-destructive Amnesia');
 `;
 let script=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
 script=script.replace('bootRun();\n})();',`saveRun=flushRun=function(){};renderItemCard=revealAcquiredItem=dollRescue=update=updateRelicHUD=clearFeedback=showLocalFeedback=updateContext=effectNotice=theftFeedback=markArrival=resourceFlight=function(){};\nbeginRun();\n${checks}\n})();`);
