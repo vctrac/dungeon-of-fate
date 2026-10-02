@@ -8,6 +8,18 @@ Active prototype.
 try it at:
 https://vctrac.github.io/dungeon-of-fate/
 
+## Asset paths and supplied Card artwork
+
+Frames now live in `assets/ui/`, PWA icons in `assets/icons/`, and supplied
+artwork in `assets/cards/`. Matching encounter, discovery and discovered Archive
+cards use those images inside the existing clipped artwork aperture (`object-fit:
+cover`). Missing artwork keeps its existing icon; unknown Archive entries load no
+artwork and reveal no identity. Guardian General temporarily shares Guardian art.
+Ordinary Trap uses the supplied darts image; Scavenge Trap uses its separate image,
+with the same existing Trap mechanics and Archive identity. No new content added.
+The PWA shell caches the moved UI/icons and all 11 supplied artwork images for
+offline use. Visible version stays V2.23.1; cache: `dungeon-of-fate-v2.23.1-2`.
+
 ## V2.23.1 — first-attempt Card hold fix
 
 A touch drag emits no click, so the Card drag handler's residual click-suppression
@@ -945,11 +957,12 @@ renderer has its own region; the single Reroll control remains below the result.
 Card interiors do not dismiss. Backdrop gestures dismiss/decline or accept the
 pending result. Existing keyboard continuation and hold-to-Reroll remain.
 
-`card_frame.png` is the supplied **unchanged 880×1214 asset** (Git blob
+At V2.20, `card_frame.png` was the supplied **unchanged 880×1214 asset** (Git blob
 `3964fda67017706fbcc287183e2e5c130e5314b5`). It is a responsive portrait background,
 not baked text/art. The artwork safe window is **80% width × 48% height**, approximately
 **704×583 px (1.21:1)** at source resolution, starting at 10% x / 21% y.
-Current icons are centered inside it. Dice/action templates reclaim some artwork
+That original file has since been replaced by the modular assets in `assets/ui/`;
+see the current asset-path notes above. Icons were centered inside it. Dice/action templates reclaimed some artwork
 space for interaction; final artwork is not introduced. Cards use no backdrop blur.
 The frame is in the offline shell cache, now `dungeon-of-fate-v2.20-1`.
 

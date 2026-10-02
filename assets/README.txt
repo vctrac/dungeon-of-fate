@@ -1,5 +1,8 @@
 Dungeon of Fate — modular card asset kit
 
+The five frame assets listed below are in assets/ui/. PWA icons are in assets/icons/.
+Encounter artwork is in assets/cards/, grouped by category.
+
 card_reference_transparent.png — supplied design with near-black exterior/aperture made transparent.
 card_outer_frame.png — fixed outer border + crest overlay.
 card_artwork_frame_9slice.png — dynamic artwork-window border source; use CSS border-image/9-slice.
