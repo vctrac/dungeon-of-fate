@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#100f0e">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png">
 <meta name="application-name" content="Dungeon of Fate">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -314,7 +314,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @media(prefers-reduced-motion:reduce){.layerMap,.cell.stairRoom.current .icon{animation:none!important}}
 /* Shared V2.20 frame. Artwork safe window: 80% × 48% (704 × 583 at source size). */
 #diceOverlay,#itemChoice{background:rgba(4,9,7,.66)!important;backdrop-filter:none}
-.worldCard{box-sizing:border-box!important;position:relative!important;width:min(88vw,420px,calc((100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*880/1214))!important;aspect-ratio:880/1214;height:auto!important;max-height:none!important;flex:none;display:block!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:url('./card_frame.png') center/100% 100% no-repeat!important;box-shadow:none!important;text-align:center;color:#eee2c4;container-type:inline-size}
+.worldCard{box-sizing:border-box!important;position:relative!important;width:min(88vw,420px,calc((100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*880/1214))!important;aspect-ratio:880/1214;height:auto!important;max-height:none!important;flex:none;display:block!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:url('./assets/ui/card_reference_transparent.png') center/100% 100% no-repeat!important;box-shadow:none!important;text-align:center;color:#eee2c4;container-type:inline-size}
 .worldCard [hidden]{display:none!important}.worldCard .cardCrest{position:absolute;top:5.6%;left:43%;width:14%;font-size:7cqw!important;color:#edd2a0;text-shadow:0 2px 4px #000}.worldCard .cardNew{position:absolute;top:15%;right:12%;font-size:10px;letter-spacing:2px;color:#ffe3a0}
 .worldCard #itemReason{position:absolute;top:17%;left:12%;width:76%;font-size:10px}
 .worldCard #itemArt,.worldCard #codexArt{position:absolute;top:30%;left:32%;width:36%;height:26%;display:grid;place-items:center;font-size:24cqw;filter:none;margin:0}
@@ -345,18 +345,19 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 
 #codexOverlay,#codexDetail{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:#07100eea;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));box-sizing:border-box}#codexOverlay[hidden],#codexDetail[hidden]{display:none}#codexDetail{background:#050b09cc}
 .codexBrowser{width:min(620px,100%);max-height:100%;display:flex;flex-direction:column;color:#e0cfac}.codexBrowser header{display:flex;align-items:center;gap:12px}.codexBrowser h2{font-size:18px;letter-spacing:3px}.codexBrowser header span{font-size:10px;margin-left:auto}.codexBrowser button{color:#e2cfaa;background:#16211b;border:1px solid #76674c;border-radius:6px;min-height:44px;cursor:pointer}.codexBrowser nav{display:flex;gap:5px;flex-wrap:wrap;padding:8px 0}.codexBrowser nav button{font-size:10px;padding:6px}.codexBrowser nav [aria-pressed=true]{border-color:#efc987;background:#3a3625}
-#codexGrid{display:grid;align-content:start;grid-auto-rows:max-content;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 20px}.codexBrowser .codexTile{width:100%;min-width:0;aspect-ratio:880/1214;background:url('./card_frame.png') center/100% 100%;border:0;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18%;padding:22% 12% 8%;font-size:10px}.codexTile b{font-size:34px}.codexTile:disabled{opacity:.5;cursor:default}.codexTile span{min-height:24px}.worldCard #codexEffect{font-size:clamp(12px,3.5cqw,16px)!important}
+#codexGrid{display:grid;align-content:start;grid-auto-rows:max-content;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 20px}.codexBrowser .codexTile{width:100%;min-width:0;aspect-ratio:880/1214;background:url('./assets/ui/card_reference_transparent.png') center/100% 100%;border:0;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18%;padding:22% 12% 8%;font-size:10px}.codexTile b{font-size:34px}.codexTile:disabled{opacity:.5;cursor:default}.codexTile span{min-height:24px}.worldCard #codexEffect{font-size:clamp(12px,3.5cqw,16px)!important}
 @media(max-width:350px){#codexGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-height:480px){.worldCard #itemDescription,.worldCard #codexDescription{font-size:10px}.worldCard #itemState{display:none}.worldCard[data-template=choice] #itemDescription{display:none}.worldCard #replaceTrinkets{top:59%}.worldCard #replaceSelected,.worldCard #consumableChoices,.worldCard #chestOpen,.worldCard #contentAction{top:82%}.worldCard #altarOffer{top:65%}.worldCard .rerollSlot{top:82%}.worldCard #diceResult{top:64%}.worldCard #diceDetail{top:71%}.worldCard #diceDetail .outcome{font-size:18px}.worldCard #rerollButton{height:44px;min-height:44px}.worldCard .diceTitle{font-size:10px}}
 
 .worldCard:focus,.worldCard .eventCard:focus{outline:none}.worldCard .eventCard:focus-visible{outline:1px solid #aa926344}
 /* V2.20.1: fixed silhouette, real independently sized artwork aperture. */
 .worldCard{aspect-ratio:1038/1536;width:min(88vw,420px,calc((100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*1038/1536))!important;background:none!important;isolation:isolate}
-.worldCard::before{content:"";position:absolute;inset:9% 4% 4%;border-radius:8%;background:url('./assets/card_interior_texture.png') center/cover;z-index:-1;pointer-events:none}
-.worldCard::after{content:"";position:absolute;inset:0;background:url('./assets/card_outer_frame.png') center/100% 100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 0,7% 15%,7% 94%,93% 94%,93% 15%,7% 15%,0 0);z-index:5;pointer-events:none}
+.worldCard::before{content:"";position:absolute;inset:9% 4% 4%;border-radius:8%;background:url('./assets/ui/card_interior_texture.png') center/cover;z-index:-1;pointer-events:none}
+.worldCard::after{content:"";position:absolute;inset:0;background:url('./assets/ui/card_outer_frame.png') center/100% 100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 0,7% 15%,7% 94%,93% 94%,93% 15%,7% 15%,0 0);z-index:5;pointer-events:none}
 .worldCard .cardCrest{top:5.5%;z-index:6}.worldCard .cardNew{z-index:4}
-.cardArtwork{position:absolute;left:10%;top:21%;width:80%;height:46%;box-sizing:border-box;border:clamp(12px,5cqw,21px) solid transparent;border-image:url('./assets/card_artwork_frame_9slice.png') 80 / 1 / 0 stretch;transition:height 180ms ease-out;contain:layout;pointer-events:none}
-.cardArtClip{position:absolute;inset:0;overflow:hidden;display:grid;place-items:center;border-radius:3%;background:url('./assets/card_interior_texture.png') center/cover}
+.cardArtwork{position:absolute;left:10%;top:21%;width:80%;height:46%;box-sizing:border-box;border:clamp(12px,5cqw,21px) solid transparent;border-image:url('./assets/ui/card_artwork_frame_9slice.png') 80 / 1 / 0 stretch;transition:height 180ms ease-out;contain:layout;pointer-events:none}
+.cardArtClip{position:absolute;inset:0;overflow:hidden;display:grid;place-items:center;border-radius:3%;background:url('./assets/ui/card_interior_texture.png') center/cover}
+.cardArtClip .cardImage{position:absolute;inset:0;object-fit:cover;opacity:0}.hasCardImage .cardImage{opacity:1}.hasCardImage #itemArt,.hasCardImage #codexArt,.hasCardImage #eventArt{visibility:hidden}.codexTile b{width:100%;height:48%;display:grid;place-items:center}.codexTile b img{width:100%;height:100%;object-fit:cover;border-radius:3%}
 .cardArtClip img,.cardArtClip video{display:block;width:100%;height:100%;object-fit:cover}
 .worldCard .cardArtwork #itemArt,.worldCard .cardArtwork #codexArt,.worldCard .cardArtwork #eventArt{position:relative;inset:auto;width:auto;height:auto;margin:0;font-size:24cqw;line-height:1;display:grid;place-items:center;filter:none}
 .worldCard[data-template=dice] .cardArtwork{height:13%}.worldCard[data-template=dice] .cardArtwork #eventArt{font-size:8cqw}.awaiting-swipe .worldCard[data-template=dice] .cardArtwork{height:46%}.awaiting-swipe .worldCard[data-template=dice] .cardArtwork #eventArt{font-size:28cqw}
@@ -714,7 +715,7 @@ function queueContentCard(id,roomId,notice){cardState.queue.push({type:"content"
 function renderContentCard(){
  var card=cardState.active,def=CONTENT[card.id],r=room(card.roomId),state=r.contentState||{},action=def.action&&!state.resolved&&!state.consumed;
  if(card.id==="garden")action=def.action;
- var fresh=discoverCard(contentCardId(card.id));frameCard(document.querySelector(".itemChoicePanel"),action?"choice":"info",def.category,fresh);
+ var fresh=discoverCard(contentCardId(card.id));frameCard(document.querySelector(".itemChoicePanel"),action?"choice":"info",def.category,fresh,contentCardId(card.id));
  ["chestOpen","altarOffer","replaceSelected","replaceTrinkets","consumableChoices","closeItem"].forEach(function(id){$(id).hidden=true});
  $("itemArt").classList.remove("holdDemo");$("itemChoice").hidden=false;$("itemArt").textContent=def.icon;$("itemName").textContent=def.name;$("itemReason").textContent=def.category.toUpperCase();$("itemDescription").textContent=def.description;
  $("itemVisual").textContent=card.notice;$("itemState").textContent=state.resolved&&card.id!=="garden"?"Searched":"";
@@ -772,6 +773,31 @@ CARD_REGISTRY["hazard:trap"]={id:"hazard:trap",category:"hazards",name:"Trap",ic
 CARD_REGISTRY["discovery:altar"]={id:"discovery:altar",category:"discoveries",name:"Altar of Fate",icon:"✦",effect:"✦ → ×1 · ♥ +1",description:"Sacrifice accumulated Fate to restore a missing Heart. One offering per altar."};
 CARD_REGISTRY["discovery:chest"]={id:"discovery:chest",category:"discoveries",name:"Treasure Chest",icon:"🧰",effect:"🧰 → ✧ / 👹",description:"An optional find. Hold OPEN to discover what waits inside."};
 CARD_REGISTRY["discovery:shrine"]={id:"discovery:shrine",category:"discoveries",name:"Shrine",icon:"✚",effect:"⚄ → ✚",description:"An uncertain blessing. Roll to discover its response."};
+// Artwork is presentation metadata; gameplay identity/effects remain authoritative.
+var CARD_ARTWORK={
+ "creature:basic":"./assets/cards/monsters/guardian.png",
+ "creature:wretch":"./assets/cards/monsters/wretch.png",
+ "creature:general":"./assets/cards/monsters/guardian.png",
+ "creature:mimic":"./assets/cards/monsters/mimic.png",
+ "creature:spirit":"./assets/cards/monsters/spirit.png",
+ "hazard:spikes":"./assets/cards/hazards/spikes.png",
+ "hazard:trap":"./assets/cards/hazards/darts.png",
+ "discovery:shrine":"./assets/cards/encounters/shrine.png",
+ "discovery:garden":"./assets/cards/discoveries/garden.png",
+ "discovery:flower":"./assets/cards/discoveries/flower.png",
+ "encounter:chest":"./assets/cards/encounters/chest.png",
+ "presentation:scavenge-trap":"./assets/cards/hazards/scavenge-trap.png"
+};
+Object.keys(CARD_ARTWORK).forEach(function(id){if(CARD_REGISTRY[id])CARD_REGISTRY[id].art=CARD_ARTWORK[id]});
+function presentCardArtwork(panel,id){
+ var aperture=panel.querySelector('.cardArtwork'),clip=panel.querySelector('.cardArtClip'),src=CARD_ARTWORK[id],img=clip.querySelector('.cardImage');
+ if(img&&img.getAttribute('src')!==src){img.remove();img=null}aperture.classList.toggle('hasCardImage',!!(img&&img.complete&&img.naturalWidth));
+ if(!src||img)return;
+ img=document.createElement('img');img.className='cardImage';img.alt='';img.decoding='async';
+ img.onload=function(){if(img.parentNode===clip)aperture.classList.add('hasCardImage')};
+ img.onerror=function(){if(img.parentNode===clip){aperture.classList.remove('hasCardImage');img.remove()}};
+ img.src=src;clip.appendChild(img)
+}
 var CODEX_KEY="dof.codex",codexState={version:1,discovered:{}},codexOpen=false,codexFilter="all",codexFocus=null,codexFresh={},codexStorageWarned=false;
 function codexWarning(){if(!codexStorageWarned){codexStorageWarned=true;console.warn("[DOF Codex] Local collection storage unavailable or invalid")}}
 function loadCodex(){try{var raw=localStorage.getItem(CODEX_KEY);if(!raw)return;var data=JSON.parse(raw);if(!data||data.version!==1||!data.discovered||typeof data.discovered!=="object"||Array.isArray(data.discovered))throw Error("schema");Object.keys(data.discovered).forEach(function(id){if(Object.prototype.hasOwnProperty.call(CARD_REGISTRY,id)&&Number.isFinite(data.discovered[id])&&data.discovered[id]>=0)codexState.discovered[id]=data.discovered[id]})}catch(e){codexWarning()}}
@@ -809,17 +835,18 @@ function installCardDrag(panel){
  panel.addEventListener('click',function(e){if(heldCardClicks.has(e))return;if(suppressClick||exiting){isolate(e);suppressClick=false}},true)
 }
 
-function frameCard(panel,template,category,fresh){
+function frameCard(panel,template,category,fresh,artId){
  panel.classList.add("worldCard");panel.dataset.template=template;installCardDrag(panel);
  if(panel.id==="codexCard"&&!panel.querySelector('.cardGestureHint')){var hint=document.createElement('div');hint.className='cardGestureHint';hint.textContent='↓ SWIPE DOWN TO CONTINUE';panel.appendChild(hint)}
  // Create once; subsequent state changes only resize this presentation container.
  var artwork=panel.querySelector(".cardArtwork");if(!artwork){artwork=document.createElement("div");artwork.className="cardArtwork";var clip=document.createElement("div");clip.className="cardArtClip";var art=panel.querySelector("#itemArt,#codexArt,#eventArt");if(art)clip.appendChild(art);artwork.appendChild(clip);panel.appendChild(artwork)}
  var crest=panel.querySelector(".cardCrest");if(!crest){crest=document.createElement("div");crest.className="cardCrest";panel.appendChild(crest)}
+ presentCardArtwork(panel,artId);
  crest.textContent=CARD_CATEGORIES[category].icon;crest.setAttribute("aria-label",CARD_CATEGORIES[category].name);
  var badge=panel.querySelector(".cardNew");if(!badge){badge=document.createElement("span");badge.className="cardNew";badge.textContent="NEW";panel.appendChild(badge)}badge.hidden=!fresh;
 }
 function encounterCardId(type){var r=room(currentId);if(type==="boss")return "creature:"+r.boss.id;return type==="monster"?(r.chest&&r.chest.opened&&r.chest.kind==="mimic"?"creature:mimic":"creature:"+(r.monsterKind||"basic")):CONTENT[type]?contentCardId(type):type==="trap"?"hazard:trap":"discovery:shrine"}
-function frameEncounter(type){var id=encounterCardId(type),fresh=discoverCard(id);frameCard(document.querySelector(".encounterPanel"),"dice",(CARD_REGISTRY[id]||{category:"hazards"}).category,fresh);}
+function frameEncounter(type){var id=encounterCardId(type),fresh=discoverCard(id);frameCard(document.querySelector(".encounterPanel"),"dice",(CARD_REGISTRY[id]||{category:"hazards"}).category,fresh,type==="trap"&&room(currentId).scavenged?"presentation:scavenge-trap":id);}
 function showCodex(){
  if(gameOver||codexOpen||layerTransition||fastTraveling||(pendingAction&&pendingAction!=="startup"))return false;
  cancelSlotGesture();clearFastPreview();codexOpen=true;codexFocus=document.activeElement;$("codexOverlay").hidden=false;renderCodex();$("codexBack").focus();return true
@@ -830,12 +857,12 @@ function renderCodex(){
  var list=$("codexGrid");list.textContent="";
  Object.keys(CARD_REGISTRY).forEach(function(id){var entry=CARD_REGISTRY[id];if(codexFilter!=="all"&&entry.category!==codexFilter)return;
   var known=Object.prototype.hasOwnProperty.call(codexState.discovered,id),tile=document.createElement("button");tile.type="button";tile.className="codexTile";tile.disabled=!known;tile.dataset.entry=known?id:"unknown";
-  var art=document.createElement("b"),name=document.createElement("span");art.textContent=known?entry.icon:"?";name.textContent=known?entry.name:"???";tile.appendChild(art);tile.appendChild(name);tile.setAttribute("aria-label",known?entry.name:"Undiscovered card");tile.addEventListener("click",function(){openCodexDetail(id)});list.appendChild(tile)
+  var art=document.createElement("b"),name=document.createElement("span");if(known&&entry.art){var image=document.createElement("img");image.src=entry.art;image.alt="";image.loading="lazy";image.decoding="async";image.onerror=function(){art.textContent=entry.icon};art.appendChild(image)}else art.textContent=known?entry.icon:"?";name.textContent=known?entry.name:"???";tile.appendChild(art);tile.appendChild(name);tile.setAttribute("aria-label",known?entry.name:"Undiscovered card");tile.addEventListener("click",function(){openCodexDetail(id)});list.appendChild(tile)
  });
 }
 function openCodexDetail(id){
  if(!codexOpen||!Object.prototype.hasOwnProperty.call(codexState.discovered,id)||!CARD_REGISTRY[id])return false;
- var e=CARD_REGISTRY[id];$("codexDetail").hidden=false;document.querySelector(".codexBrowser").inert=true;frameCard($("codexCard"),"info",e.category,false);$("codexArt").textContent=e.icon;$("codexName").textContent=e.name;$("codexEffect").textContent=e.effect;$("codexDescription").textContent=e.description;$("codexCard").focus();return true
+ var e=CARD_REGISTRY[id];$("codexDetail").hidden=false;document.querySelector(".codexBrowser").inert=true;frameCard($("codexCard"),"info",e.category,false,id);$("codexArt").textContent=e.icon;$("codexName").textContent=e.name;$("codexEffect").textContent=e.effect;$("codexDescription").textContent=e.description;$("codexCard").focus();return true
 }
 function codexBack(){if(!$("codexDetail").hidden){$("codexDetail").hidden=true;document.querySelector(".codexBrowser").inert=false;$("codexBack").focus()}else closeCodex()}
 loadCodex();
@@ -899,7 +926,7 @@ function renderItemCard(){
  $("chestOpen").hidden=true;
  var card=cardState.active;if(!card)return;
  $("altarOffer").hidden=true;$("itemArt").classList.toggle("holdDemo",card.kind==="consumable");$("itemArt").setAttribute("aria-label",card.kind==="consumable"?"Demonstration: press and keep holding the HUD item slot to use. This animation does not use the item.":"");$("cardContinue").hidden=false;
- var item=itemDefinition(card.kind,card.id);var entryId=card.kind+":"+card.id;if(discoverCard(entryId))codexFresh[entryId]=true;frameCard(document.querySelector(".itemChoicePanel"),card.decision?"choice":"info","items",(card.mode==="discovery"||card.found)&&!!codexFresh[entryId]);
+ var item=itemDefinition(card.kind,card.id);var entryId=card.kind+":"+card.id;if(discoverCard(entryId))codexFresh[entryId]=true;frameCard(document.querySelector(".itemChoicePanel"),card.decision?"choice":"info","items",(card.mode==="discovery"||card.found)&&!!codexFresh[entryId],entryId);
  $("itemChoice").hidden=false;$("itemArt").textContent=item.icon;$("itemName").textContent=item.name;$("itemVisual").textContent=ITEM_VISUALS[card.id];$("itemDescription").textContent=item.description;
  $("itemReason").textContent=card.mode==="pickup"?"LOOSE CONSUMABLE":card.decision?"CHOOSE YOUR BUILD":card.mode==="inspect"?(card.kind==="trinket"?"TRINKET":"CONSUMABLE"):"DISCOVERED";
  $("itemState").textContent=card.kind==="trinket"?(relicState.floorUsed[card.id]?"Used this floor":card.id==="doll"?"One rescue • destroyed on use":relicState.trinkets.length+" / 3 equipped"):"HOLD the slot to use";
@@ -958,7 +985,7 @@ function openBossCard(id){
 }
 function renderBossCard(){
  var card=cardState.active,b=room(card.roomId).boss,def=BOSSES[b.id];
- frameCard(document.querySelector('.itemChoicePanel'),"info","creatures",!!codexFresh["creature:"+b.id]);
+ frameCard(document.querySelector('.itemChoicePanel'),"info","creatures",!!codexFresh["creature:"+b.id],"creature:"+b.id);
  $("itemChoice").hidden=false;$("itemArt").classList.remove('holdDemo');$("itemArt").textContent=def.icon;$("itemName").textContent=def.name.toUpperCase();$("itemReason").textContent="BOSS · EXIT GUARDED";$("itemVisual").textContent=bossHearts(b.hp);$("itemDescription").textContent="Prepare before committing. Once you FIGHT, only victory or death ends the encounter.";$("itemState").textContent="Living · "+b.hp+" / "+b.maxHp+" Hearts";
  ["replaceTrinkets","replaceSelected","consumableChoices","chestOpen","altarOffer","closeItem","keepItem"].forEach(function(id){$(id).hidden=true});
  $("contentAction").hidden=false;$("contentAction").disabled=false;$("contentAction").textContent="FIGHT";$("cardContinue").hidden=false;$("cardContinue").textContent="↓ SWIPE DOWN TO PREPARE";document.querySelector('.itemChoicePanel').focus({preventScroll:true})
@@ -1010,7 +1037,7 @@ function openChestCard(id,automatic){
 }
 function renderChestCard(){
  $("contentAction").hidden=true;
- $("replaceSelected").hidden=true;frameCard(document.querySelector(".itemChoicePanel"),"choice","discoveries",false);
+ $("replaceSelected").hidden=true;frameCard(document.querySelector(".itemChoicePanel"),"choice","discoveries",false,"encounter:chest");
  $("itemArt").classList.remove('holdDemo');$("itemChoice").hidden=false;$("itemReason").textContent='CHEST';$("itemArt").textContent='🧰';$("itemName").textContent='Treasure Chest';$("itemVisual").textContent='🧰 → ✧ / 👹';$("itemDescription").textContent='An unopened chest.';$("itemState").textContent='';
  $("replaceTrinkets").hidden=true;$("consumableChoices").hidden=true;$("closeItem").hidden=true;$("altarOffer").hidden=true;$("chestOpen").hidden=false;$("cardContinue").hidden=false;$("cardContinue").textContent='↓ SWIPE DOWN TO LEAVE';document.querySelector('.itemChoicePanel').focus({preventScroll:true})
 }
@@ -1040,7 +1067,7 @@ function openAltar(id,automatic){
 function altarAvailable(){var card=cardState.active;return!!(card&&card.type==="altar"&&card.roomId===currentId&&!room(card.roomId).altarUsed&&combo>1&&hp<3&&hp>0&&!gameOver)}
 function renderAltarCard(){
  $("contentAction").hidden=true;
- $("replaceSelected").hidden=true;frameCard(document.querySelector(".itemChoicePanel"),"choice","discoveries",false);
+ $("replaceSelected").hidden=true;frameCard(document.querySelector(".itemChoicePanel"),"choice","discoveries",false,"discovery:altar");
  $("chestOpen").hidden=true;
  $("itemArt").classList.remove("holdDemo");
  $("itemChoice").hidden=false;$("itemReason").textContent="ALTAR";$("itemArt").textContent="✦";$("itemName").textContent="Altar of Fate";$("itemVisual").textContent="✦ → ♥";$("itemDescription").textContent="";$("itemState").textContent="";
