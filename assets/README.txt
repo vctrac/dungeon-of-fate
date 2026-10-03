@@ -1,19 +1,19 @@
-Dungeon of Fate — modular card asset kit
+Dungeon of Fate — Card presentation assets (V2.23.2)
 
-The five frame assets listed below are in assets/ui/. PWA icons are in assets/icons/.
-Encounter artwork is in assets/cards/, grouped by category.
+assets/ui/card-frame.webp — complete Full Card transparent overlay, 1024×1536 (2:3).
+assets/ui/card-frame-small.webp — dedicated Archive Mini Card overlay, 1024×1536 (2:3).
+assets/ui/card_interior_texture.png — fill behind transparent upper area/fallback art.
+assets/cards/ — category-grouped WebP artwork, mapped in Card metadata.
+assets/icons/ — PWA icons.
 
-card_reference_transparent.png — supplied design with near-black exterior/aperture made transparent.
-card_outer_frame.png — fixed outer border + crest overlay.
-card_artwork_frame_9slice.png — dynamic artwork-window border source; use CSS border-image/9-slice.
-card_interior_texture.png — background texture for the dynamic card surface.
-card_crest.png — optional independent crest/category overlay.
+Full Card: crest at 5%; title at 14%; artwork x 7.5%, y 19%, width 85%, height 46%.
+Lower dynamic HTML starts at 68%. Crop with object-fit: cover, centered by default.
+Archive Mini Cards use their own simple geometry/DOM; do not shrink gameplay DOM.
 
-Recommended DOM stack:
-interior texture -> clipped artwork container -> 9-slice artwork border -> text/die/action -> outer frame.
+The prior card_outer_frame.png, card_artwork_frame_9slice.png and card_crest.png
+remain reference assets, but are no longer runtime or precache dependencies.
+The complete frame now supplies the border/panel; no stretchable slicing is needed.
+No card_reference_transparent.png exists in current HEAD.
 
-Resize the HTML artwork container between card states. Do not vertically scale the inner decorative
-border as one bitmap; preserve its corners with border-image/9-slice.
-
-Note: the uploaded source was RGB with black standing in for transparency. Transparency was therefore
-derived from near-pure-black pixels. Inspect edges in-browser before treating these as final exports.
+Healing Flask's uploaded filename is healimg-flask.webp (intentional path spelling).
+Frame exports contain minor colored exterior edge fringes; inspect on real devices.

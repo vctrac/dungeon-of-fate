@@ -312,29 +312,32 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 @keyframes layerLeaveDown{to{transform:scale(1.16);opacity:0}}
 @keyframes stairPulse{50%{transform:translateY(-2px);opacity:.65}}
 @media(prefers-reduced-motion:reduce){.layerMap,.cell.stairRoom.current .icon{animation:none!important}}
-/* Shared V2.20 frame. Artwork safe window: 80% × 48% (704 × 583 at source size). */
+/* Full Cards share fixed header/aperture coordinates; only the lower shelf changes. */
 #diceOverlay,#itemChoice{background:rgba(4,9,7,.66)!important;backdrop-filter:none}
-.worldCard{box-sizing:border-box!important;position:relative!important;width:min(88vw,420px,calc((100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*880/1214))!important;aspect-ratio:880/1214;height:auto!important;max-height:none!important;flex:none;display:block!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:url('./assets/ui/card_reference_transparent.png') center/100% 100% no-repeat!important;box-shadow:none!important;text-align:center;color:#eee2c4;container-type:inline-size}
-.worldCard [hidden]{display:none!important}.worldCard .cardCrest{position:absolute;top:5.6%;left:43%;width:14%;font-size:7cqw!important;color:#edd2a0;text-shadow:0 2px 4px #000}.worldCard .cardNew{position:absolute;top:15%;right:12%;font-size:10px;letter-spacing:2px;color:#ffe3a0}
-.worldCard #itemReason{position:absolute;top:17%;left:12%;width:76%;font-size:10px}
-.worldCard #itemArt,.worldCard #codexArt{position:absolute;top:30%;left:32%;width:36%;height:26%;display:grid;place-items:center;font-size:24cqw;filter:none;margin:0}
-.worldCard #itemName,.worldCard #codexName{position:absolute;top:70%;left:11%;width:78%;font-size:clamp(16px,5.3cqw,23px);line-height:1.1;margin:0;color:#f3dfb7}
-.worldCard #itemVisual,.worldCard #codexEffect{position:absolute;top:76%;left:11%;width:78%;font-size:clamp(14px,4.5cqw,21px)!important;line-height:1.25;white-space:pre-line;color:#eace91}
-.worldCard #itemDescription,.worldCard #codexDescription{position:absolute;top:82%;left:11%;width:78%;font-size:clamp(11px,3.2cqw,14px);line-height:1.3;margin:0;color:#d5c9b2}
-.worldCard #itemState{position:absolute;top:94%;left:11%;width:78%;font-size:10px!important}
-.worldCard #cardContinue,.worldCard #tapContinue{position:absolute;top:100%;left:0;width:100%;font-size:9px;line-height:14px;padding:2px 0;color:#c4b594}
-.worldCard[data-template=choice] #itemArt{top:24%;height:18%;font-size:18cqw}
-.worldCard[data-template=choice] #itemName{top:46%}.worldCard[data-template=choice] #itemVisual{top:53%}.worldCard[data-template=choice] #itemDescription{top:60%}.worldCard[data-template=choice] #itemState{top:66%}
-.worldCard #replaceTrinkets{position:absolute;top:70%;left:12%;width:76%;gap:4px}.replaceTrinket{display:flex;flex-direction:column;align-items:center;border:1px solid #847052;border-radius:6px;background:#111a15;padding:4px;cursor:pointer}.replaceTrinket:has(:checked){border-color:#ffe2a1;background:#3c3824}.replaceTrinket input{position:absolute;opacity:0}.replaceTrinket:focus-within{outline:2px solid #ffe2a1}#replaceTrinkets small{display:none}#replaceTrinkets b{font-size:24px}#replaceTrinkets span{font-size:9px}
-.worldCard #replaceSelected,.worldCard #consumableChoices,.worldCard #chestOpen,.worldCard #contentAction,.worldCard #altarOffer{position:absolute;top:86%;left:16%;width:68%;min-height:44px;font-size:16px}
-.worldCard #altarOffer{top:72%;min-height:80px;font-size:20px;line-height:1.3}.worldCard #consumableChoices button{font-size:22px;min-height:44px}.worldCard button:disabled{opacity:.4}
-.worldCard .eventCard{position:absolute;top:13%;left:10%;width:80%;height:22%;border:0!important;box-shadow:none!important;background:none!important;animation:none;padding:0}
-.worldCard #eventArt{font-size:12cqw}.worldCard .diceTitle{position:absolute;top:0;left:0;width:100%;font-size:12px}.worldCard #monsterThreat{position:absolute;right:12%;bottom:12%;font-size:20px}
-.worldCard .dieStage{position:absolute;top:36%;left:10%;width:80%;height:27%}.worldCard .die,.worldCard .die.rolling{width:clamp(72px,25cqw,110px);height:clamp(72px,25cqw,110px);font-size:clamp(58px,21cqw,88px);margin:0}
-.worldCard #diceResult{position:absolute;top:69%;left:10%;width:80%;font-size:clamp(16px,5cqw,23px);line-height:1.2;margin:0}
-.worldCard #diceDetail{position:absolute;top:75%;left:10%;width:80%;font-size:13px;line-height:1.2;margin:0}.worldCard #diceDetail .outcome{font-size:clamp(19px,6cqw,27px);line-height:1.2}
-.worldCard .rerollSlot{position:absolute;top:86%;left:12%;width:76%;height:54px}.worldCard #rerollButton{min-height:48px;height:52px;padding:4px 10px;font-size:13px}.worldCard #rerollCost{font-size:12px}
-.awaiting-swipe .worldCard .eventCard{height:52%;top:16%}.awaiting-swipe .worldCard #eventArt{font-size:30cqw}.awaiting-swipe .worldCard .dieStage{visibility:hidden}.awaiting-swipe .worldCard .swipeCue{bottom:0}.awaiting-swipe .worldCard .diceTitle{top:3%}
+.worldCard{box-sizing:border-box!important;position:relative!important;width:var(--full-card-width,min(88vw,420px,calc((100dvh - 44px)*2/3)))!important;aspect-ratio:2/3;height:auto!important;max-height:none!important;flex:none;display:block!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:none!important;box-shadow:none!important;text-align:center;color:#eee2c4;container-type:inline-size;isolation:isolate}
+.worldCard::before{content:"";position:absolute;inset:7% 5% 4%;background:url('./assets/ui/card_interior_texture.png') center/cover;border-radius:6%;z-index:-1;pointer-events:none}
+.worldCard::after{content:"";position:absolute;inset:0;background:url('./assets/ui/card-frame.webp') center/100% 100% no-repeat;z-index:1;pointer-events:none}
+.worldCard [hidden]{display:none!important}.worldCard:focus,.worldCard .eventCard:focus{outline:none}
+.worldCard .cardCrest{position:absolute;top:5%;left:43%;width:14%;font-size:7cqw!important;color:#edd2a0;z-index:2;text-shadow:0 2px 4px #000}
+.worldCard .cardNew{position:absolute;top:11%;right:8%;font-size:8px;letter-spacing:1px;color:#ffe3a0;z-index:2}
+.worldCard #itemReason{display:none}
+.worldCard #itemName,.worldCard #codexName,.worldCard .diceTitle{position:absolute;top:14%;left:10%;width:80%;height:4%;margin:0;display:grid;place-items:center;font-size:clamp(10px,4.2cqw,18px);line-height:1;color:#f3dfb7;z-index:2;letter-spacing:.5px}
+.cardArtwork{position:absolute;left:7.5%;top:19%;width:85%;height:46%;pointer-events:none;contain:layout}
+.cardArtClip{position:absolute;inset:0;overflow:hidden;clip-path:polygon(3% 0,97% 0,100% 3%,100% 97%,97% 100%,3% 100%,0 97%,0 3%);display:grid;place-items:center;background:url('./assets/ui/card_interior_texture.png') center/cover}
+.cardArtClip .cardImage{position:absolute;inset:0;opacity:0}.hasCardImage .cardImage{opacity:1}.hasCardImage #itemArt,.hasCardImage #codexArt,.hasCardImage #eventArt{visibility:hidden}
+.cardArtClip img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+.worldCard .cardArtwork #itemArt,.worldCard .cardArtwork #codexArt,.worldCard .cardArtwork #eventArt{position:relative;inset:auto;width:auto;height:auto;margin:0;font-size:24cqw;line-height:1;filter:none}
+.worldCard .eventCard{position:absolute;inset:0;width:100%;height:100%;border:0!important;box-shadow:none!important;background:none!important;animation:none;padding:0;pointer-events:none}
+.worldCard #monsterThreat{position:absolute;top:61%;right:10%;font-size:16px;color:#f3dfb7;z-index:2;text-shadow:0 1px 4px #000}
+.worldCard .swipeCue{bottom:39%;z-index:2}
+.cardContent,#encounterResolution{position:absolute;top:68%;bottom:4%;left:11%;width:78%;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;z-index:2;color:#372919}
+.cardContent #itemVisual,.cardContent #codexEffect{font-size:clamp(11px,4cqw,17px)!important;line-height:1.15;white-space:pre-line;color:#4b3420}
+.cardContent #itemDescription,.cardContent #codexDescription{font-size:clamp(10px,3.1cqw,13px);line-height:1.2;margin:0;color:#423424}
+.cardContent #itemState{font-size:9px!important;line-height:1.1;color:#514436}
+.worldCard #cardContinue,.worldCard #tapContinue,.worldCard .cardGestureHint{position:static;width:100%;font-size:8px;line-height:11px;padding:0;color:#514436;letter-spacing:.5px;flex:none;margin-top:auto}
+.cardContent #replaceTrinkets{display:flex;gap:4px;flex:none}.replaceTrinket{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;border:1px solid #847052;border-radius:6px;background:#27251e;color:#eee2c4;padding:3px;cursor:pointer}.replaceTrinket:has(:checked){border-color:#ffe2a1;background:#574727}.replaceTrinket input{position:absolute;opacity:0}.replaceTrinket:focus-within{outline:2px solid #765b29}#replaceTrinkets small{display:none}#replaceTrinkets b{font-size:22px}#replaceTrinkets span{font-size:9px}
+.cardContent button,#encounterResolution button{position:relative;flex:none;width:100%;min-width:0;min-height:44px;margin:0;padding:4px 8px;font-size:13px;background:#443922;color:#f1e3bf;border:1px solid #ad9364;border-radius:7px}
+.cardContent #consumableChoices{display:flex;flex:none}.worldCard button:disabled{opacity:.4}
 .codexAccess{font:inherit;font-size:10px;letter-spacing:1px;color:#bda980;border:0;background:transparent;padding:6px 10px;min-height:32px;cursor:pointer}/* Footer controls own separate tracks; text cannot enlarge Archive's hitbox. */
 #footer{display:grid;grid-template-columns:minmax(0,1fr) auto 64px;gap:8px;align-items:center}
 #footer #message{grid-column:1;grid-row:1;overflow:hidden}
@@ -345,57 +348,33 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 
 #codexOverlay,#codexDetail{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:#07100eea;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));box-sizing:border-box}#codexOverlay[hidden],#codexDetail[hidden]{display:none}#codexDetail{background:#050b09cc}
 .codexBrowser{width:min(620px,100%);max-height:100%;display:flex;flex-direction:column;color:#e0cfac}.codexBrowser header{display:flex;align-items:center;gap:12px}.codexBrowser h2{font-size:18px;letter-spacing:3px}.codexBrowser header span{font-size:10px;margin-left:auto}.codexBrowser button{color:#e2cfaa;background:#16211b;border:1px solid #76674c;border-radius:6px;min-height:44px;cursor:pointer}.codexBrowser nav{display:flex;gap:5px;flex-wrap:wrap;padding:8px 0}.codexBrowser nav button{font-size:10px;padding:6px}.codexBrowser nav [aria-pressed=true]{border-color:#efc987;background:#3a3625}
-#codexGrid{display:grid;align-content:start;grid-auto-rows:max-content;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 20px}.codexBrowser .codexTile{width:100%;min-width:0;aspect-ratio:880/1214;background:url('./assets/ui/card_reference_transparent.png') center/100% 100%;border:0;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18%;padding:22% 12% 8%;font-size:10px}.codexTile b{font-size:34px}.codexTile:disabled{opacity:.5;cursor:default}.codexTile span{min-height:24px}.worldCard #codexEffect{font-size:clamp(12px,3.5cqw,16px)!important}
+/* Archive Mini Cards are independent thumbnails, sharing only metadata. */
+#codexGrid{display:grid;align-content:start;grid-auto-rows:max-content;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 20px}
+.codexBrowser .codexTile{position:relative;width:100%;min-width:0;aspect-ratio:2/3;border:0;border-radius:0;background:transparent;padding:0;font-size:10px}
+.codexTile::after{content:"";position:absolute;inset:0;background:url('./assets/ui/card-frame-small.webp') center/100% 100%;pointer-events:none}
+.codexTile b{position:absolute;left:7.5%;top:14%;width:85%;height:52%;display:grid;place-items:center;background:#111a15;font-size:30px;overflow:hidden;clip-path:polygon(6% 0,94% 0,100% 6%,100% 94%,94% 100%,6% 100%,0 94%,0 6%)}
+.codexTile b img{width:100%;height:100%;object-fit:cover}.codexTile span{position:absolute;top:73%;left:12%;width:76%;color:#372919;font-size:10px;line-height:1.2;z-index:1}
+.codexTile:disabled{opacity:.5;cursor:default}
 @media(max-width:350px){#codexGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-height:480px){.worldCard #itemDescription,.worldCard #codexDescription{font-size:10px}.worldCard #itemState{display:none}.worldCard[data-template=choice] #itemDescription{display:none}.worldCard #replaceTrinkets{top:59%}.worldCard #replaceSelected,.worldCard #consumableChoices,.worldCard #chestOpen,.worldCard #contentAction{top:82%}.worldCard #altarOffer{top:65%}.worldCard .rerollSlot{top:82%}.worldCard #diceResult{top:64%}.worldCard #diceDetail{top:71%}.worldCard #diceDetail .outcome{font-size:18px}.worldCard #rerollButton{height:44px;min-height:44px}.worldCard .diceTitle{font-size:10px}}
-
-.worldCard:focus,.worldCard .eventCard:focus{outline:none}.worldCard .eventCard:focus-visible{outline:1px solid #aa926344}
-/* V2.20.1: fixed silhouette, real independently sized artwork aperture. */
-.worldCard{aspect-ratio:1038/1536;width:min(88vw,420px,calc((100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom))*1038/1536))!important;background:none!important;isolation:isolate}
-.worldCard::before{content:"";position:absolute;inset:9% 4% 4%;border-radius:8%;background:url('./assets/ui/card_interior_texture.png') center/cover;z-index:-1;pointer-events:none}
-.worldCard::after{content:"";position:absolute;inset:0;background:url('./assets/ui/card_outer_frame.png') center/100% 100%;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 0,7% 15%,7% 94%,93% 94%,93% 15%,7% 15%,0 0);z-index:5;pointer-events:none}
-.worldCard .cardCrest{top:5.5%;z-index:6}.worldCard .cardNew{z-index:4}
-.cardArtwork{position:absolute;left:10%;top:21%;width:80%;height:46%;box-sizing:border-box;border:clamp(12px,5cqw,21px) solid transparent;border-image:url('./assets/ui/card_artwork_frame_9slice.png') 80 / 1 / 0 stretch;transition:height 180ms ease-out;contain:layout;pointer-events:none}
-.cardArtClip{position:absolute;inset:0;overflow:hidden;display:grid;place-items:center;border-radius:3%;background:url('./assets/ui/card_interior_texture.png') center/cover}
-.cardArtClip .cardImage{position:absolute;inset:0;object-fit:cover;opacity:0}.hasCardImage .cardImage{opacity:1}.hasCardImage #itemArt,.hasCardImage #codexArt,.hasCardImage #eventArt{visibility:hidden}.codexTile b{width:100%;height:48%;display:grid;place-items:center}.codexTile b img{width:100%;height:100%;object-fit:cover;border-radius:3%}
-.cardArtClip img,.cardArtClip video{display:block;width:100%;height:100%;object-fit:cover}
-.worldCard .cardArtwork #itemArt,.worldCard .cardArtwork #codexArt,.worldCard .cardArtwork #eventArt{position:relative;inset:auto;width:auto;height:auto;margin:0;font-size:24cqw;line-height:1;display:grid;place-items:center;filter:none}
-.worldCard[data-template=dice] .cardArtwork{height:13%}.worldCard[data-template=dice] .cardArtwork #eventArt{font-size:8cqw}.awaiting-swipe .worldCard[data-template=dice] .cardArtwork{height:46%}.awaiting-swipe .worldCard[data-template=dice] .cardArtwork #eventArt{font-size:28cqw}
-.worldCard[data-template=choice] .cardArtwork{height:22%}.worldCard[data-template=choice] .cardArtwork #itemArt{font-size:16cqw}
-.worldCard .eventCard{z-index:2;pointer-events:none}.worldCard .eventCard:focus-visible{outline:none}.worldCard .swipeCue{z-index:3}.worldCard .eventCard.mimic~.cardArtwork #eventArt{font-size:10cqw}
-@media(max-height:480px){.worldCard[data-template=choice] .cardArtwork{height:12%}.worldCard[data-template=choice] .cardArtwork #itemArt{font-size:10cqw}.worldCard[data-template=choice] #itemName{top:35%;font-size:15px}.worldCard[data-template=choice] #itemVisual{top:42%;font-size:12px!important}.worldCard #replaceTrinkets{top:53%}.worldCard #replaceTrinkets label{min-height:60px;padding:3px;box-sizing:border-box}.worldCard #replaceTrinkets span{font-size:10px}.worldCard #replaceSelected{top:82%}.worldCard #altarOffer{top:61%}.worldCard[data-template=dice] .cardArtwork{height:13%;border-width:10px}.worldCard .cardArtwork{border-width:12px}}
-@media(prefers-reduced-motion:reduce){.cardArtwork{transition:none}}
-@media(max-height:480px){.worldCard[data-template=choice] #itemReason{top:15%;width:62%;font-size:8px;letter-spacing:1px}.worldCard[data-template=choice] .cardNew{top:14%;font-size:8px}}
-
-/* Keep text/actions inside the fixed outer overlay's safe interior. */
-#diceOverlay:not(.awaiting-swipe) .worldCard .diceTitle{top:14%}
-.worldCard .rerollSlot{top:auto;bottom:7%;height:52px}
-.worldCard #itemState{top:91%}
-@media(max-height:480px){.worldCard .rerollSlot{height:44px}.worldCard[data-template=choice] .cardArtwork{top:19%;height:14%}.worldCard[data-template=choice] .cardArtwork #itemArt{font-size:8cqw}}
-/* V2.20.2: the intact card introduces; a sibling region resolves. */
 #diceOverlay{padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 12px);box-sizing:border-box}
 #encounterTransform{position:absolute;left:50%;transform:translateX(-50%);transform-origin:50% 0}
-#diceOverlay .encounterPanel.worldCard{width:var(--encounter-card-width)!important}
-#diceOverlay .encounterPanel .cardArtwork{height:46%;transition:none}
-#diceOverlay .encounterPanel .cardArtwork #eventArt{font-size:28cqw}
-#diceOverlay .encounterPanel:has(.mimic) .cardArtwork #eventArt{font-size:10cqw}
-#diceOverlay .encounterPanel .eventCard{top:16%;height:52%}
-#diceOverlay .encounterPanel .diceTitle{top:3%;font-size:14px}
-#encounterResolution{position:absolute;top:69%;bottom:8%;left:11%;width:78%;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;visibility:hidden;opacity:0;transition:opacity 160ms ease-out}
+#encounterResolution{visibility:hidden;opacity:0;transition:opacity 160ms ease-out}
 .resolution-active #encounterResolution{visibility:visible;opacity:1}
-#encounterResolution #diceResult{position:static;flex:none;font-size:clamp(12px,4.8cqw,20px);line-height:1.1;margin:0;min-height:0}
-#encounterResolution #diceDetail{position:static;flex:1;display:grid;place-items:center;font-size:clamp(11px,4cqw,16px);line-height:1.15;min-height:0;width:100%;margin:0;white-space:normal}
-#encounterResolution .rerollSlot{position:static;flex:none;height:auto;width:100%}
-#encounterResolution #rerollButton{min-width:0;width:100%;height:44px;min-height:44px;margin:0;font-size:12px}
-#encounterResolution #rerollCost{font-size:10px}
-#encounterResolution #tapContinue{position:static;flex:none;width:100%;font-size:8px;line-height:10px;padding:0}
-@media(max-height:600px){#diceOverlay .encounterPanel .cardArtwork{height:32%}#encounterResolution{top:55%;bottom:8%;gap:2px}}
-@media(max-height:480px){#diceOverlay .encounterPanel .cardArtwork{height:30%}#encounterResolution{top:53%;bottom:6%;gap:0}#encounterResolution #diceResult{font-size:11px}#encounterResolution #diceDetail{font-size:10px}}
+#encounterResolution #diceResult{position:static;flex:none;width:100%;font-size:clamp(11px,4.2cqw,18px);line-height:1.1;margin:0;color:#372919;text-shadow:none;letter-spacing:0}
+#encounterResolution #diceDetail{position:static;flex:1;width:100%;display:grid;place-items:center;font-size:clamp(10px,3.4cqw,14px);line-height:1.15;min-height:0;margin:0;color:#423424}
+#encounterResolution .rerollSlot{position:static;flex:none;width:100%;height:auto;display:flex;gap:6px}
+#encounterResolution .rerollSlot:has(#bossSlash:not([hidden])){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+#encounterResolution #bossSlash{grid-column:2}#encounterResolution #rerollButton{grid-column:1}
+#encounterResolution .rerollSlot button{flex:1;height:44px;font-size:12px}
+#bossSlash::before{content:"HOLD";display:block;font-size:9px;line-height:11px;color:#dbcba9}
+#encounterResolution #rerollCost{display:block;font-size:9px;line-height:11px;min-height:0;color:#dfcfaf}
+#encounterResolution #rerollCost:empty{display:none}
 #encounterDie{position:absolute;left:50%;transform:translateX(-50%);width:var(--encounter-die-size);height:var(--encounter-die-size);visibility:hidden;z-index:4;transition:opacity 160ms ease-out}
 .resolution-active #encounterDie{visibility:visible}
 #encounterDie .die,#encounterDie .die.rolling{width:100%;height:100%;font-size:calc(var(--encounter-die-size)*.79);margin:0}
-.cell.bossThreat .floor{border-color:#c66b58}.cell.bossThreat .exitMark{color:#ebad88}.cell.bossDefeated .exitMark{color:#b9d69e}.eventCard.boss #monsterThreat{width:100%;right:0;bottom:7%;font-size:clamp(12px,6cqw,24px);color:#edb09c}
-.cardGestureHint{position:absolute;top:100%;left:0;width:100%;font-size:9px;line-height:14px;color:#c4b594}
+.cell.bossThreat .floor{border-color:#c66b58}.cell.bossThreat .exitMark{color:#ebad88}.cell.bossDefeated .exitMark{color:#b9d69e}
+@media(max-height:600px){.cardContent,#encounterResolution{gap:2px}.cardContent #itemDescription,.cardContent #codexDescription{font-size:10px}.cardContent #itemState{display:none}.cardContent:has(#replaceTrinkets:not([hidden])) #itemDescription{display:none}}
+@media(max-height:480px){.cardContent,#encounterResolution{top:66%;bottom:3%;gap:1px}#encounterResolution #diceResult{font-size:10px}#encounterResolution #diceDetail{font-size:10px;line-height:1.05}.cardContent #itemVisual,.cardContent #codexEffect{font-size:10px!important}.worldCard #cardContinue,.worldCard #tapContinue,.worldCard .cardGestureHint{font-size:7px;line-height:9px}}
 .cardDismiss{position:relative;flex:none;transition:transform 180ms ease-out,opacity 180ms ease-out;touch-action:none}
 .cardDismiss.dragging{transition:none}
 .trinket[data-item="compass"]{position:relative;display:grid;place-items:center}.compassNeedle{display:block;font-size:27px;line-height:28px;color:#e9d092}.trinket[data-item="compass"] small{position:absolute;bottom:0;font-size:9px;line-height:10px}
@@ -409,8 +388,6 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 .cell.discoveryLandmark .icon{font-size:clamp(16px,4vw,26px)}.cell.discoverySpent .icon{opacity:.35}
 .cell.current-arrival .floor{animation-duration:var(--arrival-ms,280ms)}
 .cell.travel-step.current .floor{animation-duration:var(--travel-arrival-ms,180ms)}
-/* Shared lower action shelf; encounter results occupy the physical card interior. */
-.worldCard #replaceSelected,.worldCard #consumableChoices,.worldCard #chestOpen,.worldCard #contentAction{top:auto;bottom:11%}
 .droppedItem{position:absolute;right:0;bottom:0;z-index:9;font-size:14px;background:#25281e;border:1px solid #b8a36b;border-radius:5px;padding:2px;min-width:22px;min-height:22px;touch-action:manipulation}
 .droppedItem:disabled{pointer-events:none}
 .layerMap .memoryForgotten{opacity:0!important;pointer-events:none!important;transition:opacity 50ms linear}
@@ -441,7 +418,7 @@ body.death-conclusion #board .tutorialGesture,body.death-conclusion #board .stai
 <div id="game">
 <div id="hud"><div class="stat"><div class="label">Health</div><div class="value" id="hp"></div></div><div class="stat"><div class="label">Gold</div><div class="value" id="gold">0</div></div><div class="stat"><div class="label">Floor</div><div class="value" id="floorNo">1</div></div><div class="stat"><div class="label">Fate</div><div class="value" id="combo">x1.0</div></div></div>
 <div id="conditions" role="status" aria-label="No conditions"></div><div id="board"><div id="feedbackLayer"></div></div><div id="footer"><button class="codexAccess" type="button">ARCHIVE</button><div id="message"></div><div id="relicBar"><div id="trinkets" aria-label="Owned trinkets"></div><span id="activeItems"><span id="bargainState"></span><span id="coinState"></span><span id="wardState"></span></span><button id="consumableSlot" type="button" aria-label="Empty consumable slot">◇</button></div></div></div>
-<div id="diceOverlay"><div id="encounterTransform"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div id="monsterThreat" aria-hidden="true"></div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div id="encounterResolution"><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div class="rerollSlot"><button id="rerollButton" type="button" aria-label="Hold to reroll" hidden disabled><b>REROLL</b><span id="rerollCost"></span></button></div><div id="tapContinue">↓ SWIPE DOWN TO CONTINUE</div></div></div></div><div class="dieStage" id="encounterDie"><div class="die" id="die">⚄</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><div id="deathCause" role="status"></div><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
+<div id="diceOverlay"><div id="encounterTransform"><div class="encounterPanel"><div class="eventCard" id="eventCard" tabindex="0" aria-label="Monster: swipe anywhere on screen, or press Enter to confront it."><div class="swipeCue" aria-hidden="true"></div><div id="eventArt">👹</div><div id="monsterThreat" aria-hidden="true"></div><div class="diceTitle" id="diceTitle">ENCOUNTER</div></div><div id="encounterResolution"><div class="diceResult" id="diceResult"></div><div class="diceDetail" id="diceDetail"></div><div class="rerollSlot"><button id="rerollButton" type="button" aria-label="Hold to reroll" hidden disabled><b>REROLL</b><span id="rerollCost"></span></button><button id="bossSlash" type="button" hidden disabled aria-label="Hold to accept result and slash">SLASH</button></div><div id="tapContinue">↓ SWIPE DOWN TO CONTINUE</div></div></div></div><div class="dieStage" id="encounterDie"><div class="die" id="die">⚄</div></div></div><div id="overlay"><div class="panel"><h1 id="endTitle"></h1><div id="deathCause" role="status"></div><p id="endText"></p><div class="big" id="finalScore"></div><div class="summary"><div>FLOOR<b id="sumFloor">1</b></div><div>MOVES<b id="sumMoves">0</b></div><div>ROOMS<b id="sumRooms">0</b></div><div>PERFECT FLOORS<b id="sumPerfect">0</b></div></div><div class="actions"><button id="again">NEW RUN</button></div></div></div>
 
 <div id="deathConclusion" hidden tabindex="-1" role="dialog" aria-modal="true" aria-label="You died"><h1>YOU DIED</h1><p>Touch anywhere to continue</p></div>
 <div id="resumeOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="resumeTitle"><div class="panel"><h1 id="resumeTitle">DUNGEON OF FATE</h1><p id="resumeSummary"></p><div id="resumeChoices" class="actions"><button id="continueRun">CONTINUE</button><button id="newSavedRun" class="secondary">NEW RUN</button></div><div id="replaceRunChoices" hidden><p>Replace this run?</p><div class="actions"><button id="cancelNewRun">KEEP RUN</button><button id="confirmNewRun" class="secondary">START NEW RUN</button></div></div><button class="codexAccess" type="button">ARCHIVE</button><small id="buildVersion"></small></div></div>
@@ -775,22 +752,36 @@ CARD_REGISTRY["discovery:chest"]={id:"discovery:chest",category:"discoveries",na
 CARD_REGISTRY["discovery:shrine"]={id:"discovery:shrine",category:"discoveries",name:"Shrine",icon:"✚",effect:"⚄ → ✚",description:"An uncertain blessing. Roll to discover its response."};
 // Artwork is presentation metadata; gameplay identity/effects remain authoritative.
 var CARD_ARTWORK={
- "creature:basic":"./assets/cards/monsters/guardian.png",
- "creature:wretch":"./assets/cards/monsters/wretch.png",
- "creature:general":"./assets/cards/monsters/guardian.png",
- "creature:mimic":"./assets/cards/monsters/mimic.png",
- "creature:spirit":"./assets/cards/monsters/spirit.png",
- "hazard:spikes":"./assets/cards/hazards/spikes.png",
- "hazard:trap":"./assets/cards/hazards/darts.png",
- "discovery:shrine":"./assets/cards/encounters/shrine.png",
- "discovery:garden":"./assets/cards/discoveries/garden.png",
- "discovery:flower":"./assets/cards/discoveries/flower.png",
- "encounter:chest":"./assets/cards/encounters/chest.png",
- "presentation:scavenge-trap":"./assets/cards/hazards/scavenge-trap.png"
+ "creature:basic": "./assets/cards/monsters/guardian.webp",
+ "creature:wretch": "./assets/cards/monsters/wretch.webp",
+ "creature:general": "./assets/cards/monsters/guardian.webp",
+ "creature:mimic": "./assets/cards/monsters/mimic.webp",
+ "creature:spirit": "./assets/cards/monsters/spirit.webp",
+ "hazard:spikes": "./assets/cards/hazards/spikes.webp",
+ "hazard:trap": "./assets/cards/hazards/darts.webp",
+ "presentation:scavenge-trap": "./assets/cards/hazards/scavenge-trap.webp",
+ "discovery:shrine": "./assets/cards/encounters/shrine.webp",
+ "discovery:chest": "./assets/cards/encounters/chest.webp",
+ "discovery:altar": "./assets/cards/encounters/altar.webp",
+ "discovery:garden": "./assets/cards/discoveries/garden.webp",
+ "discovery:flower": "./assets/cards/discoveries/flower.webp",
+ "discovery:food": "./assets/cards/discoveries/fruit-tree.webp",
+ "discovery:corpse": "./assets/cards/discoveries/corpse-remains.webp",
+ "discovery:hole": "./assets/cards/discoveries/hole-in-the-wall.webp",
+ "trinket:doll": "./assets/cards/trinkets/voodoo-doll.webp",
+ "trinket:blood": "./assets/cards/trinkets/vampire-blood.webp",
+ "trinket:eye": "./assets/cards/trinkets/evil-eye.webp",
+ "trinket:compass": "./assets/cards/trinkets/compass.webp",
+ "trinket:horseshoe": "./assets/cards/trinkets/horseshoe.webp",
+ "consumable:coin": "./assets/cards/consumables/fortune-coin.webp",
+ "consumable:ward": "./assets/cards/consumables/trap-ward.webp",
+ "consumable:flask": "./assets/cards/consumables/healimg-flask.webp",
+ "consumable:charm": "./assets/cards/consumables/divine-charm.webp",
+ "consumable:bargain": "./assets/cards/consumables/death-bargain.webp"
 };
 Object.keys(CARD_ARTWORK).forEach(function(id){if(CARD_REGISTRY[id])CARD_REGISTRY[id].art=CARD_ARTWORK[id]});
 function presentCardArtwork(panel,id){
- var aperture=panel.querySelector('.cardArtwork'),clip=panel.querySelector('.cardArtClip'),src=CARD_ARTWORK[id],img=clip.querySelector('.cardImage');
+ var aperture=panel.querySelector('.cardArtwork'),clip=panel.querySelector('.cardArtClip'),src=(CARD_REGISTRY[id]||{}).art||CARD_ARTWORK[id],img=clip.querySelector('.cardImage');
  if(img&&img.getAttribute('src')!==src){img.remove();img=null}aperture.classList.toggle('hasCardImage',!!(img&&img.complete&&img.naturalWidth));
  if(!src||img)return;
  img=document.createElement('img');img.className='cardImage';img.alt='';img.decoding='async';
@@ -836,9 +827,11 @@ function installCardDrag(panel){
 }
 
 function frameCard(panel,template,category,fresh,artId){
+ layoutEncounter();
  panel.classList.add("worldCard");panel.dataset.template=template;installCardDrag(panel);
  if(panel.id==="codexCard"&&!panel.querySelector('.cardGestureHint')){var hint=document.createElement('div');hint.className='cardGestureHint';hint.textContent='↓ SWIPE DOWN TO CONTINUE';panel.appendChild(hint)}
- // Create once; subsequent state changes only resize this presentation container.
+ // Header/artwork stay fixed; stateful HTML occupies the independent lower shelf.
+ if(!panel.querySelector(".cardContent")&&!panel.classList.contains("encounterPanel")){var content=document.createElement("div");content.className="cardContent";panel.appendChild(content);["itemVisual","itemDescription","itemState","replaceTrinkets","replaceSelected","consumableChoices","contentAction","chestOpen","altarOffer","cardContinue","codexEffect","codexDescription"].forEach(function(id){var node=panel.querySelector("#"+id);if(node)content.appendChild(node)});var hint=panel.querySelector(".cardGestureHint");if(hint)content.appendChild(hint)}
  var artwork=panel.querySelector(".cardArtwork");if(!artwork){artwork=document.createElement("div");artwork.className="cardArtwork";var clip=document.createElement("div");clip.className="cardArtClip";var art=panel.querySelector("#itemArt,#codexArt,#eventArt");if(art)clip.appendChild(art);artwork.appendChild(clip);panel.appendChild(artwork)}
  var crest=panel.querySelector(".cardCrest");if(!crest){crest=document.createElement("div");crest.className="cardCrest";panel.appendChild(crest)}
  presentCardArtwork(panel,artId);
@@ -848,7 +841,7 @@ function frameCard(panel,template,category,fresh,artId){
 function encounterCardId(type){var r=room(currentId);if(type==="boss")return "creature:"+r.boss.id;return type==="monster"?(r.chest&&r.chest.opened&&r.chest.kind==="mimic"?"creature:mimic":"creature:"+(r.monsterKind||"basic")):CONTENT[type]?contentCardId(type):type==="trap"?"hazard:trap":"discovery:shrine"}
 function frameEncounter(type){var id=encounterCardId(type),fresh=discoverCard(id);frameCard(document.querySelector(".encounterPanel"),"dice",(CARD_REGISTRY[id]||{category:"hazards"}).category,fresh,type==="trap"&&room(currentId).scavenged?"presentation:scavenge-trap":id);}
 function showCodex(){
- if(gameOver||codexOpen||layerTransition||fastTraveling||(pendingAction&&pendingAction!=="startup"))return false;
+ if((gameOver&&pendingAction!=="startup")||codexOpen||layerTransition||fastTraveling||(pendingAction&&pendingAction!=="startup"))return false;
  cancelSlotGesture();clearFastPreview();codexOpen=true;codexFocus=document.activeElement;$("codexOverlay").hidden=false;renderCodex();$("codexBack").focus();return true
 }
 function closeCodex(){if(!codexOpen)return;codexOpen=false;$("codexOverlay").hidden=true;$("codexDetail").hidden=true;document.querySelector(".codexBrowser").inert=false;if(codexFocus&&codexFocus.isConnected)codexFocus.focus({preventScroll:true})}
@@ -1037,7 +1030,7 @@ function openChestCard(id,automatic){
 }
 function renderChestCard(){
  $("contentAction").hidden=true;
- $("replaceSelected").hidden=true;frameCard(document.querySelector(".itemChoicePanel"),"choice","discoveries",false,"encounter:chest");
+ $("replaceSelected").hidden=true;frameCard(document.querySelector(".itemChoicePanel"),"choice","discoveries",false,"discovery:chest");
  $("itemArt").classList.remove('holdDemo');$("itemChoice").hidden=false;$("itemReason").textContent='CHEST';$("itemArt").textContent='🧰';$("itemName").textContent='Treasure Chest';$("itemVisual").textContent='🧰 → ✧ / 👹';$("itemDescription").textContent='An unopened chest.';$("itemState").textContent='';
  $("replaceTrinkets").hidden=true;$("consumableChoices").hidden=true;$("closeItem").hidden=true;$("altarOffer").hidden=true;$("chestOpen").hidden=false;$("cardContinue").hidden=false;$("cardContinue").textContent='↓ SWIPE DOWN TO LEAVE';document.querySelector('.itemChoicePanel').focus({preventScroll:true})
 }
@@ -1787,7 +1780,7 @@ function previewOutcome(type,roll,kind){
  function gain(base){var sum=p.fateGainRemainder+base*fateGainFactor(p.combo),cents=Math.floor((sum+1e-10)*100)/100;p.fateGainRemainder=sum-cents;p.combo=Math.max(1,Math.round((p.combo+cents)*100)/100)}
  function reward(base){var value=Math.floor(base*rewardMultiplier(p.combo))*roomGoldMultiplier();p.gold+=value;p.score+=value}
  var damage=false,newOutcome=type==="boss"?bossOutcome(roll):isContentDice(type)?contentOutcome(type,roll):null;
- if(type==="boss"){p.bossHp=Math.max(0,room(currentId).boss.hp-newOutcome.hits);notes.push("Boss "+bossHearts(room(currentId).boss.hp)+" → "+bossHearts(p.bossHp));}
+ if(type==="boss"){p.bossHp=Math.max(0,room(currentId).boss.hp-newOutcome.hits);if(newOutcome.hits)notes.push("Boss "+bossHearts(room(currentId).boss.hp)+" → "+bossHearts(p.bossHp));}
  if(newOutcome){
   if(newOutcome.hp){damage=true;p.hp+=newOutcome.hp}
   if(newOutcome.fate<0)fate(p.combo+newOutcome.fate);else if(newOutcome.fate>0)gain(newOutcome.fate);
@@ -1829,7 +1822,7 @@ function previewOutcome(type,roll,kind){
  p.conditions=Object.assign({},conditions);if(damage)delete p.conditions.weakness;if(newOutcome)newOutcome.conditions.forEach(function(id){p.conditions[id]=CONTENT_TUNING.conditionMoves});
  return{after:p,label:newOutcome?newOutcome.label:null,text:parts.concat(notes).join(' · ')}
 }
-function hideReroll(){cancelRerollHold();clearTimeout(rerollTimer);rerollTimer=null;$("rerollButton").hidden=true;$("rerollButton").disabled=true}
+function hideReroll(){$("bossSlash").hidden=true;$("bossSlash").disabled=true;$("rerollCost").textContent="";cancelRerollHold();clearTimeout(rerollTimer);rerollTimer=null;$("rerollButton").hidden=true;$("rerollButton").disabled=true}
 function canReroll(){var e=pendingEncounter;return!!(e&&e.phase==='preview'&&!e.rerollUsed&&e.offer&&combo>=REROLL_MIN_FATE&&combo===e.offer.before&&!deathPending&&!gameOver)}
 function renderOutcomePreview(){
  setEncounterResolution();
@@ -1838,6 +1831,7 @@ function renderOutcomePreview(){
  $("diceResult").className='diceResult rollCall';$("diceResult").textContent=('ROLLED '+e.roll+(e.preview.label?' · '+e.preview.label:''))+(e.rerollUsed?' · FINAL':'');$("diceDetail").textContent=e.preview.text;layoutEncounter();
  $("diceOverlay").classList.remove('awaiting-swipe');$("diceOverlay").classList.add('resolved');$("tapContinue").style.visibility='';encounterResolved=true;combatReady=null;
  encounterCloseAction=acceptOutcome;
+ if(e.type==="boss"&&room(currentId).boss.state==="active"){$("bossSlash").hidden=false;$("bossSlash").disabled=false}
  if(canReroll()){var decision=e;rerollTimer=setTimeout(function(){if(pendingEncounter!==decision||!canReroll())return;$("rerollCost").textContent='🎲 ✦×'+e.offer.before.toFixed(2)+' → ×'+e.offer.after.toFixed(2);$("rerollButton").disabled=false;$("rerollButton").hidden=false},REROLL_REVEAL_DELAY)}
 }
 function revealOutcome(){
@@ -1902,6 +1896,7 @@ function installCardActions(root,decision){
 installCardActions($("itemChoice"),function(){return cardState.active});
 installCardActions($("encounterResolution"),function(){return pendingEncounter});
 window.addEventListener("blur",cancelCardHold);
+$("bossSlash").addEventListener("click",function(e){e.stopPropagation();if(!pendingEncounter||pendingEncounter.type!=="boss"||pendingEncounter.phase!=="preview"||room(currentId).boss.state!=="active")return;acceptOutcome()});
 $("rerollButton").addEventListener("click",function(e){e.stopPropagation();rerollOutcome()});
 
 function disarmTrap(){
@@ -1909,14 +1904,20 @@ function disarmTrap(){
  relicState.wardArmed=false;pendingAction=null;effectNotice("✂ → ⚠ ✓");showLocalFeedback(currentId,"✂ ✓","","",1000);finishRoomEffects();update();if(!awardPerfectFloor())updateContext();pumpCards();return true
 }
 function layoutEncounter(){
- var o=$("diceOverlay");if(o.style.display!=="flex")return;
- var style=getComputedStyle(o),top=Math.max(parseFloat(style.paddingTop)||12,$("hud").getBoundingClientRect().bottom+8);
- var footer=document.querySelector("#footer"),bottom=Math.min(innerHeight-(parseFloat(style.paddingBottom)||12),footer?footer.getBoundingClientRect().top-8:innerHeight-76);
- var die=innerHeight<=480?80:104,available=Math.max(180,bottom-top),width=Math.min(innerWidth*.88,420,(available-(innerHeight<=480?0:die*.55))*1038/1536),height=width*1536/1038;
- o.style.setProperty("--encounter-card-width",width+"px");$("encounterTransform").style.top=(top+Math.max(0,(available-height-(innerHeight<=480?0:die*.55))/2))+"px";
- $("encounterDie").style.top=(parseFloat($("encounterTransform").style.top)+height-(innerHeight<=480?die:die*.45))+"px";$("encounterDie").style.left=innerHeight<=480?"calc(50% + "+(width/2+die*.55)+"px)":"50%";
+ var o=$("diceOverlay"),style=getComputedStyle(o),top=Math.max(parseFloat(style.paddingTop)||12,$("hud").getBoundingClientRect().bottom+8);
+ var footer=$("footer"),bottom=Math.min(innerHeight-(parseFloat(style.paddingBottom)||12),footer?footer.getBoundingClientRect().top-8:innerHeight-76);
+ var landscape=innerWidth>innerHeight,die=innerHeight<=480?80:104,available=Math.max(180,bottom-top);
+ if(landscape){top=parseFloat(style.paddingTop)||12;bottom=innerHeight-(parseFloat(style.paddingBottom)||12);available=bottom-top}
+ var width=Math.min(innerWidth*.88,420,(available-(landscape?0:die*.55))*2/3),height=width*1.5;
+ document.documentElement.style.setProperty("--full-card-width",width+"px");
+ var cardTop=top+Math.max(0,(available-height-(landscape?0:die*.55))/2);
+ $("encounterTransform").style.top=cardTop+"px";
+ // Portrait hints end inside the frame; the independent die overlaps only its bottom edge.
+ $("encounterDie").style.top=(cardTop+(landscape?height-die:height*.96+12))+"px";
+ $("encounterDie").style.left=landscape?"calc(50% + "+(width/2+die*.55)+"px)":"50%";
  o.style.setProperty("--encounter-die-size",die+"px")
 }
+
 function setEncounterResolution(){$("diceOverlay").classList.remove("encounter-reveal");$("diceOverlay").classList.add("resolution-active")}
 window.addEventListener("resize",layoutEncounter);
 function presentContentEncounter(type){if(!CONTENT[type])return;$("eventArt").textContent=CONTENT[type].icon;$("monsterThreat").textContent="";$("diceTitle").textContent=CONTENT[type].name.toUpperCase();$("eventCard").setAttribute("aria-label",CONTENT[type].name+" encounter")}
@@ -2199,7 +2200,7 @@ function render(){
 function update(){updateConditions();if(layerVisual&&layerVisual.phase!=="prepare"){layerVisual.dirty=true;return}$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.23.1";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.23.2";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
