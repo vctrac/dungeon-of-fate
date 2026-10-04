@@ -321,7 +321,7 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 .worldCard .cardCrest{position:absolute;top:5%;left:43%;width:14%;font-size:7cqw!important;color:#edd2a0;z-index:2;text-shadow:0 2px 4px #000}
 .worldCard .cardNew{position:absolute;top:11%;right:8%;font-size:8px;letter-spacing:1px;color:#ffe3a0;z-index:2}
 .worldCard #itemReason{display:none}
-.worldCard #itemName,.worldCard #codexName,.worldCard .diceTitle{position:absolute;top:14%;left:10%;width:80%;height:4%;margin:0;display:grid;place-items:center;font-size:clamp(10px,4.2cqw,18px);line-height:1;color:#f3dfb7;z-index:2;letter-spacing:.5px}
+.worldCard #itemName,.worldCard #codexName,.worldCard .diceTitle{position:absolute;top:13%;left:10%;width:80%;height:5%;margin:0;padding:0;border:0;background:none;display:grid;place-items:center;font-size:clamp(10px,4.2cqw,18px);line-height:1.05;color:#f3dfb7;z-index:2;letter-spacing:.5px;text-wrap:balance}
 .cardArtwork{position:absolute;left:7.5%;top:19%;width:85%;height:46%;pointer-events:none;contain:layout}
 .cardArtClip{position:absolute;inset:0;overflow:hidden;clip-path:polygon(3% 0,97% 0,100% 3%,100% 97%,97% 100%,3% 100%,0 97%,0 3%);display:grid;place-items:center;background:url('./assets/ui/card_interior_texture.png') center/cover}
 .cardArtClip .cardImage{position:absolute;inset:0;opacity:0}.hasCardImage .cardImage{opacity:1}.hasCardImage #itemArt,.hasCardImage #codexArt,.hasCardImage #eventArt{visibility:hidden}
@@ -330,13 +330,17 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 .worldCard .eventCard{position:absolute;inset:0;width:100%;height:100%;border:0!important;box-shadow:none!important;background:none!important;animation:none;padding:0;pointer-events:none}
 .worldCard #monsterThreat{position:absolute;top:61%;right:10%;font-size:16px;color:#f3dfb7;z-index:2;text-shadow:0 1px 4px #000}
 .worldCard .swipeCue{bottom:39%;z-index:2}
-.cardContent,#encounterResolution{position:absolute;top:68%;bottom:4%;left:11%;width:78%;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;z-index:2;color:#372919}
+.cardContent,#encounterResolution{position:absolute;top:71%;bottom:10%;left:11%;width:78%;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:3px;z-index:2;color:#372919}
 .cardContent #itemVisual,.cardContent #codexEffect{font-size:clamp(11px,4cqw,17px)!important;line-height:1.15;white-space:pre-line;color:#4b3420}
 .cardContent #itemDescription,.cardContent #codexDescription{font-size:clamp(10px,3.1cqw,13px);line-height:1.2;margin:0;color:#423424}
 .cardContent #itemState{font-size:9px!important;line-height:1.1;color:#514436}
-.worldCard #cardContinue,.worldCard #tapContinue,.worldCard .cardGestureHint{position:static;width:100%;font-size:8px;line-height:11px;padding:0;color:#514436;letter-spacing:.5px;flex:none;margin-top:auto}
+.worldCard #cardContinue,.worldCard #tapContinue,.worldCard .cardGestureHint{position:absolute;top:90%;left:11%;width:78%;height:3%;z-index:2;display:grid;place-items:center;font-size:8px;line-height:11px;padding:0;margin:0;color:#514436;letter-spacing:.5px}
+/* The same layout anchor survives choice → dice → result; drag owns its inner wrapper. */
+#itemChoice>.cardDismiss,#codexDetail>.cardDismiss{position:absolute;left:50%;top:var(--full-card-top,12px);translate:-50% 0}
 .cardContent #replaceTrinkets{display:flex;gap:4px;flex:none}.replaceTrinket{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;border:1px solid #847052;border-radius:6px;background:#27251e;color:#eee2c4;padding:3px;cursor:pointer}.replaceTrinket:has(:checked){border-color:#ffe2a1;background:#574727}.replaceTrinket input{position:absolute;opacity:0}.replaceTrinket:focus-within{outline:2px solid #765b29}#replaceTrinkets small{display:none}#replaceTrinkets b{font-size:22px}#replaceTrinkets span{font-size:9px}
 .cardContent button,#encounterResolution button{position:relative;flex:none;width:100%;min-width:0;min-height:44px;margin:0;padding:4px 8px;font-size:13px;background:#443922;color:#f1e3bf;border:1px solid #ad9364;border-radius:7px}
+/* Shared geometry wins over obsolete individual action sizing (notably Altar). */
+.worldCard :is(.cardContent,#encounterResolution) button{min-height:44px;min-width:0;font-size:13px;line-height:1.15;padding:4px 8px;margin:0}
 .cardContent #consumableChoices{display:flex;flex:none}.worldCard button:disabled{opacity:.4}
 .codexAccess{font:inherit;font-size:10px;letter-spacing:1px;color:#bda980;border:0;background:transparent;padding:6px 10px;min-height:32px;cursor:pointer}/* Footer controls own separate tracks; text cannot enlarge Archive's hitbox. */
 #footer{display:grid;grid-template-columns:minmax(0,1fr) auto 64px;gap:8px;align-items:center}
@@ -360,21 +364,38 @@ body{display:flex;justify-content:center;overscroll-behavior:none}
 #encounterTransform{position:absolute;left:50%;transform:translateX(-50%);transform-origin:50% 0}
 #encounterResolution{visibility:hidden;opacity:0;transition:opacity 160ms ease-out}
 .resolution-active #encounterResolution{visibility:visible;opacity:1}
-#encounterResolution #diceResult{position:static;flex:none;width:100%;font-size:clamp(11px,4.2cqw,18px);line-height:1.1;margin:0;color:#372919;text-shadow:none;letter-spacing:0}
-#encounterResolution #diceDetail{position:static;flex:1;width:100%;display:grid;place-items:center;font-size:clamp(10px,3.4cqw,14px);line-height:1.15;min-height:0;margin:0;color:#423424}
+#encounterResolution #diceResult{position:static;flex:none;min-height:0;width:100%;font-size:clamp(11px,4.2cqw,18px);line-height:1.1;margin:0;color:#372919;text-shadow:none;letter-spacing:0}
+#encounterResolution #diceDetail{position:static;flex:none;width:100%;display:block;font-size:clamp(10px,3.4cqw,14px);line-height:1.15;min-height:0;margin:0;color:#423424}
 #encounterResolution .rerollSlot{position:static;flex:none;width:100%;height:auto;display:flex;gap:6px}
 #encounterResolution .rerollSlot:has(#bossSlash:not([hidden])){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 #encounterResolution #bossSlash{grid-column:2}#encounterResolution #rerollButton{grid-column:1}
 #encounterResolution .rerollSlot button{flex:1;height:44px;font-size:12px}
 #bossSlash::before{content:"HOLD";display:block;font-size:9px;line-height:11px;color:#dbcba9}
-#encounterResolution #rerollCost{display:block;font-size:9px;line-height:11px;min-height:0;color:#dfcfaf}
+#encounterResolution #rerollCost{display:block;font-size:9px;line-height:11px;min-height:0;white-space:normal;overflow-wrap:anywhere;color:#dfcfaf}
 #encounterResolution #rerollCost:empty{display:none}
 #encounterDie{position:absolute;left:50%;transform:translateX(-50%);width:var(--encounter-die-size);height:var(--encounter-die-size);visibility:hidden;z-index:4;transition:opacity 160ms ease-out}
 .resolution-active #encounterDie{visibility:visible}
 #encounterDie .die,#encounterDie .die.rolling{width:100%;height:100%;font-size:calc(var(--encounter-die-size)*.79);margin:0}
 .cell.bossThreat .floor{border-color:#c66b58}.cell.bossThreat .exitMark{color:#ebad88}.cell.bossDefeated .exitMark{color:#b9d69e}
 @media(max-height:600px){.cardContent,#encounterResolution{gap:2px}.cardContent #itemDescription,.cardContent #codexDescription{font-size:10px}.cardContent #itemState{display:none}.cardContent:has(#replaceTrinkets:not([hidden])) #itemDescription{display:none}}
-@media(max-height:480px){.cardContent,#encounterResolution{top:66%;bottom:3%;gap:1px}#encounterResolution #diceResult{font-size:10px}#encounterResolution #diceDetail{font-size:10px;line-height:1.05}.cardContent #itemVisual,.cardContent #codexEffect{font-size:10px!important}.worldCard #cardContinue,.worldCard #tapContinue,.worldCard .cardGestureHint{font-size:7px;line-height:9px}}
+@media(max-height:480px){.cardContent,#encounterResolution{gap:2px}#encounterResolution #diceResult{font-size:10px}#encounterResolution #diceDetail{font-size:10px;line-height:1.05}.cardContent #itemVisual,.cardContent #codexEffect{font-size:10px!important}.worldCard #cardContinue,.worldCard #tapContinue,.worldCard .cardGestureHint{font-size:7px;line-height:9px}}
+/* A short Card keeps text and hold controls in separate columns, leaving the hint intact. */
+@container(max-width:300px){
+ .worldCard :is(.cardContent,#encounterResolution) button{font-size:clamp(9px,4.5cqw,11px);line-height:1.1;padding:3px}
+ #encounterResolution,.cardContent{box-sizing:border-box}
+ #encounterResolution{padding-right:calc(33.54cqw + 6px)}
+ .cardContent{padding-right:calc(29.64cqw + 6px)}
+ #encounterResolution .rerollSlot{position:absolute;right:0;top:0;width:43%}
+ .worldCard :is(.cardContent,#encounterResolution)>button:not([data-card-tap]),.cardContent #consumableChoices{position:absolute;right:0;top:0;width:38%}
+ #encounterResolution:not(:has(button:not([hidden]))),.cardContent:not(:has(>button:not([hidden]),>#consumableChoices:not([hidden]))){padding-right:0}
+ .cardContent:has(#replaceTrinkets:not([hidden])){padding-right:0}
+ .worldCard .cardContent:has(#replaceTrinkets:not([hidden]))>button:not([data-card-tap]){position:relative;width:100%}
+ #encounterResolution #diceResult{font-size:11px}#encounterResolution #diceDetail{font-size:10px}
+ #encounterResolution .rerollSlot button{font-size:10px;height:auto;min-height:44px;padding:3px}
+ #encounterResolution #rerollCost{font-size:8px;line-height:9px}
+ #encounterResolution .rerollSlot:has(#bossSlash:not([hidden])) #rerollCost{font-size:7px;line-height:8px}
+ .cardContent #itemDescription,.cardContent #codexDescription{font-size:clamp(8px,3.4cqw,10px)}
+}
 .cardDismiss{position:relative;flex:none;transition:transform 180ms ease-out,opacity 180ms ease-out;touch-action:none}
 .cardDismiss.dragging{transition:none}
 .trinket[data-item="compass"]{position:relative;display:grid;place-items:center}.compassNeedle{display:block;font-size:27px;line-height:28px;color:#e9d092}.trinket[data-item="compass"] small{position:absolute;bottom:0;font-size:9px;line-height:10px}
@@ -831,7 +852,10 @@ function frameCard(panel,template,category,fresh,artId){
  panel.classList.add("worldCard");panel.dataset.template=template;installCardDrag(panel);
  if(panel.id==="codexCard"&&!panel.querySelector('.cardGestureHint')){var hint=document.createElement('div');hint.className='cardGestureHint';hint.textContent='↓ SWIPE DOWN TO CONTINUE';panel.appendChild(hint)}
  // Header/artwork stay fixed; stateful HTML occupies the independent lower shelf.
- if(!panel.querySelector(".cardContent")&&!panel.classList.contains("encounterPanel")){var content=document.createElement("div");content.className="cardContent";panel.appendChild(content);["itemVisual","itemDescription","itemState","replaceTrinkets","replaceSelected","consumableChoices","contentAction","chestOpen","altarOffer","cardContinue","codexEffect","codexDescription"].forEach(function(id){var node=panel.querySelector("#"+id);if(node)content.appendChild(node)});var hint=panel.querySelector(".cardGestureHint");if(hint)content.appendChild(hint)}
+ if(!panel.querySelector(".cardContent")&&!panel.classList.contains("encounterPanel")){var content=document.createElement("div");content.className="cardContent";panel.appendChild(content);["itemVisual","itemDescription","itemState","replaceTrinkets","replaceSelected","consumableChoices","contentAction","chestOpen","altarOffer","cardContinue","codexEffect","codexDescription"].forEach(function(id){var node=panel.querySelector("#"+id);if(node)content.appendChild(node)});}
+ // Hints have their own protected frame row, outside all stateful lower content.
+ var hint=panel.querySelector("#cardContinue,#tapContinue,.cardGestureHint");if(hint&&hint.parentNode!==panel)panel.appendChild(hint);
+ var title=panel.querySelector("#itemName,#codexName,#diceTitle");if(title&&title.parentNode!==panel)panel.appendChild(title);
  var artwork=panel.querySelector(".cardArtwork");if(!artwork){artwork=document.createElement("div");artwork.className="cardArtwork";var clip=document.createElement("div");clip.className="cardArtClip";var art=panel.querySelector("#itemArt,#codexArt,#eventArt");if(art)clip.appendChild(art);artwork.appendChild(clip);panel.appendChild(artwork)}
  var crest=panel.querySelector(".cardCrest");if(!crest){crest=document.createElement("div");crest.className="cardCrest";panel.appendChild(crest)}
  presentCardArtwork(panel,artId);
@@ -1903,17 +1927,23 @@ function disarmTrap(){
  if(!relicState.wardArmed)return false;
  relicState.wardArmed=false;pendingAction=null;effectNotice("✂ → ⚠ ✓");showLocalFeedback(currentId,"✂ ✓","","",1000);finishRoomEffects();update();if(!awardPerfectFloor())updateContext();pumpCards();return true
 }
+var fullCardLayout=null;
 function layoutEncounter(){
- var o=$("diceOverlay"),style=getComputedStyle(o),top=Math.max(parseFloat(style.paddingTop)||12,$("hud").getBoundingClientRect().bottom+8);
+ var o=$("diceOverlay"),style=getComputedStyle(o),key=[innerWidth,innerHeight,style.paddingTop,style.paddingBottom].join(":");
+ // HUD/message/content updates must not recenter an already-open physical Card.
+ if(fullCardLayout===key)return;
+ fullCardLayout=key;
+ var top=Math.max(parseFloat(style.paddingTop)||12,$("hud").getBoundingClientRect().bottom+8);
  var footer=$("footer"),bottom=Math.min(innerHeight-(parseFloat(style.paddingBottom)||12),footer?footer.getBoundingClientRect().top-8:innerHeight-76);
  var landscape=innerWidth>innerHeight,die=innerHeight<=480?80:104,available=Math.max(180,bottom-top);
  if(landscape){top=parseFloat(style.paddingTop)||12;bottom=innerHeight-(parseFloat(style.paddingBottom)||12);available=bottom-top}
  var width=Math.min(innerWidth*.88,420,(available-(landscape?0:die*.55))*2/3),height=width*1.5;
  document.documentElement.style.setProperty("--full-card-width",width+"px");
  var cardTop=top+Math.max(0,(available-height-(landscape?0:die*.55))/2);
+ document.documentElement.style.setProperty("--full-card-top",cardTop+"px");
  $("encounterTransform").style.top=cardTop+"px";
- // Portrait hints end inside the frame; the independent die overlaps only its bottom edge.
- $("encounterDie").style.top=(cardTop+(landscape?height-die:height*.96+12))+"px";
+ // Leave room for the unchanged landing bounce below the protected portrait hint.
+ $("encounterDie").style.top=(cardTop+(landscape?height-die:height+20))+"px";
  $("encounterDie").style.left=landscape?"calc(50% + "+(width/2+die*.55)+"px)":"50%";
  o.style.setProperty("--encounter-die-size",die+"px")
 }
@@ -2200,7 +2230,7 @@ function render(){
 function update(){updateConditions();if(layerVisual&&layerVisual.phase!=="prepare"){layerVisual.dirty=true;return}$("hp").textContent="❤️".repeat(hp)+"🖤".repeat(3-hp)+(shield?" 🛡":"");$("gold").textContent=Math.floor(gold).toLocaleString();$("floorNo").textContent=floorNo;$("combo").textContent="×"+combo.toFixed(1);$("combo").style.setProperty("--fortune",Math.min(1,(combo-1)/6));$("combo").title="FATE ×"+combo.toFixed(1)+" • Gold ×"+rewardMultiplier().toFixed(2)+" • Fortune favors the next floor";updateRelicHUD();render()}
 $("again").addEventListener("pointerup",function(e){e.preventDefault();beginRun()},{passive:false});
 // Active-run persistence v1. Transactions publish only complete synchronous mutations.
-var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.23.2";
+var SAVE_KEY="dof.activeRun",SAVE_VERSION=1,GAME_VERSION="2.23.3";
 var safeSnapshot=null,transactionDepth=0,restoringRun=false,storageBlocked=false,storageWarned=false,startupSave=null,pendingEncounter=null;
 function jsonCopy(value){return JSON.parse(JSON.stringify(value))}
 function persistenceWarning(error){if(!storageWarned){storageWarned=true;console.warn("[DOF save] Local persistence unavailable or invalid save",String(error))}}
@@ -2368,7 +2398,7 @@ $("buildVersion").textContent="V"+GAME_VERSION;document.title="Dungeon of Fate V
 window.__dofTest={
  progression:CONTENT_PROGRESSION,eligibleCreatures:eligibleCreatures,creatureFamilyWeights:creatureFamilyWeights,ordinaryHazards:ordinaryHazards,bossMilestone:bossMilestone,bossForFloor:bossForFloor,bossOutcome:bossOutcome,openBossCard:openBossCard,beginBossFight:beginBossFight,boss:function(){return room(exitId).boss?jsonCopy(room(exitId).boss):null},
  creatures:MONSTERS,creatureDefinition:creatureDefinition,sensesLiving:sensesLiving,compassDirection:compassDirection,
- content:CONTENT,contentTuning:CONTENT_TUNING,contentOutcome:contentOutcome,openContent:openContent,actOnContent:actOnContent,applyCondition:applyCondition,clearConditions:clearConditions,conditions:function(){return jsonCopy(conditions)},movementMultiplier:movementMultiplier,travelState:function(){return roomTravel?{from:roomTravel.from,to:roomTravel.to,duration:roomTravel.duration,started:roomTravel.started,progress:roomTravel.progress}:null},mapVisible:mapVisible,memoryWipe:function(){return memoryWipe?{phase:memoryWipe.phase,order:memoryWipe.order,visible:Object.keys(memoryWipe.visible)}:null},openDroppedConsumable:openDroppedConsumable,
+ refreshContentCard:renderContentCard,layoutCard:layoutEncounter,content:CONTENT,contentTuning:CONTENT_TUNING,contentOutcome:contentOutcome,openContent:openContent,actOnContent:actOnContent,applyCondition:applyCondition,clearConditions:clearConditions,conditions:function(){return jsonCopy(conditions)},movementMultiplier:movementMultiplier,travelState:function(){return roomTravel?{from:roomTravel.from,to:roomTravel.to,duration:roomTravel.duration,started:roomTravel.started,progress:roomTravel.progress}:null},mapVisible:mapVisible,memoryWipe:function(){return memoryWipe?{phase:memoryWipe.phase,order:memoryWipe.order,visible:Object.keys(memoryWipe.visible)}:null},openDroppedConsumable:openDroppedConsumable,
  codex:function(){return{entries:CARD_REGISTRY,discovered:JSON.parse(JSON.stringify(codexState.discovered)),open:codexOpen}},showCodex:showCodex,closeCodex:closeCodex,openCodexDetail:openCodexDetail,
  layerChance:layerChance,traverseStairs:traverseStairs,layerInfo:function(){return{layers:layers,activeLayer:activeLayer,transition:layerTransition}},
  chestCandidates:chestCandidates,chooseChestContent:chooseChestContent,generateChest:generateChest,openChestCard:openChestCard,openChest:openChest,

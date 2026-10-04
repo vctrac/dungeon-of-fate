@@ -1,5 +1,31 @@
 # Dungeon of Fate
 
+## V2.23.3 — Card layout stabilization
+
+- Full Card titles use a transparent header at y 13%–18%, above the unchanged
+  artwork aperture (y 19%, height 46%). Headers are direct children of the Full
+  Card, independent of encounter content. Frame artwork/colors are unchanged.
+- Lower content starts at 71%, clear of the ornamental divider. Consequences
+  keep their natural height and actions follow them; the dedicated hint row is
+  at 90%–93%, outside the changing content. Short Cards use two lower-content
+  columns to preserve 44px hold controls and hint clearance.
+- Action, dice and Archive detail Cards share one viewport/safe-area layout
+  anchor. Content/HUD updates reuse that geometry; viewport changes recompute
+  it. Corpse SEARCH transitions between existing overlays without moving the
+  physical frame/header/artwork. Fruit Tree/Garden/Flower retain their existing
+  close-on-success behavior and stay fixed until closure.
+- The independent die sits below the portrait Card with landing-bounce clearance;
+  landscape retains the side die. Die size/animation, HOLD (650 ms), dragging,
+  boss SLASH, artwork mapping, Archive Mini Cards and all gameplay are unchanged.
+- Save schema remains 1. Version/cache: V2.23.3 / `dungeon-of-fate-v2.23.3-1`.
+
+Regression checks cover Guardian/Reroll, actual first HOLD SEARCH→roll→result,
+Fruit Tree/Garden/Flower closure, crowded Hazard consequences, Chest, Altar,
+Items and long Archive titles in 320×568, 390×844, 430×932, 844×390 and 568×320.
+Android/PWA playtest: title/divider clearance, action/hint readability, landing
+bounce, first holds, drag cancellation, boss SLASH, active-run reload and offline
+update. Physical-device verification is still required.
+
 ## V2.23.2 — Card presentation and boss-flow refinement
 
 - Full Cards use `assets/ui/card-frame.webp` (1024×1536, 2:3) as one complete
