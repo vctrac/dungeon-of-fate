@@ -1,5 +1,47 @@
 # Dungeon of Fate
 
+## V2.23.2 — Card presentation and boss-flow refinement
+
+- Full Cards use `assets/ui/card-frame.webp` (1024×1536, 2:3) as one complete
+  transparent overlay. The crest (5%), title (14%) and artwork aperture (x 7.5%,
+  y 19%, width 85%, height 46%) stay fixed across introduction, roll, result,
+  Reroll and action states. The lower HTML shelf adapts to content. Artwork uses
+  centered `object-fit: cover`; no state squeezes it into a banner.
+- Archive thumbnails use the separate `card-frame-small.webp` (also 1024×1536,
+  2:3), lightweight artwork/name DOM, and the same registry metadata. Unknown
+  entries keep their concealed presentation. Detail cards use the Full Card.
+- All 25 supplied WebP artworks are integrated, including items, Altar, Fruit
+  Tree, Corpse and Hole. The actual uploaded `healimg-flask.webp` filename is
+  retained. Guardian General shares Guardian art. Thief, Mosquito Swarm, Rotten
+  Spores, Falling Stones, Wasps, Old Picture and Unreadable Monolith retain icon
+  fallbacks; missing/failed artwork never blocks a card.
+- The complete frame supplies its own border and lower panel: the old outer
+  overlay, cutout polygon and artwork 9-slice are retired from runtime/cache.
+  Their source PNG assets remain in the repository. Interior texture is still
+  used behind the transparent upper area and fallback art.
+- Dice remain outside the Card. The continuation hint lives in the lower shelf,
+  away from the die; short landscape uses the full safe-area height for cards
+  and places the die to the side. Header/artwork do not change during resolution.
+- Archive opens from the saved-run Continue/New Run menu without resuming or
+  modifying the run. Closing Archive returns to that menu.
+- During committed Guardian General combat, HOLD SLASH accepts the displayed
+  pending result through the existing commit path, then starts the next round
+  only if both combatants survive. HOLD REROLL still challenges that result;
+  drag-down acceptance remains available. Initial FIGHT/retreat and balance are
+  unchanged. SLASH and REROLL are the deliberate two-choice boss exception to
+  ordinary single-action cards.
+- Hold duration remains 650 ms. Movement remains 220 ms / Slowed 550 ms. No
+  generation, rewards, conditions, item or boss balance changes; save schema is
+  unchanged. PWA shell/cache is `dungeon-of-fate-v2.23.2-1`, precaching current
+  frames and all artwork.
+
+Android/PWA checks: first holds, dragging/cancelling while the die fades, readable
+hint/Reroll/cost on short portrait and landscape screens, Archive from startup,
+SLASH damage/critical/Weakness/death/victory and pending-round force-close; install
+this update and verify offline images. New frame exports have slight colored
+edge fringes at full resolution; assets were not repainted.
+
+
 Dungeon of Fate is a mobile-friendly procedural dungeon game prototype focused on risk/reward exploration, FATE, Scavenge, Fast Travel, dice encounters, and treasure.
 
 ## Status
