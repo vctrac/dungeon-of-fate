@@ -98,6 +98,7 @@ let browser;
   assert.equal(await page.evaluate(()=>rngCalls),1);
   await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy,{steps:4});
   assert.equal(await page.locator('#eventCard.swipe-impact').count(),1);
+  assert.equal(await page.locator('.encounterPanel .cardArtClip.slash-impact .slashEffect').count(),1);
   if(dx===65){
    await page.mouse.up();await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy);
   }
@@ -150,6 +151,7 @@ let browser;
   assert.equal(await page.locator('#diceOverlay.awaiting-swipe').count(),1);
   await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy,{steps:4});
   assert.equal(await page.locator('#eventCard.swipe-impact').count(),1);
+  assert.equal(await page.locator('.encounterPanel .cardArtClip.slash-impact .slashEffect').count(),1);
   await page.waitForSelector('#diceOverlay.resolved');
   await page.mouse.up();
   assert.equal(await page.locator('#diceOverlay.resolved').count(),1,'Swipe release must not continue');
@@ -201,12 +203,10 @@ let browser;
  await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await context.setOffline(true);await page.goto(url+'index.html');if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();assert(await page.locator('.current').count());
- assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.23.3-1'))),true);
+ assert.equal(await page.evaluate(()=>caches.keys().then(keys=>keys.includes('dungeon-of-fate-v2.23.5-1'))),true);
  await page.goto(url);if(await page.locator('#continueRun').isVisible())await page.locator('#continueRun').click();assert(await page.locator('.current').count());
  await context.setOffline(false);
  assert.deepEqual(errors,[]);
  console.log('PASS actual service worker install, offline file and directory launch, no runtime errors');
  await browser.close();browser=null;server.close();
 })().catch(async e=>{console.error(e);if(browser)await browser.close();server.close();process.exitCode=1});
-
-

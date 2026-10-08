@@ -1,6 +1,6 @@
 # Dungeon of Fate
 
-## V2.23.3 — Card layout stabilization
+## V2.23.5 — Juicier combat slash
 
 - Full Card titles use a transparent header at y 13%–18%, above the unchanged
   artwork aperture (y 19%, height 46%). Headers are direct children of the Full
@@ -14,10 +14,16 @@
   it. Corpse SEARCH transitions between existing overlays without moving the
   physical frame/header/artwork. Fruit Tree/Garden/Flower retain their existing
   close-on-success behavior and stay fixed until closure.
-- The independent die sits below the portrait Card with landing-bounce clearance;
-  landscape retains the side die. Die size/animation, HOLD (650 ms), dragging,
-  boss SLASH, artwork mapping, Archive Mini Cards and all gameplay are unchanged.
-- Save schema remains 1. Version/cache: V2.23.3 / `dungeon-of-fate-v2.23.3-1`.
+- The independent die sits centered below the Card in portrait and landscape,
+  with the card scaled to preserve available vertical space. Die size/animation,
+  HOLD (650 ms), dragging, boss SLASH, remaining artwork mappings, Archive Mini
+  Cards and all gameplay are unchanged.
+- The pre-combat swipe slash now overlays the clipped artwork above its image,
+  with a bright streak, flash, sparks and impact pulse. Reduced-motion users see
+  a static slash effect.
+- Monolith and Old Picture artwork now resolve from their discoveries assets and
+  are included in the updated offline cache.
+- Save schema remains 1. Version/cache: V2.23.5 / `dungeon-of-fate-v2.23.5-1`.
 
 Regression checks cover Guardian/Reroll, actual first HOLD SEARCH→roll→result,
 Fruit Tree/Garden/Flower closure, crowded Hazard consequences, Chest, Altar,
@@ -36,11 +42,11 @@ update. Physical-device verification is still required.
 - Archive thumbnails use the separate `card-frame-small.webp` (also 1024×1536,
   2:3), lightweight artwork/name DOM, and the same registry metadata. Unknown
   entries keep their concealed presentation. Detail cards use the Full Card.
-- All 25 supplied WebP artworks are integrated, including items, Altar, Fruit
-  Tree, Corpse and Hole. The actual uploaded `healimg-flask.webp` filename is
-  retained. Guardian General shares Guardian art. Thief, Mosquito Swarm, Rotten
-  Spores, Falling Stones, Wasps, Old Picture and Unreadable Monolith retain icon
-  fallbacks; missing/failed artwork never blocks a card.
+- All 27 used WebP artworks are integrated, including items, Altar, Old Picture,
+  Unreadable Monolith, Fruit Tree, Corpse and Hole. The actual uploaded
+  `healimg-flask.webp` filename is retained. Guardian General shares Guardian
+  art. Thief, Mosquito Swarm, Rotten Spores, Falling Stones and Wasps retain
+  icon fallbacks; missing/failed artwork never blocks a card.
 - The complete frame supplies its own border and lower panel: the old outer
   overlay, cutout polygon and artwork 9-slice are retired from runtime/cache.
   Their source PNG assets remain in the repository. Interior texture is still
